@@ -478,9 +478,31 @@ export class DatabaseStorage implements IStorage {
 
       // Insert each memory into pgvector
       let successCount = 0;
+      let duplicateCount = 0;
+      let totalProcessed = pineconeVectors.length;
       
       // Keep track of created message IDs to handle foreign key references
       const createdMessageMap = new Map<number, number>();
+      
+      // Track duplicate detection by content hash
+      const existingMemoryHashes = new Set<string>();
+      
+      // First, build a set of existing memory hashes for deduplication
+      try {
+        console.log('Gathering existing memory hashes for deduplication detection');
+        const { memories: existingMemories } = await this.getMemories(1, 1000);
+        
+        for (const memory of existingMemories) {
+          // Generate a hash based on content to detect duplicates
+          const contentHash = memoryIdForUpsert(memory);
+          existingMemoryHashes.add(contentHash);
+        }
+        
+        console.log(`Found ${existingMemoryHashes.size} existing memories to check for duplicates`);
+      } catch (hashError) {
+        console.error(`Error gathering existing memory hashes: ${hashError}`);
+        // Continue without deduplication if this fails
+      }
       
       console.log(`Starting to process ${pineconeVectors.length} vectors from Pinecone`);
       for (const vector of pineconeVectors) {
@@ -562,21 +584,48 @@ export class DatabaseStorage implements IStorage {
           // Ensure memory content exists
           const memoryContent = metadata.content || `Memory imported from Pinecone index: ${indexName}`;
           
-          const memory = await this.createMemory({
+          // Create a temp memory object to check for duplication
+          const tempMemory: Memory = {
+            id: -1, // Temporary ID for hash calculation
             content: memoryContent,
             embedding: JSON.stringify(vector.values),
             type: metadata.type || 'prompt',
             messageId: messageId,
+            timestamp: new Date(),
             metadata: {
               ...(metadata.metadata || {}),
               importedFrom: indexName,
-              originalMessageId: metadata.messageId || null,
-              importTimestamp: new Date().toISOString()
+              originalMessageId: metadata.messageId || null
             }
-          });
-          console.log(`Created memory with ID: ${memory.id}`);
+          };
           
-          successCount++;
+          // Check for duplicates based on content hash
+          const contentHash = memoryIdForUpsert(tempMemory);
+          
+          if (existingMemoryHashes.has(contentHash)) {
+            console.log(`Skipping duplicate memory with hash: ${contentHash}`);
+            duplicateCount++;
+          } else {
+            // Not a duplicate, so create it in the database
+            const memory = await this.createMemory({
+              content: memoryContent,
+              embedding: JSON.stringify(vector.values),
+              type: metadata.type || 'prompt',
+              messageId: messageId,
+              metadata: {
+                ...(metadata.metadata || {}),
+                importedFrom: indexName,
+                originalMessageId: metadata.messageId || null,
+                importTimestamp: new Date().toISOString(),
+                contentHash // Store the hash for future reference
+              }
+            });
+            console.log(`Created memory with ID: ${memory.id}`);
+            
+            // Add to hash set to prevent future duplicates in this batch
+            existingMemoryHashes.add(contentHash);
+            successCount++;
+          }
         } catch (err) {
           console.error(`Error hydrating memory from Pinecone:`, err);
           // Continue with next vector even if one fails
@@ -594,10 +643,18 @@ export class DatabaseStorage implements IStorage {
         lastSyncTimestamp: new Date()
       });
       
+      // Calculate deduplication rate
+      const dedupRate = totalProcessed > 0 ? duplicateCount / totalProcessed : 0;
+      
       console.log(`Hydration from Pinecone completed successfully`);
+      console.log(`Deduplication stats: ${duplicateCount} duplicates out of ${totalProcessed} total vectors (${(dedupRate * 100).toFixed(2)}%)`);
+      
       return { 
         success: true, 
-        count: successCount 
+        count: successCount,
+        duplicateCount,
+        dedupRate,
+        totalProcessed 
       };
     } catch (error) {
       console.error("Error hydrating from Pinecone:", error);
