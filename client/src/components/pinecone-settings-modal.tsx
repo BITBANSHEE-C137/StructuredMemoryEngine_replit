@@ -50,8 +50,6 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
   const [isCreatingIndex, setIsCreatingIndex] = useState(false);
   
   // Track last operation results for deduplication metrics display
-  const [lastSyncResult, setLastSyncResult] = useState<any>(null);
-  const [lastHydrateResult, setLastHydrateResult] = useState<any>(null);
   const [selectedTab, setSelectedTab] = useState('settings');
   
   // Form values for creating a new index
@@ -65,6 +63,15 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
   
   // Track deduplication information from last sync
   const [lastSyncResults, setLastSyncResults] = useState<{
+    count: number;
+    duplicateCount?: number;
+    dedupRate?: number;
+    totalProcessed?: number;
+    timestamp: Date;
+  } | null>(null);
+  
+  // Track deduplication information from last hydrate
+  const [lastHydrateResult, setLastHydrateResult] = useState<{
     count: number;
     duplicateCount?: number;
     dedupRate?: number;
