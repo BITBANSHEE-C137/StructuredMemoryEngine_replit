@@ -112,63 +112,76 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
             </svg>
             Memory Stats
           </h3>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-              <div className="text-primary/70 font-medium mb-1">Total Memories</div>
-              <div className="text-primary text-lg font-bold">{total}</div>
-            </div>
-            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-              <div className="text-primary/70 font-medium mb-1">Tokens Used</div>
-              <div className="text-primary text-lg font-bold">
-                {totalTokens > 1000 
-                  ? `${(totalTokens / 1000).toFixed(1)}k` 
-                  : totalTokens}
+          <div className="grid grid-cols-1 gap-3 text-xs">
+            {/* Local PGVector Stats */}
+            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10 col-span-1">
+              <div className="text-primary/70 font-medium mb-1 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Local Storage (PGVector)
               </div>
-            </div>
-            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-              <div className="text-primary/70 font-medium mb-1">Vector Dimension</div>
-              <div className="text-primary text-lg font-bold">1536</div>
-            </div>
-            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-              <div className="text-primary/70 font-medium mb-1">Database</div>
-              <div className="text-primary text-lg font-bold">PGVector</div>
+              <div className="flex justify-between items-center mt-2">
+                <div className="text-primary font-medium">
+                  <span className="text-lg font-bold">{total}</span> 
+                  <span className="text-xs ml-1 text-primary/70">memories</span>
+                </div>
+                <div className="text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded-full">
+                  {loading ? 'Updating...' : 'Ready'}
+                </div>
+              </div>
+              <div className="flex justify-between items-center mt-2">
+                <div className="text-primary/70 text-xs">Tokens Used:</div>
+                <div className="text-primary font-medium">
+                  {totalTokens > 1000 
+                    ? `${(totalTokens / 1000).toFixed(1)}k` 
+                    : totalTokens}
+                </div>
+              </div>
             </div>
             
             {/* Pinecone Stats */}
             {pineconeStats.enabled && (
-              <>
-                <div className="bg-primary/5 p-3 rounded-lg border border-primary/10 col-span-2">
-                  <div className="text-primary/70 font-medium mb-1 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Pinecone Index: {pineconeStats.activeIndex}
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="text-primary font-medium">
-                      <span className="text-lg font-bold">{pineconeStats.vectorCount}</span> 
-                      <span className="text-xs ml-1 text-primary/70">vectors</span>
-                    </div>
-                    <div className="text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded-full">
-                      {loadingPinecone ? 'Updating...' : 'Synced'}
-                    </div>
-                  </div>
-                  
-                  {pineconeStats.namespaces.length > 0 && (
-                    <div className="mt-2 border-t border-primary/10 pt-2">
-                      <div className="text-xs text-primary/70 mb-1">Namespaces:</div>
-                      <div className="text-xs space-y-1">
-                        {pineconeStats.namespaces.map(ns => (
-                          <div key={ns.name} className="flex justify-between">
-                            <span className="text-primary/80">{ns.name}</span>
-                            <span className="text-primary font-medium">{ns.vectorCount} vectors</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+              <div className="bg-primary/5 p-3 rounded-lg border border-primary/10 col-span-1">
+                <div className="text-primary/70 font-medium mb-1 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Long-term Memory (Pinecone)
                 </div>
-              </>
+                <div className="flex justify-between items-center mt-2">
+                  <div className="text-primary font-medium">
+                    <span className="text-lg font-bold">{pineconeStats.vectorCount}</span> 
+                    <span className="text-xs ml-1 text-primary/70">vectors</span>
+                  </div>
+                  <div className="text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded-full">
+                    {loadingPinecone ? 'Syncing...' : 'Synced'}
+                  </div>
+                </div>
+                
+                {pineconeStats.activeIndex && (
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="text-primary/70 text-xs">Active Index:</div>
+                    <div className="text-primary font-medium truncate max-w-[150px]">
+                      {pineconeStats.activeIndex}
+                    </div>
+                  </div>
+                )}
+                
+                {pineconeStats.namespaces.length > 0 && (
+                  <div className="mt-2 border-t border-primary/10 pt-2">
+                    <div className="text-xs text-primary/70 mb-1">Namespaces:</div>
+                    <div className="text-xs space-y-1">
+                      {pineconeStats.namespaces.map(ns => (
+                        <div key={ns.name} className="flex justify-between">
+                          <span className="text-primary/80">{ns.name}</span>
+                          <span className="text-primary font-medium">{ns.vectorCount} vectors</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
