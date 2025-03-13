@@ -991,11 +991,11 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 <div className="flex flex-col space-y-2 mt-2">
                   <Button 
                     onClick={handleHydrateFromPinecone}
-                    disabled={!isAvailable || isSyncing || !selectedIndex}
+                    disabled={!isAvailable || isHydrating || !selectedIndex}
                     variant="outline"
                     className="w-full"
                   >
-                    {isSyncing ? (
+                    {isHydrating ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Hydrating...
@@ -1088,11 +1088,11 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                   {/* Debug button */}
                   <Button 
                     onClick={handleDebugVectors}
-                    disabled={!isAvailable || isSyncing || !selectedIndex}
+                    disabled={!isAvailable || isLoading || !selectedIndex}
                     variant="secondary"
                     className="w-full mt-4"
                   >
-                    {isSyncing ? (
+                    {isLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Loading...
@@ -1114,8 +1114,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
           <div className="text-sm text-muted-foreground">
             {settings?.isEnabled ? 'Pinecone integration is enabled' : 'Pinecone integration is disabled'}
           </div>
-          <Button onClick={handleCloseRequest} disabled={isSyncing}>
-            {isSyncing ? (
+          <Button onClick={handleCloseRequest} disabled={isSyncing || isHydrating || isLoading}>
+            {isSyncing || isHydrating || isLoading ? (
               <span className="flex items-center">
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                 Operation in Progress
