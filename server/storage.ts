@@ -148,6 +148,11 @@ export class DatabaseStorage implements IStorage {
     const [model] = await db.select().from(models).where(eq(models.id, id));
     return model;
   }
+  
+  async createModel(modelData: { id: string; name: string; provider: 'openai' | 'anthropic'; maxTokens: number; isEnabled: boolean }): Promise<Model> {
+    const [model] = await db.insert(models).values(modelData).returning();
+    return model;
+  }
 
   async updateModel(id: string, data: Partial<Omit<Model, "id">>): Promise<Model> {
     const [updated] = await db.update(models)
