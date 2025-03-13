@@ -356,13 +356,18 @@ export class DatabaseStorage implements IStorage {
     const existingSettings = await db.select().from(pineconeSettings).limit(1);
     
     if (existingSettings.length > 0) {
-      return existingSettings[0];
+      return {
+        ...existingSettings[0],
+        // Initialize metadata as empty object if it doesn't exist
+        metadata: existingSettings[0].metadata || {}
+      };
     } else {
-      // Create default pinecone settings
+      // Create default pinecone settings with empty metadata
       const [newSettings] = await db.insert(pineconeSettings).values({
         isEnabled: false,
         vectorDimension: 1536,
-        namespace: 'default'
+        namespace: 'default',
+        metadata: {}
       }).returning();
       
       return newSettings;
@@ -372,10 +377,20 @@ export class DatabaseStorage implements IStorage {
   async updatePineconeSettings(updatedSettings: Partial<InsertPineconeSettings>): Promise<PineconeSettings> {
     const currentSettings = await this.getPineconeSettings();
     
+    // Handle metadata merging
+    let mergedMetadata = currentSettings.metadata;
+    if (updatedSettings.metadata) {
+      mergedMetadata = {
+        ...mergedMetadata,
+        ...updatedSettings.metadata
+      };
+    }
+    
     // Update settings with the new values
     const [updated] = await db.update(pineconeSettings)
       .set({
         ...updatedSettings,
+        metadata: mergedMetadata,
         lastSyncTimestamp: updatedSettings.lastSyncTimestamp || new Date()
       })
       .where(eq(pineconeSettings.id, currentSettings.id))

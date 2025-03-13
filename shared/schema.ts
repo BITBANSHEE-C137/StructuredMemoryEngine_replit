@@ -115,10 +115,14 @@ export const pineconeSettings = pgTable("pinecone_settings", {
   namespace: text("namespace").default("default").notNull(),
   isEnabled: boolean("is_enabled").default(false).notNull(),
   lastSyncTimestamp: timestamp("last_sync_timestamp"),
+  metadata: jsonb("metadata"), // Store operation results and metrics
 });
 
 export const insertPineconeSettingsSchema = createInsertSchema(pineconeSettings).omit({
   id: true,
+}).extend({
+  // Make sure metadata is properly typed as an optional JSON field
+  metadata: z.record(z.any()).optional(),
 });
 
 export type InsertPineconeSettings = z.infer<typeof insertPineconeSettingsSchema>;
