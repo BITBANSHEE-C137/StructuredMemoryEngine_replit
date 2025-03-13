@@ -81,9 +81,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     : [DEFAULT_SYSTEM_MESSAGE];
   
   return (
-    <main className="flex-1 flex flex-col bg-white shadow-md">
-      {/* Model Selection Bar */}
-      <div className="bg-gradient-to-r from-primary/5 to-transparent border-b border-primary/10 p-4 flex items-center justify-between">
+    <main className="flex-1 flex flex-col bg-white shadow-md h-screen overflow-hidden">
+      {/* Model Selection Bar - Fixed at top */}
+      <div className="bg-gradient-to-r from-primary/5 to-transparent border-b border-primary/10 p-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center space-x-4">
           <div className="flex flex-col">
             <label className="mb-1 text-sm font-medium text-primary/80">Current Model</label>
@@ -127,8 +127,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
       </div>
       
-      {/* Chat Messages Area - ChatGPT-style */}
-      <div className="chat-container flex flex-col h-[calc(100vh-64px)]">
+      {/* Chat Messages Area - Scrollable middle section */}
+      <div className="chat-container flex flex-col flex-1 overflow-hidden">
         <div className="chat-messages flex-1 overflow-y-auto p-4 bg-white">
           <div className="max-w-3xl mx-auto space-y-4 pb-20">
             {/* Welcome message if no messages */}
@@ -146,7 +146,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
             )}
             
-            {/* Display messages in order (always chronological - newest at bottom) */}
+            {/* Display messages with oldest at top, newest at bottom */}
             {displayMessages.map((message, i) => (
               <ChatMessage 
                 key={message.id} 
@@ -182,8 +182,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <div ref={messagesEndRef} />
         </div>
         
-        {/* Message Input Area */}
-        <div className="border-t border-primary/10 p-4 bg-gradient-to-b from-white to-primary/5">
+        {/* Message Input Area - Fixed at bottom */}
+        <div className="border-t border-primary/10 p-4 bg-gradient-to-b from-white to-primary/5 sticky bottom-0 z-10">
           <form onSubmit={handleSubmit} className="flex items-center space-x-3 max-w-4xl mx-auto">
             <div className="relative flex-1">
               <textarea
