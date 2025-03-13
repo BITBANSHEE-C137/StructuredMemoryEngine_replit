@@ -14,8 +14,10 @@ export async function generateEmbedding(text: string, embeddingModel: string = "
       input: text,
     });
     
-    // Return the embedding as a string
-    return JSON.stringify(response.data[0].embedding);
+    // Return the embedding as a properly formatted vector string for pgvector
+    // Format: [1.2, 3.4, 5.6, ...]
+    const embeddingArray = response.data[0].embedding;
+    return `[${embeddingArray.join(',')}]`;
   } catch (error) {
     console.error("Error generating embedding:", error);
     throw new Error("Failed to generate embedding from OpenAI");

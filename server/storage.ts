@@ -103,11 +103,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async queryMemoriesByEmbedding(embedding: string, limit: number = 5): Promise<(Memory & { similarity: number })[]> {
-    // Use pgvector's cosine similarity operation to find similar embeddings
+    // Make sure embedding is explicitly cast to vector for comparison
     const result = await db.execute(sql`
       SELECT m.*, 
              1 - (m.embedding <=> ${embedding}::vector) as similarity
       FROM memories m
+      WHERE m.embedding IS NOT NULL
       ORDER BY similarity DESC
       LIMIT ${limit}
     `);
