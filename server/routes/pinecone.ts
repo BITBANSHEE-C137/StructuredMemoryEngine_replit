@@ -326,11 +326,11 @@ router.get('/stats', async (_req: Request, res: Response) => {
       if (pineconeSettings.metadata && typeof pineconeSettings.metadata === 'object') {
         const metadata = pineconeSettings.metadata as any;
         
-        if (metadata.lastSyncResult && metadata.lastSyncResult.dedupRate) {
+        if (metadata.lastSyncResult && metadata.lastSyncResult.dedupRate !== undefined) {
           lastSyncDedupRate = metadata.lastSyncResult.dedupRate;
         }
         
-        if (metadata.lastHydrateResult && metadata.lastHydrateResult.dedupRate) {
+        if (metadata.lastHydrateResult && metadata.lastHydrateResult.dedupRate !== undefined) {
           lastHydrateDedupRate = metadata.lastHydrateResult.dedupRate;
         }
         
