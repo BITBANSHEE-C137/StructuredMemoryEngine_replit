@@ -76,7 +76,7 @@ export const settings = pgTable("settings", {
   similarityThreshold: text("similarity_threshold").default("0.75").notNull(),
   defaultModelId: text("default_model_id").default("gpt-4o").notNull(),
   defaultEmbeddingModelId: text("default_embedding_model_id").default("text-embedding-ada-002").notNull(),
-  autoClearMemories: boolean("auto_clear_memories").default(false).notNull(),
+  // Removed autoClearMemories option - replaced with manual memory management
 });
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({

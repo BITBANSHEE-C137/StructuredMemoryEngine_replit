@@ -24,6 +24,7 @@ export interface IStorage {
   createMemory(memory: InsertMemory): Promise<Memory>;
   getMemoryById(id: number): Promise<Memory | undefined>;
   queryMemoriesByEmbedding(embedding: string, limit?: number): Promise<(Memory & { similarity: number })[]>;
+  clearAllMemories(): Promise<{ count: number }>; // New method to clear all memories
   
   // Settings operations
   getSettings(): Promise<Settings>;
@@ -153,6 +154,20 @@ export class DatabaseStorage implements IStorage {
       }
     }
   }
+  
+  // Method to clear all memories
+  async clearAllMemories(): Promise<{ count: number }> {
+    try {
+      // Delete all memories from the database
+      const result = await db.delete(memories);
+      
+      // Return the count of deleted memories
+      return { count: Number(result.length) };
+    } catch (error) {
+      console.error("Error clearing memories:", error);
+      throw error;
+    }
+  }
 
   // Settings operations
   async getSettings(): Promise<Settings> {
@@ -167,7 +182,7 @@ export class DatabaseStorage implements IStorage {
         contextSize: 5,
         similarityThreshold: "0.75",
         defaultModelId: "gpt-3.5-turbo",
-        autoClearMemories: false
+        defaultEmbeddingModelId: "text-embedding-ada-002"
       }).returning();
       
       return newSettings;
