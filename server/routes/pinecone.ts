@@ -162,11 +162,24 @@ router.post('/hydrate', async (req: Request, res: Response) => {
 // Check if Pinecone is available
 router.get('/status', async (_req: Request, res: Response) => {
   try {
+    log('Checking Pinecone availability...', 'pinecone');
+    log(`PINECONE_API_KEY exists: ${!!process.env.PINECONE_API_KEY}`, 'pinecone');
+    log(`PINECONE_ENVIRONMENT: ${process.env.PINECONE_ENVIRONMENT}`, 'pinecone');
+    
     const isAvailable = await storage.isPineconeAvailable();
-    res.json({ available: isAvailable });
+    log(`Pinecone availability result: ${isAvailable}`, 'pinecone');
+    
+    res.json({ 
+      available: isAvailable,
+      environment: process.env.PINECONE_ENVIRONMENT,
+      apiKeyExists: !!process.env.PINECONE_API_KEY
+    });
   } catch (error) {
     log(`Error checking Pinecone status: ${error}`, 'pinecone');
-    res.status(500).json({ error: 'Failed to check Pinecone status' });
+    res.status(500).json({ 
+      error: 'Failed to check Pinecone status',
+      message: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 

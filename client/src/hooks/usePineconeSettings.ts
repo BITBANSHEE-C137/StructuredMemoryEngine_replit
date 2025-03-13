@@ -87,8 +87,13 @@ export function usePineconeSettings() {
   const checkAvailability = useCallback(async () => {
     setIsLoading(true);
     try {
+      console.log('Checking Pinecone availability...');
       const response = await apiRequest('/api/pinecone/status');
+      console.log('Pinecone status response:', response);
+      
       const isAvailable = response?.available || false;
+      console.log('Pinecone is available:', isAvailable);
+      
       setIsAvailable(isAvailable);
       if (isAvailable) {
         fetchIndexes();
@@ -101,7 +106,7 @@ export function usePineconeSettings() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchIndexes]);
 
   const fetchIndexes = useCallback(async () => {
     setIsLoading(true);

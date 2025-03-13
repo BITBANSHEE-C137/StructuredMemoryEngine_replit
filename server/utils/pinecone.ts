@@ -11,26 +11,41 @@ let pineconeClient: Pinecone | null = null;
  * Initialize Pinecone client connection
  */
 async function initializePinecone() {
+  log('Starting Pinecone client initialization...', 'pinecone');
+  
   if (!pineconeApiKey) {
-    throw new Error('PINECONE_API_KEY is not set. Pinecone integration is disabled.');
+    const errorMsg = 'PINECONE_API_KEY is not set. Pinecone integration is disabled.';
+    log(errorMsg, 'pinecone');
+    throw new Error(errorMsg);
   }
   
   if (!pineconeEnvironment) {
-    throw new Error('PINECONE_ENVIRONMENT is not set. Pinecone integration is disabled.');
+    const errorMsg = 'PINECONE_ENVIRONMENT is not set. Pinecone integration is disabled.';
+    log(errorMsg, 'pinecone');
+    throw new Error(errorMsg);
   }
 
   try {
     log(`Initializing Pinecone client with environment: ${pineconeEnvironment}`, 'pinecone');
+    log(`API Key length: ${pineconeApiKey.length} characters`, 'pinecone');
     
+    // Check for newer SDK version compatibility
+    log('Creating new Pinecone client instance...', 'pinecone');
     pineconeClient = new Pinecone({
       apiKey: pineconeApiKey,
       environment: pineconeEnvironment,
     });
     
-    log('Pinecone client initialized successfully', 'pinecone');
+    // Verify connection with a simple operation
+    log('Testing connection by listing indexes...', 'pinecone');
+    await pineconeClient.listIndexes();
+    
+    log('✅ Pinecone client initialized and connected successfully', 'pinecone');
     return pineconeClient;
   } catch (error) {
-    log(`Error initializing Pinecone client: ${error}`, 'pinecone');
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    log(`❌ Error initializing Pinecone client: ${errorMessage}`, 'pinecone');
+    log(`Stack trace: ${error instanceof Error ? error.stack : 'No stack trace available'}`, 'pinecone');
     throw error;
   }
 }
