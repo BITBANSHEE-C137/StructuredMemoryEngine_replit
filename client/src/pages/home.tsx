@@ -156,8 +156,8 @@ export default function Home() {
   useEffect(() => {
     async function fetchMemoriesCount() {
       try {
-        const response = await apiRequest(`${API_ROUTES.MEMORIES}?page=1&pageSize=1`, { method: 'GET' });
-        const data = await response.json();
+        // apiRequest already parses the JSON for us
+        const data = await apiRequest(`${API_ROUTES.MEMORIES}?page=1&pageSize=1`);
         if (data && typeof data === 'object' && 'total' in data) {
           setTotalMemoriesCount(data.total);
         }

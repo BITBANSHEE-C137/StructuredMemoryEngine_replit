@@ -51,12 +51,10 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
     
     setLoading(true);
     try {
-      const response = await apiRequest(
-        `${API_ROUTES.MEMORIES}?page=${pageNum}&pageSize=${pageSizeNum}`,
-        { method: 'GET' }
+      // apiRequest already parses the JSON for us
+      const data = await apiRequest(
+        `${API_ROUTES.MEMORIES}?page=${pageNum}&pageSize=${pageSizeNum}`
       );
-      
-      const data = await response.json();
       if (data && typeof data === 'object' && 'memories' in data && 'total' in data) {
         setMemories(data.memories);
         setTotal(data.total);
