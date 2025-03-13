@@ -264,8 +264,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                         }
                       }}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4 4l-4 4m0 0l-4-4m4 4V4" />
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{transform: 'rotate(180deg)'}}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                       </svg>
                       RECALL
                     </Button>
@@ -405,7 +405,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                   {memory.similarity !== undefined && (
                     <span className="text-primary/60 text-[10px] flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l7-7 3 3-7 7-3-3z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 13l-1.5-7.5L9 12l-3-3 7-7L19.5 4.5 18 13z" />
                       </svg>
                       Similarity: {memory.similarity.toFixed(2)}
                     </span>
