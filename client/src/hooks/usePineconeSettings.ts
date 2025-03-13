@@ -317,10 +317,7 @@ export function usePineconeSettings() {
   const fetchVectorsFromIndex = useCallback(async (indexName: string, namespace: string = 'default', limit: number = 100) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest({
-        url: `/api/pinecone/indexes/${indexName}/vectors?namespace=${encodeURIComponent(namespace)}&limit=${limit}`,
-        method: 'GET'
-      });
+      const response = await apiRequest(`/api/pinecone/indexes/${indexName}/vectors?namespace=${encodeURIComponent(namespace)}&limit=${limit}`);
       
       toast({
         title: "Success",
@@ -355,6 +352,7 @@ export function usePineconeSettings() {
     deleteIndex,
     wipeIndex,
     syncToPinecone,
-    hydrateFromPinecone
+    hydrateFromPinecone,
+    fetchVectorsFromIndex
   };
 }

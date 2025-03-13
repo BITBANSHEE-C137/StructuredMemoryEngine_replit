@@ -33,7 +33,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     deleteIndex,
     wipeIndex,
     syncToPinecone,
-    hydrateFromPinecone
+    hydrateFromPinecone,
+    fetchVectorsFromIndex
   } = usePineconeSettings();
   
   const [isSyncing, setIsSyncing] = useState(false);
@@ -121,6 +122,53 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     setIsSyncing(true);
     try {
       await hydrateFromPinecone(selectedIndex, syncNamespace, 1000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+  
+  // Handler for the new Debug button
+  const handleDebugVectors = async () => {
+    if (!selectedIndex) {
+      return;
+    }
+    
+    setIsSyncing(true);
+    try {
+      const data = await fetchVectorsFromIndex(selectedIndex, syncNamespace, 100);
+      console.log('Vector data from Pinecone:', data);
+      
+      // Display the data more accessibly
+      if (data?.vectors?.length > 0) {
+        // Open a basic view of the first few vectors in a new window
+        const vectorInfo = data.vectors.map((v: any) => ({
+          id: v.id,
+          metadata: v.metadata || {},
+          dimension: v.values?.length || 0
+        }));
+        
+        const debugWindow = window.open('', '_blank');
+        if (debugWindow) {
+          debugWindow.document.write(`
+            <html>
+              <head>
+                <title>Pinecone Vector Debug - ${selectedIndex}</title>
+                <style>
+                  body { font-family: sans-serif; padding: 20px; }
+                  pre { background: #f5f5f5; padding: 10px; overflow: auto; max-height: 400px; }
+                </style>
+              </head>
+              <body>
+                <h2>Pinecone Vector Debug - ${selectedIndex}</h2>
+                <p>Namespace: ${syncNamespace}</p>
+                <p>Total vectors: ${data.vectors.length}</p>
+                <h3>Vector Preview:</h3>
+                <pre>${JSON.stringify(vectorInfo, null, 2)}</pre>
+              </body>
+            </html>
+          `);
+        }
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -481,6 +529,26 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                   
                   <p className="text-xs text-muted-foreground mt-1">
                     Retrieves and merges memories from Pinecone with your local database.
+                  </p>
+                  
+                  {/* Debug button */}
+                  <Button 
+                    onClick={handleDebugVectors}
+                    disabled={!isAvailable || isSyncing || !selectedIndex}
+                    variant="secondary"
+                    className="w-full mt-4"
+                  >
+                    {isSyncing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>Debug Vectors</>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    View the raw vector data for debugging purposes. Opens in a new window.
                   </p>
                 </div>
               </div>
