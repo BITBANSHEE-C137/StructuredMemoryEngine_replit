@@ -3,8 +3,40 @@ import { ChatInterface } from '@/components/chat-interface';
 import { MemoryPanel } from '@/components/memory-panel';
 import { SettingsModal } from '@/components/settings-modal';
 import { useChatMessages, useSettings, useModels, useApiStatus, useMobile } from '@/lib/hooks';
-import { DEFAULT_SETTINGS } from '@/lib/constants';
+import { DEFAULT_SETTINGS, API_ROUTES } from '@/lib/constants';
 import { RelevantMemory, Settings } from '@/lib/types';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+
+// User menu with logout button
+function UserMenuWithLogout() {
+  const { user } = useAuth();
+  
+  return (
+    <div className="flex items-center space-x-2">
+      {user?.profileImage && (
+        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/30">
+          <img src={user.profileImage} alt={user.name || 'User'} className="w-full h-full object-cover" />
+        </div>
+      )}
+      
+      <div className="flex flex-col">
+        <span className="text-sm font-medium text-white">
+          {user?.name || 'User'}
+        </span>
+      </div>
+      
+      <Button 
+        variant="outline" 
+        size="sm"
+        className="ml-2 bg-white/10 text-white hover:bg-white/20 border-white/20"
+        onClick={() => window.location.href = API_ROUTES.AUTH.LOGOUT}
+      >
+        Logout
+      </Button>
+    </div>
+  );
+}
 
 export default function Home() {
   const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(true);
@@ -107,18 +139,61 @@ export default function Home() {
       <header className="bg-gradient-to-r from-primary/90 to-primary shadow-lg border-b border-primary/20 z-20">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="relative h-10 w-10 flex items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 shadow-inner">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+            <div className="relative h-12 w-12 flex items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 shadow-app">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" className="h-10 w-10">
+                <defs>
+                  <linearGradient id="logo-gradient-primary" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ffffff" />
+                    <stop offset="100%" stopColor="#e2e8f0" />
+                  </linearGradient>
+                  <linearGradient id="logo-gradient-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#4ade80" />
+                    <stop offset="100%" stopColor="#22c55e" />
+                  </linearGradient>
+                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
+                
+                {/* Base circle */}
+                <circle cx="32" cy="32" r="28" fill="none" stroke="url(#logo-gradient-primary)" strokeWidth="2" opacity="0.8" />
+                
+                {/* Neural network connections */}
+                <g stroke="url(#logo-gradient-primary)" strokeWidth="1.5" opacity="0.7">
+                  <path d="M20,20 L32,12 L44,20" />
+                  <path d="M20,20 L20,32 L20,44" />
+                  <path d="M20,44 L32,52 L44,44" />
+                  <path d="M44,20 L44,32 L44,44" />
+                  <path d="M20,20 L32,32 L44,20" />
+                  <path d="M20,44 L32,32 L44,44" />
+                  <path d="M32,12 L32,32 L32,52" />
+                </g>
+                
+                {/* Nodes */}
+                <circle cx="32" cy="12" r="4" fill="url(#logo-gradient-primary)" filter="url(#glow)" />
+                <circle cx="20" cy="20" r="4" fill="url(#logo-gradient-primary)" filter="url(#glow)" />
+                <circle cx="44" cy="20" r="4" fill="url(#logo-gradient-primary)" filter="url(#glow)" />
+                <circle cx="32" cy="32" r="6" fill="url(#logo-gradient-accent)" filter="url(#glow)" />
+                <circle cx="20" cy="44" r="4" fill="url(#logo-gradient-primary)" filter="url(#glow)" />
+                <circle cx="44" cy="44" r="4" fill="url(#logo-gradient-primary)" filter="url(#glow)" />
+                <circle cx="32" cy="52" r="4" fill="url(#logo-gradient-primary)" filter="url(#glow)" />
               </svg>
-              <div className="absolute -bottom-1 -right-1 h-4 w-4 bg-emerald-400 rounded-full border-2 border-primary/90 shadow-lg"></div>
+              
+              <div className="absolute -bottom-1 -right-1 h-5 w-5 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full border-2 border-white/80 shadow-lg flex items-center justify-center">
+                <span className="animate-pulse">
+                  <span className="block h-2 w-2 rounded-full bg-white shadow-inner"></span>
+                </span>
+              </div>
             </div>
             <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
+              <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
                 Structured Memory Engine
               </h1>
-              <p className="text-xs text-white/60">Context-Aware RAG System</p>
+              <div className="flex items-center">
+                <p className="text-xs text-white/60 font-medium tracking-wide">Context-Aware RAG System</p>
+                <span className="inline-flex ml-2 items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-app-info/40 text-white/90 ring-1 ring-inset ring-white/20">v1.0</span>
+              </div>
             </div>
           </div>
           
@@ -138,9 +213,12 @@ export default function Home() {
                 </span>
               </span>
             </div>
+            
+            <UserMenuWithLogout />
+            
             <button 
               onClick={() => setIsSettingsModalOpen(true)}
-              className="text-white p-2 rounded-full hover:bg-white/10 focus:outline-none transition-colors"
+              className="flex items-center text-white p-2 rounded-full bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all transform hover:scale-105 active:scale-95 shadow-app-sm backdrop-blur-sm border border-white/20"
               aria-label="Settings"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
