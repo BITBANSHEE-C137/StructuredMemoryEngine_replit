@@ -72,8 +72,29 @@ export class DatabaseStorage implements IStorage {
 
   // Memory operations
   async createMemory(insertMemory: InsertMemory): Promise<Memory> {
-    const [memory] = await db.insert(memories).values(insertMemory).returning();
-    return memory;
+    // Use SQL to ensure embedding is handled as a vector
+    const [memory] = await db.execute(sql`
+      INSERT INTO memories (content, embedding, type, message_id, metadata)
+      VALUES (
+        ${insertMemory.content},
+        ${insertMemory.embedding}::vector,
+        ${insertMemory.type},
+        ${insertMemory.messageId},
+        ${insertMemory.metadata ? JSON.stringify(insertMemory.metadata) : null}::jsonb
+      )
+      RETURNING *
+    `);
+    
+    // Convert the raw result to a Memory object
+    return {
+      id: Number(memory.id),
+      content: String(memory.content),
+      embedding: String(memory.embedding),
+      type: memory.type as 'prompt' | 'response',
+      messageId: memory.message_id ? Number(memory.message_id) : null,
+      timestamp: memory.timestamp as Date,
+      metadata: memory.metadata
+    };
   }
 
   async getMemoryById(id: number): Promise<Memory | undefined> {

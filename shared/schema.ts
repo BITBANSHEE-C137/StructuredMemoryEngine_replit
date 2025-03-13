@@ -37,12 +37,19 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
 // Memory table for storing embeddings
+// Create a vector data type for pgvector
+const vector = customType<{ data: string }>({
+  dataType() {
+    return 'vector';
+  },
+});
+
 export const memories = pgTable(
   "memories", 
   {
     id: serial("id").primaryKey(),
     content: text("content").notNull(),
-    embedding: text("embedding").notNull(), // will be cast to vector in queries
+    embedding: vector("embedding").notNull(), // Vector type for embeddings
     type: text("type").notNull(), // prompt, response, etc.
     messageId: integer("message_id").references(() => messages.id, { onDelete: 'cascade' }),
     timestamp: timestamp("timestamp").defaultNow().notNull(),
