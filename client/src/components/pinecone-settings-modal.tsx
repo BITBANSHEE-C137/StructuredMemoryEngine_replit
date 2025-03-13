@@ -402,8 +402,20 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     }
   };
   
+  // Function to handle modal close request with safety check
+  const handleCloseRequest = () => {
+    // If an operation is in progress, show a confirmation dialog
+    if (!canChangeIndexSettings()) {
+      if (confirm(`A ${currentOperation} operation is currently in progress. Closing this window will not cancel the operation. Continue?`)) {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleCloseRequest}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Pinecone Vector Database Integration</DialogTitle>
@@ -687,8 +699,9 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                               variant="outline" 
                               size="sm"
                               onClick={() => handleWipeIndex(index.name, settings?.namespace || 'default')}
-                              disabled={isLoading}
+                              disabled={isLoading || !canChangeIndexSettings()}
                               className="mr-1"
+                              title={!canChangeIndexSettings() ? "Cannot wipe index during active operation" : ""}
                             >
                               Wipe
                             </Button>
@@ -696,7 +709,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                               variant="destructive" 
                               size="sm"
                               onClick={() => handleDeleteIndex(index.name)}
-                              disabled={isLoading}
+                              disabled={isLoading || !canChangeIndexSettings()}
+                              title={!canChangeIndexSettings() ? "Cannot delete index during active operation" : ""}
                             >
                               Delete
                             </Button>
@@ -829,7 +843,14 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
           <div className="text-sm text-muted-foreground">
             {settings?.isEnabled ? 'Pinecone integration is enabled' : 'Pinecone integration is disabled'}
           </div>
-          <Button onClick={onClose}>Close</Button>
+          <Button onClick={handleCloseRequest}>
+            {currentOperation !== 'none' ? (
+              <span className="flex items-center">
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Close (Operation in Progress)
+              </span>
+            ) : 'Close'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
