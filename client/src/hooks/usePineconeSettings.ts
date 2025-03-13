@@ -241,6 +241,13 @@ export function usePineconeSettings() {
         successMessage += ` (${result.duplicateCount} duplicates skipped, ${result.dedupRate.toFixed(1)}% deduplication rate)`;
       }
       
+      // Add vector count information if available
+      if (result.vectorCount !== undefined) {
+        successMessage += `\nTotal vectors in index: ${result.vectorCount}`;
+      }
+      
+      console.log('Sync operation complete with result:', result);
+      
       toast({
         title: "Success",
         description: successMessage,
@@ -299,6 +306,13 @@ export function usePineconeSettings() {
         
         successMessage += ` (${result.duplicateCount} duplicates detected, ${(dedupRate * 100).toFixed(1)}% deduplication rate)`;
       }
+      
+      // Add vector count information if available
+      if (result.vectorCount !== undefined) {
+        successMessage += `\nProcessed ${result.vectorCount} vectors from index`;
+      }
+      
+      console.log('Hydrate operation complete with result:', result);
       
       toast({
         title: "Success",

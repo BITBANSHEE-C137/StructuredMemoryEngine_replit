@@ -142,13 +142,17 @@ router.post('/sync', async (req: Request, res: Response) => {
       totalProcessed: syncResult.totalProcessed || syncResult.count
     })}`, 'pinecone');
     
-    // Return complete response with all deduplication data
+    // Return complete response with all deduplication data and metadata
     res.json({
       success: syncResult.success,
       count: syncResult.count,
       duplicateCount: syncResult.duplicateCount || 0,
       dedupRate: syncResult.dedupRate || 0,
-      totalProcessed: syncResult.totalProcessed || syncResult.count
+      totalProcessed: syncResult.totalProcessed || syncResult.count,
+      vectorCount: syncResult.vectorCount || 0,
+      indexName: syncResult.indexName || indexName,
+      namespace: syncResult.namespace || namespace,
+      timestamp: syncResult.timestamp || new Date().toISOString()
     });
     
     // Refresh stats after successful sync to update vector counts
@@ -193,6 +197,15 @@ router.post('/hydrate', async (req: Request, res: Response) => {
     }
     
     const result = await storage.hydrateFromPinecone(indexName, namespace, limit);
+    
+    log(`Hydration completed with result: ${JSON.stringify({
+      success: result.success,
+      count: result.count,
+      duplicateCount: result.duplicateCount || 0,
+      dedupRate: result.dedupRate ? result.dedupRate.toFixed(1) + '%' : '0%',
+      totalProcessed: result.totalProcessed || result.count,
+      vectorCount: result.vectorCount || 0
+    })}`, 'pinecone');
     
     res.json(result);
   } catch (error) {
