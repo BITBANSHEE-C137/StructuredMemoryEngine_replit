@@ -207,42 +207,42 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
             Recently stored conversation fragments
           </div>
           
-          <div className="space-y-3">
-            {memories.slice(0, 3).map((memory) => (
-              <div key={memory.id} className="bg-primary/5 rounded-lg p-3 text-xs border border-primary/10">
+          <div>
+            {memories.length > 0 && (
+              <div className="bg-primary/5 rounded-lg p-3 text-xs border border-primary/10">
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-semibold text-primary flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
-                    Memory #{memory.id}
+                    Memory #{memories[0].id}
                   </span>
                   <span className="text-primary/60 text-xs">
-                    {memory.timestamp 
-                      ? format(new Date(memory.timestamp), 'MM/dd HH:mm') 
+                    {memories[0].timestamp 
+                      ? format(new Date(memories[0].timestamp), 'MM/dd HH:mm') 
                       : 'Just now'}
                   </span>
                 </div>
-                <p className="text-primary/80 mb-2 line-clamp-2">{memory.content}</p>
+                <p className="text-primary/80 mb-2">{memories[0].content}</p>
                 <div className="flex items-center justify-between">
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                    memory.type === 'prompt' 
+                    memories[0].type === 'prompt' 
                       ? 'bg-primary/20 text-primary' 
                       : 'bg-primary/10 text-primary/80'
                   }`}>
-                    {memory.type === 'prompt' ? 'USER' : 'AI'}
+                    {memories[0].type === 'prompt' ? 'USER' : 'AI'}
                   </span>
-                  {memory.similarity !== undefined && (
+                  {memories[0].similarity !== undefined && (
                     <span className="text-primary/60 text-[10px] flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
                       </svg>
-                      Similarity: {memory.similarity.toFixed(2)}
+                      Similarity: {memories[0].similarity.toFixed(2)}
                     </span>
                   )}
                 </div>
               </div>
-            ))}
+            )}
           </div>
           
           {/* Pagination controls */}
