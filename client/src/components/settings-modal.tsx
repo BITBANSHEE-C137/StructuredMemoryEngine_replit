@@ -49,15 +49,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     try {
       setClearingMemories(true);
       
-      const result = await apiRequest<{ success: boolean; count: number; message: string }>(
+      const response = await apiRequest(
         API_ROUTES.CLEAR_MEMORIES,
         { method: 'POST' }
       );
       
       toast({
         title: "Memories Cleared",
-        description: result.message,
-        variant: "success"
+        description: response.message || `Successfully cleared ${response.count || 0} memories`,
+        variant: "default"
       });
       
       setShowConfirmClear(false);
@@ -318,15 +318,52 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </p>
             </div>
             
-            <div className="flex items-center">
-              <input 
-                id="auto-clear" 
-                type="checkbox" 
-                checked={autoClearMemories}
-                onChange={(e) => setAutoClearMemories(e.target.checked)}
-                className="h-4 w-4 text-secondary focus:ring-secondary border-neutral-dark rounded"
-              />
-              <label htmlFor="auto-clear" className="ml-2 text-sm">Auto-clear memories after session</label>
+            <div className="mt-6 border-t pt-4 border-neutral-light">
+              <h4 className="text-sm font-medium text-primary mb-2">Memory Management</h4>
+              
+              {!showConfirmClear ? (
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmClear(true)}
+                  className="w-full py-2 px-4 border border-error text-error text-sm rounded hover:bg-error/5 transition-colors"
+                >
+                  Clear All Memories
+                </button>
+              ) : (
+                <div className="bg-error/5 border border-error rounded p-3">
+                  <p className="text-sm text-primary mb-3">
+                    Are you sure you want to clear all memories? This action cannot be undone.
+                  </p>
+                  <div className="flex space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmClear(false)}
+                      className="flex-1 py-1.5 border border-neutral-dark text-primary-light text-sm rounded hover:bg-neutral transition-colors"
+                      disabled={clearingMemories}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearMemories}
+                      className="flex-1 py-1.5 bg-error text-white text-sm rounded hover:bg-error-dark transition-colors flex items-center justify-center"
+                      disabled={clearingMemories}
+                    >
+                      {clearingMemories ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Clearing...
+                        </>
+                      ) : (
+                        "Confirm Clear"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
