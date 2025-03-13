@@ -58,7 +58,7 @@ export function useChatMessages() {
       content,
       role: "user",
       timestamp: new Date().toISOString(),
-      modelId: "text-embedding-ada-002"
+      modelId
     };
     
     setMessages(prev => [...prev, tempUserMessage]);
