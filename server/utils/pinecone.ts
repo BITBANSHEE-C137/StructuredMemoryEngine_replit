@@ -634,39 +634,78 @@ export async function wipePineconeIndex(
     const client = await getPineconeClient();
     const pineconeIndex = client.index(indexName);
     
+    // Get index information to find the correct host
+    let host = '';
+    try {
+      // First try to get the indexes list to find our index's host
+      const indexes = await listPineconeIndexes();
+      const index = indexes.find(idx => idx.name === indexName);
+      if (index && index.host) {
+        host = index.host;
+        log(`Found host for index ${indexName}: ${host}`, 'pinecone');
+      }
+    } catch (hostError) {
+      log(`Failed to retrieve host information: ${hostError}`, 'pinecone');
+      // Continue with other methods
+    }
+    
     // In the latest Pinecone SDK, we need to use a different approach to delete all vectors
     // We'll try multiple methods to adapt to different Pinecone SDK versions
-    try {
-      // Method 1: Using the native API for v1 of Pinecone
-      await fetch(`https://${indexName}-kkp7a93.svc.aped-4627-b74a.pinecone.io/vectors/delete`, {
-        method: 'POST',
-        headers: {
-          'Api-Key': process.env.PINECONE_API_KEY!,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          deleteAll: true,
-          namespace
-        }),
-      });
-      
-      log(`Wiped all vectors from Pinecone index ${indexName} in namespace ${namespace} using direct API`, 'pinecone');
-    } catch (fetchError) {
-      log(`Direct API call failed, falling back to SDK methods: ${fetchError}`, 'pinecone');
-      
-      // Method 2: Try using the standard SDK method if available
-      // Cast to any to bypass TypeScript restrictions
-      const indexAny = pineconeIndex as any;
-      
-      if (typeof indexAny.delete === 'function') {
-        await indexAny.delete({ deleteAll: true, namespace });
-        log(`Wiped all vectors using index.delete method`, 'pinecone');
-      } else if (typeof indexAny._delete === 'function') {
-        await indexAny._delete({ deleteAll: true, namespace });
-        log(`Wiped all vectors using index._delete method`, 'pinecone');
-      } else {
-        // Method 3: Use vector IDs - least efficient but most compatible
-        log(`Falling back to fetching and deleting vectors by ID`, 'pinecone');
+    let success = false;
+    
+    // Method 1: Using the direct delete API if we have the host
+    if (host) {
+      try {
+        const protocol = host.startsWith('http') ? '' : 'https://';
+        const response = await fetch(`${protocol}${host}/vectors/delete`, {
+          method: 'POST',
+          headers: {
+            'Api-Key': process.env.PINECONE_API_KEY!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            deleteAll: true,
+            namespace
+          }),
+        });
+        
+        if (response.ok) {
+          log(`Wiped all vectors from Pinecone index ${indexName} in namespace ${namespace} using direct API`, 'pinecone');
+          success = true;
+        } else {
+          log(`Direct API call failed with status ${response.status}`, 'pinecone');
+        }
+      } catch (fetchError) {
+        log(`Direct API call failed, falling back to SDK methods: ${fetchError}`, 'pinecone');
+      }
+    }
+    
+    // Method 2: Try using the standard SDK method if Method 1 failed
+    if (!success) {
+      try {
+        // Cast to any to bypass TypeScript restrictions
+        const indexAny = pineconeIndex as any;
+        
+        if (typeof indexAny.delete === 'function') {
+          await indexAny.delete({ deleteAll: true, namespace });
+          log(`Wiped all vectors using index.delete method`, 'pinecone');
+          success = true;
+        } else if (typeof indexAny._delete === 'function') {
+          await indexAny._delete({ deleteAll: true, namespace });
+          log(`Wiped all vectors using index._delete method`, 'pinecone');
+          success = true;
+        } else {
+          log(`SDK delete methods not available, falling back to final approach`, 'pinecone');
+        }
+      } catch (sdkError) {
+        log(`SDK delete methods failed: ${sdkError}`, 'pinecone');
+      }
+    }
+    
+    // Method 3: Use vector IDs as a last resort
+    if (!success) {
+      try {
+        log(`Attempting to clear index using describeIndexStats`, 'pinecone');
         const stats = await pineconeIndex.describeIndexStats();
         // Use recordCount (newer SDK) or vectorCount (older SDK) property
         const count = stats.namespaces?.[namespace]?.recordCount || 
@@ -674,16 +713,31 @@ export async function wipePineconeIndex(
         
         if (count > 0) {
           log(`Found ${count} vectors to delete in namespace ${namespace}`, 'pinecone');
-          // We would need to query for all vector IDs and then delete them
-          // This is a fallback if all else fails
-          throw new Error("Could not wipe index using any available method");
+          try {
+            // Try using namespace delete API (newer SDKs)
+            const indexAny = pineconeIndex as any;
+            if (typeof indexAny.deleteNamespace === 'function') {
+              await indexAny.deleteNamespace(namespace);
+              log(`Successfully deleted namespace ${namespace}`, 'pinecone');
+              success = true;
+            } else {
+              throw new Error("deleteNamespace method not available");
+            }
+          } catch (nsError) {
+            log(`Namespace deletion failed: ${nsError}`, 'pinecone');
+            throw new Error("Could not wipe index using any available method");
+          }
         } else {
           log(`No vectors found in namespace ${namespace}, nothing to delete`, 'pinecone');
+          success = true; // Consider this a success if nothing to delete
         }
+      } catch (statsError) {
+        log(`Failed to get index stats: ${statsError}`, 'pinecone');
+        throw new Error("Could not retrieve index statistics");
       }
     }
     
-    return true;
+    return success;
   } catch (error) {
     log(`Error wiping Pinecone index: ${error}`, 'pinecone');
     throw error;
