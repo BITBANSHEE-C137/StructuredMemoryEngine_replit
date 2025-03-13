@@ -914,7 +914,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                             <div>
                               <span className="text-muted-foreground">Vectors Processed:</span>
-                              <span className="ml-1 font-medium">{lastSyncResults.totalProcessed || 0}</span>
+                              <span className="ml-1 font-medium">{lastSyncResults?.totalProcessed !== undefined ? lastSyncResults.totalProcessed : 0}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Successfully Synced:</span>
@@ -948,7 +948,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                             </div>
                           </div>
                           
-                          {lastSyncResults.duplicateCount === 0 && lastSyncResults.totalProcessed > 0 && (
+                          {lastSyncResults.duplicateCount === 0 && lastSyncResults.totalProcessed !== undefined && lastSyncResults.totalProcessed > 0 && (
                             <div className="text-xs mt-1 text-muted-foreground bg-secondary/20 p-1 rounded">
                               <InfoIcon className="h-3 w-3 inline mr-1" />
                               No duplicates found. This could mean either:
@@ -1008,7 +1008,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                   </p>
                   
                   {/* Display hydration results with enhanced UI */}
-                  {lastHydrateResults && (
+                  {lastHydrateResult && (
                     <div className="mt-3 p-3 bg-secondary/30 rounded-md border border-border">
                       <div className="text-sm font-medium mb-2 flex items-center">
                         <DownloadCloud className="h-4 w-4 mr-1 text-blue-500" />
@@ -1022,15 +1022,15 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                             <div>
                               <span className="text-muted-foreground">Vectors Processed:</span>
-                              <span className="ml-1 font-medium">{lastHydrateResults.totalProcessed || 0}</span>
+                              <span className="ml-1 font-medium">{lastHydrateResult.totalProcessed || 0}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Imported to Local:</span>
-                              <span className="ml-1 font-medium">{lastHydrateResults.count}</span>
+                              <span className="ml-1 font-medium">{lastHydrateResult.count}</span>
                             </div>
                             <div className="col-span-2 text-muted-foreground mt-1">
                               <Clock className="h-3 w-3 inline mr-1" />
-                              {lastHydrateResults.timestamp ? new Date(lastHydrateResults.timestamp).toLocaleTimeString() : 'Unknown time'}
+                              {lastHydrateResult.timestamp ? new Date(lastHydrateResult.timestamp).toLocaleTimeString() : 'Unknown time'}
                             </div>
                           </div>
                         </div>
@@ -1041,17 +1041,17 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                             <div>
                               <span className="text-muted-foreground">Duplicates Skipped:</span>
-                              <span className="ml-1 font-medium">{lastHydrateResults.duplicateCount !== undefined ? lastHydrateResults.duplicateCount : 'N/A'}</span>
+                              <span className="ml-1 font-medium">{lastHydrateResult.duplicateCount !== undefined ? lastHydrateResult.duplicateCount : 'N/A'}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Dedup Rate:</span>
                               <span className="ml-1 font-medium">
-                                {lastHydrateResults.dedupRate !== undefined ? `${lastHydrateResults.dedupRate.toFixed(1)}%` : 'N/A'}
+                                {lastHydrateResult.dedupRate !== undefined ? `${lastHydrateResult.dedupRate.toFixed(1)}%` : 'N/A'}
                               </span>
                             </div>
                           </div>
                           
-                          {lastHydrateResults.dedupRate > 0 && (
+                          {lastHydrateResult.dedupRate !== undefined && lastHydrateResult.dedupRate > 0 && (
                             <div className="text-xs mt-1 text-muted-foreground bg-secondary/20 p-1 rounded">
                               <InfoIcon className="h-3 w-3 inline mr-1" />
                               High deduplication rate indicates that many memories were already present in your local database, which means the system is efficiently avoiding duplicates.
@@ -1060,21 +1060,21 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                         </div>
                         
                         {/* Vector Store Status */}
-                        {lastHydrateResults.vectorCount !== undefined && (
+                        {lastHydrateResult.vectorCount !== undefined && (
                           <div className="bg-background/50 p-2 rounded-md border border-border/50">
                             <h4 className="text-xs font-medium mb-1">Vector Store Stats</h4>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                               <div>
                                 <span className="text-muted-foreground">Source Vectors:</span>
-                                <span className="ml-1 font-medium">{lastHydrateResults.vectorCount}</span>
+                                <span className="ml-1 font-medium">{lastHydrateResult.vectorCount}</span>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Source Index:</span>
-                                <span className="ml-1 font-medium">{lastHydrateResults.indexName || selectedIndex}</span>
+                                <span className="ml-1 font-medium">{lastHydrateResult.indexName || selectedIndex}</span>
                               </div>
                               <div>
                                 <span className="text-muted-foreground">Namespace:</span>
-                                <span className="ml-1 font-medium">{lastHydrateResults.namespace || syncNamespace || 'default'}</span>
+                                <span className="ml-1 font-medium">{lastHydrateResult.namespace || syncNamespace || 'default'}</span>
                               </div>
                             </div>
                           </div>
