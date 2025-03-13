@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Check, AlertCircle, Key, CircleAlert, RefreshCw, CheckCircle, Clock } from "lucide-react";
+import { Loader2, Check, AlertCircle, Key, CircleAlert, RefreshCw, CheckCircle, Clock, Info as InfoIcon, Download as DownloadCloud } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { usePineconeSettings } from '@/hooks/usePineconeSettings';
@@ -899,42 +899,88 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                     Pushes all local vector memories to the selected Pinecone index.
                   </p>
                   
-                  {/* Display deduplication stats if available */}
+                  {/* Display deduplication stats with enhanced UI */}
                   {lastSyncResults && (
                     <div className="mt-3 p-3 bg-secondary/30 rounded-md border border-border">
-                      <div className="text-sm font-medium mb-1 flex items-center">
+                      <div className="text-sm font-medium mb-2 flex items-center">
                         <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
                         Last Sync Results
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-muted-foreground">Vectors Synced:</span>
-                          <span className="ml-1 font-medium">{lastSyncResults.count}</span>
+                      
+                      <div className="space-y-3">
+                        {/* Operation Summary */}
+                        <div className="bg-background/50 p-2 rounded-md border border-border/50">
+                          <h4 className="text-xs font-medium mb-1">Operation Summary</h4>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Vectors Processed:</span>
+                              <span className="ml-1 font-medium">{lastSyncResults.totalProcessed || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Successfully Synced:</span>
+                              <span className="ml-1 font-medium">{lastSyncResults.count}</span>
+                            </div>
+                            <div className="col-span-2 text-muted-foreground mt-1">
+                              <Clock className="h-3 w-3 inline mr-1" />
+                              {lastSyncResults.timestamp ? new Date(lastSyncResults.timestamp).toLocaleTimeString() : 'Unknown time'}
+                            </div>
+                          </div>
                         </div>
-                        {lastSyncResults.duplicateCount !== undefined && (
-                          <div>
-                            <span className="text-muted-foreground">Duplicates:</span>
-                            <span className="ml-1 font-medium">{lastSyncResults.duplicateCount}</span>
+                        
+                        {/* Deduplication Stats */}
+                        <div className="bg-background/50 p-2 rounded-md border border-border/50">
+                          <h4 className="text-xs font-medium mb-1">Deduplication Stats</h4>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Duplicates Found:</span>
+                              <span className="ml-1 font-medium">{lastSyncResults.duplicateCount !== undefined ? lastSyncResults.duplicateCount : 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Dedup Rate:</span>
+                              <span className="ml-1 font-medium">
+                                {lastSyncResults.dedupRate !== undefined ? `${lastSyncResults.dedupRate.toFixed(1)}%` : 'N/A'}
+                              </span>
+                              {lastSyncResults.dedupRate === 0 && (
+                                <span className="text-xs ml-1 text-muted-foreground">
+                                  (No duplicates detected)
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        {lastSyncResults.totalProcessed !== undefined && (
-                          <div>
-                            <span className="text-muted-foreground">Total Processed:</span>
-                            <span className="ml-1 font-medium">{lastSyncResults.totalProcessed}</span>
-                          </div>
-                        )}
-                        {lastSyncResults.dedupRate !== undefined && (
-                          <div>
-                            <span className="text-muted-foreground">Dedup Rate:</span>
-                            <span className="ml-1 font-medium">
-                              {lastSyncResults.dedupRate.toFixed(1)}%
-                            </span>
-                          </div>
-                        )}
-                        <div className="col-span-2 text-muted-foreground">
-                          <Clock className="h-3 w-3 inline mr-1" />
-                          {lastSyncResults.timestamp ? new Date(lastSyncResults.timestamp).toLocaleTimeString() : 'Unknown time'}
+                          
+                          {lastSyncResults.duplicateCount === 0 && lastSyncResults.totalProcessed > 0 && (
+                            <div className="text-xs mt-1 text-muted-foreground bg-secondary/20 p-1 rounded">
+                              <InfoIcon className="h-3 w-3 inline mr-1" />
+                              No duplicates found. This could mean either:
+                              <ul className="list-disc list-inside ml-2 mt-1">
+                                <li>There were no duplicate memories to process</li>
+                                <li>All memories were already properly deduplicated</li> 
+                                <li>Memories were automatically overwritten in Pinecone</li>
+                              </ul>
+                            </div>
+                          )}
                         </div>
+                        
+                        {/* Vector Store Status */}
+                        {lastSyncResults.vectorCount !== undefined && (
+                          <div className="bg-background/50 p-2 rounded-md border border-border/50">
+                            <h4 className="text-xs font-medium mb-1">Vector Store Status</h4>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                              <div>
+                                <span className="text-muted-foreground">Total Vectors:</span>
+                                <span className="ml-1 font-medium">{lastSyncResults.vectorCount}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Index:</span>
+                                <span className="ml-1 font-medium">{lastSyncResults.indexName || selectedIndex}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Namespace:</span>
+                                <span className="ml-1 font-medium">{lastSyncResults.namespace || syncNamespace || 'default'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -960,6 +1006,82 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                   <p className="text-xs text-muted-foreground mt-1">
                     Retrieves and merges memories from Pinecone with your local database.
                   </p>
+                  
+                  {/* Display hydration results with enhanced UI */}
+                  {lastHydrateResults && (
+                    <div className="mt-3 p-3 bg-secondary/30 rounded-md border border-border">
+                      <div className="text-sm font-medium mb-2 flex items-center">
+                        <DownloadCloud className="h-4 w-4 mr-1 text-blue-500" />
+                        Last Hydration Results
+                      </div>
+                      
+                      <div className="space-y-3">
+                        {/* Operation Summary */}
+                        <div className="bg-background/50 p-2 rounded-md border border-border/50">
+                          <h4 className="text-xs font-medium mb-1">Operation Summary</h4>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Vectors Processed:</span>
+                              <span className="ml-1 font-medium">{lastHydrateResults.totalProcessed || 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Imported to Local:</span>
+                              <span className="ml-1 font-medium">{lastHydrateResults.count}</span>
+                            </div>
+                            <div className="col-span-2 text-muted-foreground mt-1">
+                              <Clock className="h-3 w-3 inline mr-1" />
+                              {lastHydrateResults.timestamp ? new Date(lastHydrateResults.timestamp).toLocaleTimeString() : 'Unknown time'}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Deduplication Stats */}
+                        <div className="bg-background/50 p-2 rounded-md border border-border/50">
+                          <h4 className="text-xs font-medium mb-1">Deduplication Stats</h4>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <div>
+                              <span className="text-muted-foreground">Duplicates Skipped:</span>
+                              <span className="ml-1 font-medium">{lastHydrateResults.duplicateCount !== undefined ? lastHydrateResults.duplicateCount : 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Dedup Rate:</span>
+                              <span className="ml-1 font-medium">
+                                {lastHydrateResults.dedupRate !== undefined ? `${lastHydrateResults.dedupRate.toFixed(1)}%` : 'N/A'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {lastHydrateResults.dedupRate > 0 && (
+                            <div className="text-xs mt-1 text-muted-foreground bg-secondary/20 p-1 rounded">
+                              <InfoIcon className="h-3 w-3 inline mr-1" />
+                              High deduplication rate indicates that many memories were already present in your local database, which means the system is efficiently avoiding duplicates.
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Vector Store Status */}
+                        {lastHydrateResults.vectorCount !== undefined && (
+                          <div className="bg-background/50 p-2 rounded-md border border-border/50">
+                            <h4 className="text-xs font-medium mb-1">Vector Store Stats</h4>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                              <div>
+                                <span className="text-muted-foreground">Source Vectors:</span>
+                                <span className="ml-1 font-medium">{lastHydrateResults.vectorCount}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Source Index:</span>
+                                <span className="ml-1 font-medium">{lastHydrateResults.indexName || selectedIndex}</span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">Namespace:</span>
+                                <span className="ml-1 font-medium">{lastHydrateResults.namespace || syncNamespace || 'default'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   
                   {/* Debug button */}
                   <Button 
