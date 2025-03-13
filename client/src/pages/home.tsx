@@ -59,6 +59,8 @@ export default function Home() {
   const { settings, isLoading: isSettingsLoading, fetchSettings, updateSettings } = useSettings();
   const { models, isLoading: isModelsLoading, fetchModels } = useModels();
   const { status, isLoading: isStatusLoading, checkApiStatus } = useApiStatus();
+  const { currentOperation } = usePineconeSettings();
+  const isPineconeOperationActive = currentOperation !== 'none';
   
   // Close memory panel on mobile initially
   useEffect(() => {
@@ -183,9 +185,7 @@ export default function Home() {
   
   const isLoading = isMessagesLoading || isSettingsLoading || isModelsLoading;
   
-  // Access the Pinecone operation status
-  const { currentOperation } = usePineconeSettings();
-  const isPineconeOperationActive = currentOperation !== 'none';
+  // Pinecone operation status defined at the top with hooks
   
   return (
     <div className="bg-neutral-light text-primary h-full flex flex-col">
