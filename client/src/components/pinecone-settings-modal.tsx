@@ -231,7 +231,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       return;
     }
     
-    setIsLoading(true);
+    // Use isSyncing temporarily as a general loading state for debug operations
+    setIsSyncing(true);
     try {
       // Refresh stats before fetching vector data to ensure up-to-date counts
       await refreshStats();
@@ -461,14 +462,14 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     } catch (error) {
       console.error('Error in vector debugging:', error);
     } finally {
-      setIsLoading(false);
+      setIsSyncing(false);
     }
   };
   
   // Function to handle modal close request
   const handleCloseRequest = () => {
     // Only allow closing if no operation is in progress
-    if (!isSyncing) {
+    if (!isSyncing && !isHydrating) {
       onClose();
     }
   };
