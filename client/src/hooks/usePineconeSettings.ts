@@ -284,9 +284,21 @@ export function usePineconeSettings() {
         data: { indexName, namespace, limit }
       });
       
+      // Create a detailed success message including deduplication info if available
+      let successMessage = `Successfully hydrated ${result.count} memories from Pinecone`;
+      
+      // Add deduplication information if available
+      if (result.duplicateCount !== undefined && result.totalProcessed !== undefined) {
+        const dedupRate = result.dedupRate !== undefined 
+          ? result.dedupRate 
+          : (result.duplicateCount / result.totalProcessed);
+        
+        successMessage += ` (${result.duplicateCount} duplicates detected, ${(dedupRate * 100).toFixed(1)}% deduplication rate)`;
+      }
+      
       toast({
         title: "Success",
-        description: `Successfully hydrated ${result.count} memories from Pinecone`,
+        description: successMessage,
         variant: "default"
       });
       

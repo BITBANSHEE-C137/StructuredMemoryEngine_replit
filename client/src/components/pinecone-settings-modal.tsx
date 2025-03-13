@@ -48,6 +48,10 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreatingIndex, setIsCreatingIndex] = useState(false);
+  
+  // Track last operation results for deduplication metrics display
+  const [lastSyncResult, setLastSyncResult] = useState<any>(null);
+  const [lastHydrateResult, setLastHydrateResult] = useState<any>(null);
   const [selectedTab, setSelectedTab] = useState('settings');
   
   // Form values for creating a new index
@@ -174,6 +178,18 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     try {
       const result = await hydrateFromPinecone(selectedIndex, syncNamespace, 1000);
       console.log('Hydrate result:', result);
+      
+      // Store the hydrate results for display
+      if (result) {
+        setLastHydrateResult({
+          count: result.count,
+          duplicateCount: result.duplicateCount,
+          dedupRate: result.dedupRate,
+          totalProcessed: result.totalProcessed,
+          timestamp: new Date()
+        });
+      }
+      
       // Refresh stats after hydrate operation completes
       await refreshStats();
     } catch (error) {
@@ -587,6 +603,63 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                     <span className="text-muted-foreground">Active index:</span> {stats.activeIndex || 'None'}
                   </div>
                 </div>
+                
+                {/* Deduplication Statistics - Display the last operation's deduplication metrics */}
+                {(lastSyncResults || lastHydrateResult) && (
+                  <div className="pt-2 mt-2 border-t border-muted-foreground/20">
+                    <h5 className="text-xs font-medium mb-1">Last Operation Deduplication Metrics</h5>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {lastSyncResults && (
+                        <>
+                          <div>
+                            <span className="text-muted-foreground">Sync Operation:</span> {lastSyncResults.count} vectors
+                          </div>
+                          {lastSyncResults.duplicateCount !== undefined && (
+                            <div>
+                              <span className="text-muted-foreground">Duplicates Skipped:</span> {lastSyncResults.duplicateCount}
+                            </div>
+                          )}
+                          {lastSyncResults.dedupRate !== undefined && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Deduplication Rate:</span> {(lastSyncResults.dedupRate * 100).toFixed(1)}%
+                            </div>
+                          )}
+                          {lastSyncResults.timestamp && (
+                            <div className="col-span-2 text-xs text-muted-foreground/80 mt-1">
+                              <Clock className="h-3 w-3 inline mr-1" />
+                              {new Date(lastSyncResults.timestamp).toLocaleTimeString()}
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
+                      {lastHydrateResult && !lastSyncResults && (
+                        <>
+                          <div>
+                            <span className="text-muted-foreground">Hydrate Operation:</span> {lastHydrateResult.count} vectors
+                          </div>
+                          {lastHydrateResult.duplicateCount !== undefined && (
+                            <div>
+                              <span className="text-muted-foreground">Duplicates Detected:</span> {lastHydrateResult.duplicateCount}
+                            </div>
+                          )}
+                          {lastHydrateResult.dedupRate !== undefined && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Deduplication Rate:</span> {(lastHydrateResult.dedupRate * 100).toFixed(1)}%
+                            </div>
+                          )}
+                          {lastHydrateResult.timestamp && (
+                            <div className="col-span-2 text-xs text-muted-foreground/80 mt-1">
+                              <Clock className="h-3 w-3 inline mr-1" />
+                              {new Date(lastHydrateResult.timestamp).toLocaleTimeString()}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 {currentOperation !== 'none' && (
                   <div className="text-xs flex items-center pt-2 border-t border-gray-200 text-rose-600">
                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
