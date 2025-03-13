@@ -231,7 +231,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       return;
     }
     
-    setIsSyncing(true);
+    setIsLoading(true);
     try {
       // Refresh stats before fetching vector data to ensure up-to-date counts
       await refreshStats();
@@ -461,7 +461,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     } catch (error) {
       console.error('Error in vector debugging:', error);
     } finally {
-      setIsSyncing(false);
+      setIsLoading(false);
     }
   };
   
