@@ -195,6 +195,8 @@ export async function upsertMemoriesToPinecone(
     
     // Step 1: Check for existing vectors to detect duplicates
     const existingIds = new Set<string>();
+    const duplicateContents = new Set<string>();
+    
     try {
       // Fetch existing IDs - using batching to avoid rate limits
       const fetchBatchSize = 100;
@@ -214,7 +216,18 @@ export async function upsertMemoriesToPinecone(
             
             if (foundIds.length > 0) {
               log(`Found ${foundIds.length} existing vectors in batch`, 'pinecone');
-              foundIds.forEach(id => existingIds.add(id));
+              foundIds.forEach(id => {
+                existingIds.add(id);
+                
+                // Store content snippets for detailed logging
+                const memory = memoryMap.get(id);
+                if (memory) {
+                  const contentPreview = memory.content.length > 40 
+                    ? `${memory.content.substring(0, 40)}...` 
+                    : memory.content;
+                  duplicateContents.add(contentPreview);
+                }
+              });
             }
           }
         } catch (e) {
@@ -224,11 +237,22 @@ export async function upsertMemoriesToPinecone(
       
       // Count duplicates
       dedupCount = existingIds.size;
-      log(`Found ${dedupCount} duplicate vectors out of ${totalProcessed} total memories`, 'pinecone');
       
       if (dedupCount > 0) {
+        const dedupPercent = ((dedupCount / totalProcessed) * 100).toFixed(1);
+        log(`Found ${dedupCount} duplicate vectors out of ${totalProcessed} total memories (${dedupPercent}%)`, 'pinecone');
+        
+        // Log duplicate content previews
+        if (duplicateContents.size > 0) {
+          const contentExamples = Array.from(duplicateContents).slice(0, 3);
+          log(`Duplicate content samples: ${contentExamples.join(' | ')}${duplicateContents.size > 3 ? '...' : ''}`, 'pinecone');
+        }
+        
+        // Log the IDs
         const duplicateExamples = Array.from(existingIds).slice(0, 5);
-        log(`Duplicate examples: ${duplicateExamples.join(', ')}${existingIds.size > 5 ? '...' : ''}`, 'pinecone');
+        log(`Duplicate IDs: ${duplicateExamples.join(', ')}${existingIds.size > 5 ? '...' : ''}`, 'pinecone');
+      } else {
+        log(`No duplicates found in ${totalProcessed} memories to be synced`, 'pinecone');
       }
     } catch (e) {
       log(`Error checking for duplicates (will continue with upsert): ${e}`, 'pinecone');
@@ -313,21 +337,32 @@ export async function upsertMemoriesToPinecone(
     
     log(`Sync complete. Total: ${totalProcessed}, New: ${newUpsertCount}, Duplicates: ${dedupCount}, Dedup rate: ${dedupRate.toFixed(1)}%`, 'pinecone');
     
+    // Get initial and final vector counts for accurate reporting
+    let initialVectorCount = 0;
+    let currentVectorCount = 0;
+    
     // Verify the vectors were added by checking stats
     try {
       const stats = await pineconeIndex.describeIndexStats();
-      const currentVectorCount = stats.namespaces?.[namespace]?.recordCount || 0;
+      currentVectorCount = stats.namespaces?.[namespace]?.recordCount || 0;
       log(`Index now contains ${currentVectorCount} vectors in namespace ${namespace}`, 'pinecone');
     } catch (statsError) {
       log(`Error checking final vector count: ${statsError}`, 'pinecone');
     }
     
+    const formattedDedupRate = parseFloat(dedupRate.toFixed(2));
+    
+    // Return comprehensive statistics for better UX reporting
     return {
       success: true,
-      upsertedCount: newUpsertCount,
-      duplicateCount: dedupCount,
-      dedupRate: parseFloat(dedupRate.toFixed(2)),
-      totalProcessed
+      count: newUpsertCount,               // Number of new vectors successfully added
+      duplicateCount: dedupCount,          // Number of duplicates detected and skipped
+      dedupRate: formattedDedupRate,       // Percentage of duplicates in the original set
+      totalProcessed,                      // Total number of memories processed
+      vectorCount: currentVectorCount,     // Current vector count in the index
+      indexName,                           // Name of the index
+      namespace,                           // Namespace used
+      timestamp: new Date().toISOString()  // Timestamp of operation completion
     };
   } catch (error) {
     log(`Error upserting memories to Pinecone: ${error}`, 'pinecone');
