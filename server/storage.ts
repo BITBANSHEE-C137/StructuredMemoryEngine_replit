@@ -56,6 +56,10 @@ export interface IStorage {
     duplicateCount?: number; 
     dedupRate?: number; 
     totalProcessed?: number;
+    vectorCount?: number;
+    indexName?: string;
+    namespace?: string;
+    timestamp?: string;
   }>;
   hydrateFromPinecone(indexName: string, namespace?: string, limit?: number): Promise<{ 
     success: boolean; 
@@ -382,6 +386,10 @@ export class DatabaseStorage implements IStorage {
     duplicateCount?: number; 
     dedupRate?: number; 
     totalProcessed?: number;
+    vectorCount?: number;
+    indexName?: string;
+    namespace?: string;
+    timestamp?: string;
   }> {
     try {
       // Check if Pinecone is available
@@ -394,7 +402,17 @@ export class DatabaseStorage implements IStorage {
       const { memories: pgvectorMemories } = await this.getMemories(1, 1000); // Get first 1000 memories
       
       if (pgvectorMemories.length === 0) {
-        return { success: true, count: 0 };
+        return { 
+          success: true, 
+          count: 0,
+          duplicateCount: 0,
+          dedupRate: 0,
+          totalProcessed: 0,
+          vectorCount: 0,
+          indexName,
+          namespace,
+          timestamp: new Date().toISOString()
+        };
       }
 
       // Sync memories to Pinecone with enhanced deduplication tracking
@@ -408,13 +426,17 @@ export class DatabaseStorage implements IStorage {
         lastSyncTimestamp: new Date()
       });
       
-      // Return enhanced response with deduplication stats
+      // Return comprehensive response with all sync statistics
       return { 
         success: result.success, 
-        count: result.upsertedCount,
+        count: result.count,
         duplicateCount: result.duplicateCount,
         dedupRate: result.dedupRate,
-        totalProcessed: result.totalProcessed
+        totalProcessed: result.totalProcessed,
+        vectorCount: result.vectorCount,
+        indexName: result.indexName,
+        namespace: result.namespace,
+        timestamp: result.timestamp
       };
     } catch (error) {
       console.error("Error syncing memories to Pinecone:", error);
@@ -428,6 +450,10 @@ export class DatabaseStorage implements IStorage {
     duplicateCount?: number;
     dedupRate?: number;
     totalProcessed?: number;
+    vectorCount?: number;
+    indexName?: string;
+    namespace?: string;
+    timestamp?: string;
   }> {
     try {
       console.log(`Starting hydration from Pinecone index ${indexName}, namespace ${namespace}, limit ${limit}`);
@@ -453,7 +479,17 @@ export class DatabaseStorage implements IStorage {
         
         if (targetIndex.vectorCount === 0) {
           console.log(`Index ${indexName} exists but contains no vectors. Nothing to hydrate.`);
-          return { success: true, count: 0 };
+          return { 
+            success: true, 
+            count: 0,
+            duplicateCount: 0,
+            dedupRate: 0,
+            totalProcessed: 0,
+            vectorCount: 0,
+            indexName,
+            namespace,
+            timestamp: new Date().toISOString()
+          };
         }
         
         console.log(`Index ${indexName} found with ${targetIndex.vectorCount} vectors total`);
@@ -473,7 +509,17 @@ export class DatabaseStorage implements IStorage {
       
       if (pineconeVectors.length === 0) {
         console.log('No vectors found in Pinecone, nothing to hydrate');
-        return { success: true, count: 0 };
+        return { 
+          success: true, 
+          count: 0,
+          duplicateCount: 0,
+          dedupRate: 0,
+          totalProcessed: 0,
+          vectorCount: 0,
+          indexName,
+          namespace,
+          timestamp: new Date().toISOString()
+        };
       }
 
       // Insert each memory into pgvector
@@ -649,12 +695,30 @@ export class DatabaseStorage implements IStorage {
       console.log(`Hydration from Pinecone completed successfully`);
       console.log(`Deduplication stats: ${duplicateCount} duplicates out of ${totalProcessed} total vectors (${(dedupRate * 100).toFixed(2)}%)`);
       
+      // Get final vector count for reporting
+      let vectorCount = 0;
+      try {
+        const indexes = await listPineconeIndexes();
+        const targetIndex = indexes.find(idx => idx.name === indexName);
+        if (targetIndex) {
+          vectorCount = targetIndex.vectorCount;
+        }
+      } catch (error) {
+        console.error("Error getting final vector count:", error);
+      }
+      
+      const timestamp = new Date().toISOString();
+      
       return { 
         success: true, 
         count: successCount,
         duplicateCount,
-        dedupRate,
-        totalProcessed 
+        dedupRate: parseFloat((dedupRate * 100).toFixed(2)),
+        totalProcessed,
+        vectorCount,
+        indexName,
+        namespace,
+        timestamp
       };
     } catch (error) {
       console.error("Error hydrating from Pinecone:", error);
