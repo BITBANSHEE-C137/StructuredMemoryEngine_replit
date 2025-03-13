@@ -693,7 +693,7 @@ export async function deletePineconeIndex(indexName: string): Promise<boolean> {
 
 /**
  * Wipe all vectors from a Pinecone index or namespace
- * Uses multiple strategies to ensure compatibility with different SDK versions
+ * Completely rewritten to use direct REST API approach for maximum compatibility
  */
 export async function wipePineconeIndex(
   indexName: string, 
@@ -701,174 +701,97 @@ export async function wipePineconeIndex(
 ): Promise<boolean> {
   try {
     log(`Starting operation to wipe Pinecone index ${indexName} in namespace ${namespace}`, 'pinecone');
-    const client = await getPineconeClient();
-    const pineconeIndex = client.index(indexName);
     
-    // Get index information to find the correct host for direct API calls if needed
-    let host = '';
-    try {
-      // First try to get the indexes list to find our index's host
-      const indexes = await listPineconeIndexes();
-      const index = indexes.find(idx => idx.name === indexName);
-      if (index && index.host) {
-        host = index.host;
-        log(`Found host for index ${indexName}: ${host}`, 'pinecone');
-      }
-    } catch (hostError) {
-      log(`Failed to retrieve host information: ${hostError}`, 'pinecone');
-      // Continue with other methods
+    // Step 1: Get the index host from the list of indexes
+    const indexes = await listPineconeIndexes();
+    const index = indexes.find(idx => idx.name === indexName);
+    
+    if (!index || !index.host) {
+      log(`Cannot find host for index ${indexName}`, 'pinecone');
+      return false;
     }
     
-    // Check index stats first to see if there are any vectors
-    let initialStats;
+    const host = index.host;
+    log(`Found host for index ${indexName}: ${host}`, 'pinecone');
+    
+    // Step 2: Get current vector count for verification
     let initialCount = 0;
     try {
-      initialStats = await pineconeIndex.describeIndexStats();
-      initialCount = initialStats.namespaces?.[namespace]?.recordCount || 0;
+      const client = await getPineconeClient();
+      const pineconeIndex = client.index(indexName);
+      const stats = await pineconeIndex.describeIndexStats();
+      initialCount = stats.namespaces?.[namespace]?.recordCount || 0;
       log(`Current vector count in namespace ${namespace}: ${initialCount}`, 'pinecone');
       
-      // If there are no vectors, we're already done
       if (initialCount === 0) {
         log(`Namespace ${namespace} is already empty, no action needed`, 'pinecone');
         return true;
       }
     } catch (statsError) {
-      log(`Failed to get initial index stats: ${statsError}`, 'pinecone');
+      log(`Error getting vector count: ${statsError}. Continuing anyway...`, 'pinecone');
     }
     
-    // In the latest Pinecone SDK, we need to use a different approach to delete all vectors
-    // We'll try multiple methods to adapt to different Pinecone SDK versions
-    let success = false;
-    
-    // Method 1: Try to delete using the latest SDK's method
+    // Step 3: Direct REST API approach - most reliable method
     try {
-      log(`Attempting to delete all vectors using deleteAll method`, 'pinecone');
+      log(`Using direct REST API to delete all vectors`, 'pinecone');
       
-      // Use the official SDK method for the latest version
-      // The signature appears to have changed, so we'll try both with and without parameters
-      if (typeof pineconeIndex.deleteAll === 'function') {
-        try {
-          // First try with namespace
-          await pineconeIndex.deleteAll({
-            namespace: namespace 
-          });
-        } catch (innerError) {
-          // If that fails, try without parameters
-          await pineconeIndex.deleteAll();
-        }
+      // Ensure protocol is included
+      const protocol = host.startsWith('http') ? '' : 'https://';
+      const apiUrl = `${protocol}${host}/vectors/delete`;
+      
+      log(`Making request to: ${apiUrl}`, 'pinecone');
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Api-Key': process.env.PINECONE_API_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deleteAll: true,
+          namespace: namespace
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        log(`API call failed with status ${response.status}: ${errorText}`, 'pinecone');
+        return false;
       }
       
-      log(`Successfully issued deleteAll command for namespace ${namespace}`, 'pinecone');
-      success = true;
-    } catch (deleteAllError) {
-      log(`Error with deleteAll method: ${deleteAllError}. Trying alternative methods...`, 'pinecone');
-    }
-    
-    // Method 2: Using the direct REST API if we have the host
-    if (!success && host) {
-      try {
-        log(`Trying direct REST API call to delete all vectors`, 'pinecone');
-        const protocol = host.startsWith('http') ? '' : 'https://';
-        const response = await fetch(`${protocol}${host}/vectors/delete`, {
-          method: 'POST',
-          headers: {
-            'Api-Key': process.env.PINECONE_API_KEY!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            deleteAll: true,
-            namespace
-          }),
-        });
-        
-        if (response.ok) {
-          log(`Wiped all vectors from Pinecone index ${indexName} in namespace ${namespace} using direct API`, 'pinecone');
-          success = true;
-        } else {
-          const responseText = await response.text();
-          log(`Direct API call failed with status ${response.status}: ${responseText}`, 'pinecone');
-        }
-      } catch (fetchError) {
-        log(`Direct API call failed: ${fetchError}`, 'pinecone');
-      }
-    }
-    
-    // Method 3: Try namespace deletion if supported
-    if (!success) {
-      try {
-        log(`Attempting to delete entire namespace`, 'pinecone');
-        // Cast to any to access potential methods not in the type definition
-        const indexAny = pineconeIndex as any;
-        
-        if (typeof indexAny.deleteNamespace === 'function') {
-          await indexAny.deleteNamespace(namespace);
-          log(`Successfully deleted namespace ${namespace}`, 'pinecone');
-          success = true;
-        } else {
-          log(`deleteNamespace method not available in this SDK version`, 'pinecone');
-        }
-      } catch (nsError) {
-        log(`Namespace deletion failed: ${nsError}`, 'pinecone');
-      }
-    }
-    
-    // Method 4: Try to delete vectors by filter if other methods fail
-    if (!success) {
-      try {
-        log(`Strategy 4: Attempting to delete vectors by filter matching all`, 'pinecone');
-        
-        // Check if delete method exists and handle both signature variants
-        if (typeof pineconeIndex.delete === 'function') {
-          try {
-            // Try with filter and namespace (newer SDK)
-            await pineconeIndex.delete({
-              filter: {
-                // An empty filter should match all vectors
-              },
-              namespace
-            });
-          } catch (deleteError) {
-            log(`Delete with filter and namespace failed: ${deleteError}. Trying alternative delete syntax...`, 'pinecone');
-            
-            // Try with just the filter (older SDK)
-            await pineconeIndex.delete({
-              filter: {}
-            });
-          }
-        } else {
-          log(`Delete method not available on pineconeIndex`, 'pinecone');
-        }
-        
-        log(`Successfully issued delete by filter for all vectors`, 'pinecone');
-        success = true;
-      } catch (filterError) {
-        log(`Filter deletion failed: ${filterError}`, 'pinecone');
-      }
-    }
-    
-    // Verify the deletion was successful by checking stats again
-    try {
-      const finalStats = await pineconeIndex.describeIndexStats();
-      const finalCount = finalStats.namespaces?.[namespace]?.recordCount || 0;
-      log(`Final vector count in namespace ${namespace}: ${finalCount}`, 'pinecone');
+      log(`Successfully issued deleteAll command via REST API`, 'pinecone');
       
-      // If there are no vectors left, consider it a success even if previous methods failed
-      if (finalCount === 0) {
-        success = true;
-        log(`Verified all vectors were successfully removed from namespace ${namespace}`, 'pinecone');
-      } else if (finalCount > 0 && success) {
-        // We thought we succeeded but vectors still exist
-        log(`Warning: Operation reported success but ${finalCount} vectors still exist`, 'pinecone');
-        success = false;
+      // Step 4: Verify deletion by checking stats again
+      // Wait a moment for the deletion to propagate
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      try {
+        const client = await getPineconeClient();
+        const pineconeIndex = client.index(indexName);
+        const finalStats = await pineconeIndex.describeIndexStats();
+        const finalCount = finalStats.namespaces?.[namespace]?.recordCount || 0;
+        
+        log(`Final vector count in namespace ${namespace}: ${finalCount}`, 'pinecone');
+        
+        if (finalCount === 0) {
+          log(`Verified all vectors were successfully removed from namespace ${namespace}`, 'pinecone');
+          return true;
+        } else {
+          log(`Warning: Operation reported success but ${finalCount} vectors still exist`, 'pinecone');
+          return false;
+        }
+      } catch (verifyError) {
+        log(`Failed to verify deletion results: ${verifyError}`, 'pinecone');
+        // Assume success if we can't verify
+        return true;
       }
-    } catch (verifyError) {
-      log(`Failed to verify deletion results: ${verifyError}`, 'pinecone');
+    } catch (apiError) {
+      log(`Error with REST API call: ${apiError}`, 'pinecone');
+      return false;
     }
-    
-    return success;
   } catch (error) {
     log(`Error wiping Pinecone index: ${error}`, 'pinecone');
-    return false; // Return false instead of throwing to allow UI to show error
+    return false;
   }
 }
 
