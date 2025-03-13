@@ -192,7 +192,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     {pineconeStats.lastSyncDedupRate !== undefined && (
                       <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
                         <span className="text-xs font-bold text-primary">
-                          {parseFloat(pineconeStats.lastSyncDedupRate.toString()).toFixed(1)}%
+                          {Number.isFinite(pineconeStats.lastSyncDedupRate) ? parseFloat(pineconeStats.lastSyncDedupRate.toString()).toFixed(1) : "0.0"}%
                         </span>
                         <span className="text-[10px] text-primary/70">Last Sync</span>
                       </div>
@@ -200,7 +200,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     {pineconeStats.lastHydrateDedupRate !== undefined && (
                       <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
                         <span className="text-xs font-bold text-primary">
-                          {parseFloat(pineconeStats.lastHydrateDedupRate.toString()).toFixed(1)}%
+                          {Number.isFinite(pineconeStats.lastHydrateDedupRate) ? parseFloat(pineconeStats.lastHydrateDedupRate.toString()).toFixed(1) : "0.0"}%
                         </span>
                         <span className="text-[10px] text-primary/70">Last Recall</span>
                       </div>
@@ -208,7 +208,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     {pineconeStats.avgDedupRate !== undefined && (
                       <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
                         <span className="text-xs font-bold text-primary">
-                          {parseFloat(pineconeStats.avgDedupRate.toString()).toFixed(1)}%
+                          {Number.isFinite(pineconeStats.avgDedupRate) ? parseFloat(pineconeStats.avgDedupRate.toString()).toFixed(1) : "0.0"}%
                         </span>
                         <span className="text-[10px] text-primary/70">Average</span>
                       </div>
