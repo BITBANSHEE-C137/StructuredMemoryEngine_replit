@@ -291,7 +291,7 @@ async function generateAndInsertTestData() {
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           conversation.prompt,
-          '[-0.01,0.02]', // Placeholder embedding - this would normally be generated
+          JSON.stringify(Array(1536).fill(0).map(() => (Math.random() - 0.5) * 0.01)), // Proper dimension random embedding
           'prompt',
           userMessageId,
           new Date(),
@@ -319,7 +319,7 @@ async function generateAndInsertTestData() {
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           conversation.response,
-          '[-0.01,0.02]', // Placeholder embedding - this would normally be generated
+          JSON.stringify(Array(1536).fill(0).map(() => (Math.random() - 0.5) * 0.01)), // Proper dimension random embedding
           'response',
           assistantMessageId,
           new Date(),
