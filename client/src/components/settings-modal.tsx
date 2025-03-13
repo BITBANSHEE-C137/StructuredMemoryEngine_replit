@@ -171,7 +171,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex justify-between text-primary-light">
                   <span>Models Available</span>
                   <span className="font-medium">
-                    {apiStatus?.providers.anthropic === 'connected' ? '2' : '0'}
+                    {apiStatus?.providers.anthropic === 'connected'
+                      ? models.filter(m => m.provider === 'anthropic').length
+                      : '0'}
                   </span>
                 </div>
               </div>

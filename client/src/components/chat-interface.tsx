@@ -86,68 +86,31 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="bg-gradient-to-r from-primary/5 to-transparent border-b border-primary/10 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex flex-col">
-            <label htmlFor="model-select" className="mb-1 text-sm font-medium text-primary/80">AI Model</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <label className="mb-1 text-sm font-medium text-primary/80">Current Model</label>
+            <div className="relative py-1.5 pl-3 pr-3 text-sm text-primary shadow-sm border border-primary/20 rounded-md bg-white/80 backdrop-blur-sm min-w-[200px]">
+              <div className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary/60 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-              </div>
-              <select 
-                id="model-select" 
-                className="appearance-none bg-white/80 backdrop-blur-sm border border-primary/20 rounded-md py-1.5 pl-10 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent transition-all"
-                value={selectedModelId}
-                onChange={(e) => onModelChange(e.target.value)}
-                disabled={isLoading}
-              >
-                {openaiModels.length > 0 && (
-                  <optgroup label="OpenAI">
-                    {openaiModels.map(model => (
-                      <option key={model.id} value={model.id}>{model.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {anthropicModels.length > 0 && (
-                  <optgroup label="Anthropic">
-                    {anthropicModels.map(model => (
-                      <option key={model.id} value={model.id}>{model.name}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-primary/60">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
+                <span>
+                  {models.find(m => m.id === selectedModelId)?.name || selectedModelId}
+                </span>
               </div>
             </div>
+            <p className="mt-1 text-xs text-primary/60 italic">Set in Settings</p>
           </div>
           
           <div className="flex flex-col">
-            <label htmlFor="embedding-model-select" className="mb-1 text-sm font-medium text-primary/80">Embedding Model</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <label className="mb-1 text-sm font-medium text-primary/80">Embedding Model</label>
+            <div className="relative py-1.5 pl-3 pr-3 text-sm text-primary shadow-sm border border-primary/20 rounded-md bg-white/80 backdrop-blur-sm min-w-[200px]">
+              <div className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-primary/60 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                 </svg>
-              </div>
-              <select 
-                id="embedding-model-select" 
-                className="appearance-none bg-white/80 backdrop-blur-sm border border-primary/20 rounded-md py-1.5 pl-10 pr-10 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent transition-all"
-                value={selectedEmbeddingModelId}
-                onChange={(e) => onEmbeddingModelChange(e.target.value)}
-                disabled={isLoading}
-              >
-                <option value="text-embedding-ada-002">text-embedding-ada-002</option>
-                <option value="text-embedding-3-small">text-embedding-3-small</option>
-                <option value="text-embedding-3-large">text-embedding-3-large</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-primary/60">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
+                <span>{selectedEmbeddingModelId}</span>
               </div>
             </div>
+            <p className="mt-1 text-xs text-primary/60 italic">Set in Settings</p>
           </div>
         </div>
         
