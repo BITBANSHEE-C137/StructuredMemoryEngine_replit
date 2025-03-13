@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Model, ApiStatus } from '@/lib/types';
-import { DEFAULT_SETTINGS } from '@/lib/constants';
+import { DEFAULT_SETTINGS, API_ROUTES, ERROR_MESSAGES } from '@/lib/constants';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -25,16 +27,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [contextSize, setContextSize] = useState(DEFAULT_SETTINGS.contextSize);
   const [similarityThreshold, setSimilarityThreshold] = useState(DEFAULT_SETTINGS.similarityThreshold);
-  const [autoClearMemories, setAutoClearMemories] = useState(DEFAULT_SETTINGS.autoClearMemories);
   const [defaultModelId, setDefaultModelId] = useState(DEFAULT_SETTINGS.defaultModelId);
   const [defaultEmbeddingModelId, setDefaultEmbeddingModelId] = useState(DEFAULT_SETTINGS.defaultEmbeddingModelId);
+  const [clearingMemories, setClearingMemories] = useState(false);
+  const [showConfirmClear, setShowConfirmClear] = useState(false);
+  const { toast } = useToast();
   
   // Sync state with props when settings change
   useEffect(() => {
     if (settings) {
       setContextSize(settings.contextSize);
       setSimilarityThreshold(settings.similarityThreshold);
-      setAutoClearMemories(settings.autoClearMemories);
       setDefaultModelId(settings.defaultModelId || DEFAULT_SETTINGS.defaultModelId);
       setDefaultEmbeddingModelId(settings.defaultEmbeddingModelId || DEFAULT_SETTINGS.defaultEmbeddingModelId);
     }
@@ -42,11 +45,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   
   if (!isOpen) return null;
   
+  const handleClearMemories = async () => {
+    try {
+      setClearingMemories(true);
+      
+      const result = await apiRequest<{ success: boolean; count: number; message: string }>(
+        API_ROUTES.CLEAR_MEMORIES,
+        { method: 'POST' }
+      );
+      
+      toast({
+        title: "Memories Cleared",
+        description: result.message,
+        variant: "success"
+      });
+      
+      setShowConfirmClear(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: ERROR_MESSAGES.CLEAR_MEMORIES,
+        variant: "destructive"
+      });
+      console.error("Error clearing memories:", error);
+    } finally {
+      setClearingMemories(false);
+    }
+  };
+  
   const handleSave = async () => {
     const updated = await onSave({
       contextSize,
       similarityThreshold,
-      autoClearMemories,
       defaultModelId,
       defaultEmbeddingModelId
     });
@@ -61,7 +91,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (reset) {
       setContextSize(reset.contextSize);
       setSimilarityThreshold(reset.similarityThreshold);
-      setAutoClearMemories(reset.autoClearMemories);
       setDefaultModelId(reset.defaultModelId || DEFAULT_SETTINGS.defaultModelId);
       setDefaultEmbeddingModelId(reset.defaultEmbeddingModelId || DEFAULT_SETTINGS.defaultEmbeddingModelId);
     }

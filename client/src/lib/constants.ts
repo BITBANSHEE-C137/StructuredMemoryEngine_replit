@@ -26,7 +26,8 @@ export const API_ROUTES = {
   MODELS: "/api/models",
   MODELS_ENABLED: "/api/models/enabled",
   SETTINGS: "/api/settings",
-  HEALTH: "/api/health"
+  HEALTH: "/api/health",
+  CLEAR_MEMORIES: "/api/memories/clear"
 };
 
 export const ERROR_MESSAGES = {
@@ -35,5 +36,6 @@ export const ERROR_MESSAGES = {
   FETCH_SETTINGS: "Failed to load settings",
   SEND_MESSAGE: "Failed to send message",
   UPDATE_SETTINGS: "Failed to update settings",
-  FETCH_API_STATUS: "Failed to check API status"
+  FETCH_API_STATUS: "Failed to check API status",
+  CLEAR_MEMORIES: "Failed to clear memories"
 };

@@ -379,15 +379,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 - Default Embedding Model: ${settings.defaultEmbeddingModelId}
 - Context Size: ${settings.contextSize} memories per query
 - Similarity Threshold: ${settings.similarityThreshold}
-- Auto-Clear Memories: ${settings.autoClearMemories ? 'Enabled' : 'Disabled'}
 
-These settings determine how the system processes your queries and retrieves relevant context from past conversations.`
+These settings determine how the system processes your queries and retrieves relevant context from past conversations. You can manually clear all memories through the settings menu.`
       };
     }
     
     // Not a system query
     return false;
   }
+
+  // Clear all memories endpoint
+  router.post("/memories/clear", async (req, res) => {
+    try {
+      const result = await storage.clearAllMemories();
+      res.json({ success: true, count: result.count, message: `Successfully cleared ${result.count} memories` });
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
 
   // Register all routes with /api prefix
   app.use("/api", router);
