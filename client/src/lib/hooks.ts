@@ -54,7 +54,7 @@ export function useChatMessages() {
     
     // Optimistically add user message to state
     const tempUserMessage: Message = {
-      id: Date.now(), // Temporary ID
+      id: -Date.now(), // Temporary negative ID
       content,
       role: "user",
       timestamp: new Date().toISOString(),
@@ -71,12 +71,22 @@ export function useChatMessages() {
       
       const data = await response.json();
       
-      // Replace the temp message with the actual one and add the assistant's response
+      // Update messages with the real data from API
       setMessages(prev => {
         // Filter out the temporary message
         const filtered = prev.filter(msg => msg.id !== tempUserMessage.id);
-        // Add the real user message and the assistant message
-        return [...filtered, data.message];
+        
+        // Get the user message and assistant message
+        const userMessage = {
+          id: Math.abs(tempUserMessage.id),
+          content,
+          role: "user",
+          timestamp: new Date().toISOString(),
+          modelId
+        };
+        
+        // Add both real messages in correct order
+        return [...filtered, userMessage, data.message];
       });
       
       // Return the context for memory panel

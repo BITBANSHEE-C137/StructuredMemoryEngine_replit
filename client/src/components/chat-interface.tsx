@@ -127,32 +127,56 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         )}
       </div>
       
-      {/* Chat Messages Area */}
+      {/* Chat Messages Area - ChatGPT-style */}
       <div className="chat-container flex flex-col h-[calc(100vh-64px)]">
-        <div className="chat-messages flex-1 overflow-y-auto p-5 space-y-6 bg-gradient-to-b from-white to-primary/5">
-          {displayMessages.map((message, i) => (
-            <ChatMessage 
-              key={message.id} 
-              message={message}
-              relevantMemories={relevantMemoriesMap[message.id]}
-              isLast={i === displayMessages.length - 1}
-            />
-          ))}
-          
-          {/* Loading indicator */}
-          {isLoading && (
-            <div className="flex justify-center py-4 max-w-4xl mx-auto">
-              <div className="flex items-center bg-white/80 backdrop-blur-sm px-5 py-3 rounded-xl border border-primary/10 shadow-sm text-primary/70">
-                <div className="mr-3">
-                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        <div className="chat-messages flex-1 overflow-y-auto p-4 bg-white">
+          <div className="max-w-3xl mx-auto space-y-4 pb-20">
+            {/* Welcome message if no messages */}
+            {messages.length === 0 && (
+              <div className="text-center my-12 py-8">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/90 to-primary mx-auto flex items-center justify-center text-white mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                   </svg>
                 </div>
-                <div className="text-sm font-medium">Generating response...</div>
+                <h2 className="text-xl font-semibold text-primary/90 mb-2">Welcome to Structured Memory Engine</h2>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  I'm your context-aware assistant that remembers our conversations. Start by asking a question!
+                </p>
               </div>
-            </div>
-          )}
+            )}
+            
+            {/* Display messages in order (always chronological - newest at bottom) */}
+            {displayMessages.map((message, i) => (
+              <ChatMessage 
+                key={message.id} 
+                message={message}
+                relevantMemories={relevantMemoriesMap[message.id]}
+                isLast={i === displayMessages.length - 1}
+              />
+            ))}
+            
+            {/* Loading indicator at the bottom like ChatGPT */}
+            {isLoading && (
+              <div className="flex items-start max-w-3xl mx-auto">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary/90 to-primary/80 shadow-md flex items-center justify-center text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <div className="ml-4 max-w-3xl px-5 py-4 rounded-2xl bg-white border border-primary/10 rounded-tl-none shadow-sm">
+                  <div className="flex items-center">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                      <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '100ms' }}></div>
+                      <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: '200ms' }}></div>
+                    </div>
+                    <span className="ml-3 text-sm text-primary/60">Generating response...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           
           {/* Auto-scroll element */}
           <div ref={messagesEndRef} />
