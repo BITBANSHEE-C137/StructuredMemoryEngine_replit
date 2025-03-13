@@ -147,10 +147,15 @@ export async function upsertMemoriesToPinecone(
   namespace: string = 'default'
 ): Promise<{ 
   success: boolean; 
-  upsertedCount: number;
+  count: number;  // Primary count field 
+  upsertedCount: number; // Alias for backward compatibility
   duplicateCount: number;
   dedupRate: number;
   totalProcessed: number;
+  vectorCount: number;
+  indexName: string;
+  namespace: string;
+  timestamp: string;
 }> {
   log(`Starting memory sync to Pinecone index ${indexName}, namespace ${namespace}`, 'pinecone');
   log(`Processing ${memories.length} memory items for sync`, 'pinecone');
@@ -202,36 +207,65 @@ export async function upsertMemoriesToPinecone(
       const fetchBatchSize = 100;
       log(`Checking for duplicates in ${generatedIds.length} vectors`, 'pinecone');
       
-      for (let i = 0; i < generatedIds.length; i += fetchBatchSize) {
-        const idBatch = generatedIds.slice(i, i + fetchBatchSize);
-        try {
-          log(`Checking batch ${Math.floor(i / fetchBatchSize) + 1} of ${Math.ceil(generatedIds.length / fetchBatchSize)} for duplicates`, 'pinecone');
-          const existingVectors = await pineconeIndex.fetch(idBatch);
-          
-          // Track existing vectors
-          if (existingVectors) {
-            // Handle different SDK response formats
-            const vectors = existingVectors.vectors || existingVectors.records || {};
-            const foundIds = Object.keys(vectors);
+      // Check both blank and specified namespace for duplicates
+      const namespacesToCheck = namespace === "" ? [""] : [namespace, ""];
+      log(`Will check ${namespacesToCheck.length} namespaces for duplicates: [${namespacesToCheck.join(", ")}]`, 'pinecone');
+      
+      for (const namespaceToCheck of namespacesToCheck) {
+        log(`Checking namespace '${namespaceToCheck || "blank"}' for duplicates`, 'pinecone');
+        
+        for (let i = 0; i < generatedIds.length; i += fetchBatchSize) {
+          const idBatch = generatedIds.slice(i, i + fetchBatchSize);
+          try {
+            log(`Checking batch ${Math.floor(i / fetchBatchSize) + 1} of ${Math.ceil(generatedIds.length / fetchBatchSize)} for duplicates in namespace '${namespaceToCheck || "blank"}'`, 'pinecone');
             
-            if (foundIds.length > 0) {
-              log(`Found ${foundIds.length} existing vectors in batch`, 'pinecone');
-              foundIds.forEach(id => {
-                existingIds.add(id);
-                
-                // Store content snippets for detailed logging
-                const memory = memoryMap.get(id);
-                if (memory) {
-                  const contentPreview = memory.content.length > 40 
-                    ? `${memory.content.substring(0, 40)}...` 
-                    : memory.content;
-                  duplicateContents.add(contentPreview);
-                }
+            // Try different fetch methods to account for SDK differences
+            let existingVectors;
+            try {
+              // Method 1: Try with namespace parameter (newer SDK)
+              existingVectors = await pineconeIndex.fetch({ 
+                ids: idBatch,
+                namespace: namespaceToCheck 
               });
+            } catch (fetchError) {
+              try {
+                // Method 2: Try older SDK format
+                existingVectors = await pineconeIndex.fetch(idBatch, { namespace: namespaceToCheck });
+              } catch (fetchError2) {
+                // Method 3: Try without namespace (for blank namespace)
+                if (namespaceToCheck === "") {
+                  existingVectors = await pineconeIndex.fetch(idBatch);
+                } else {
+                  throw fetchError2;
+                }
+              }
             }
+            
+            // Track existing vectors
+            if (existingVectors) {
+              // Handle different SDK response formats
+              const vectors = existingVectors.vectors || existingVectors.records || {};
+              const foundIds = Object.keys(vectors);
+              
+              if (foundIds.length > 0) {
+                log(`Found ${foundIds.length} existing vectors in batch (namespace: '${namespaceToCheck || "blank"}')`, 'pinecone');
+                foundIds.forEach(id => {
+                  existingIds.add(id);
+                  
+                  // Store content snippets for detailed logging
+                  const memory = memoryMap.get(id);
+                  if (memory) {
+                    const contentPreview = memory.content.length > 40 
+                      ? `${memory.content.substring(0, 40)}...` 
+                      : memory.content;
+                    duplicateContents.add(contentPreview);
+                  }
+                });
+              }
+            }
+          } catch (e) {
+            log(`Error in duplicate check batch (continuing): ${e}`, 'pinecone');
           }
-        } catch (e) {
-          log(`Error in duplicate check batch (continuing): ${e}`, 'pinecone');
         }
       }
       
@@ -341,11 +375,33 @@ export async function upsertMemoriesToPinecone(
     let initialVectorCount = 0;
     let currentVectorCount = 0;
     
-    // Verify the vectors were added by checking stats
+    // Verify the vectors were added by checking stats for both blank and specified namespace
     try {
       const stats = await pineconeIndex.describeIndexStats();
-      currentVectorCount = stats.namespaces?.[namespace]?.recordCount || 0;
-      log(`Index now contains ${currentVectorCount} vectors in namespace ${namespace}`, 'pinecone');
+      
+      // Get counts from both blank and specified namespace
+      const blankNamespaceCount = stats.namespaces?.['']?.recordCount || 0;
+      const specifiedNamespaceCount = stats.namespaces?.[namespace]?.recordCount || 0;
+      
+      // Log both counts for debugging
+      if (namespace !== '') {
+        log(`Index stats - blank namespace: ${blankNamespaceCount} vectors, ${namespace} namespace: ${specifiedNamespaceCount} vectors`, 'pinecone');
+      }
+      
+      // Use the count from whichever namespace has vectors
+      if (specifiedNamespaceCount > 0) {
+        currentVectorCount = specifiedNamespaceCount;
+        log(`Index now contains ${currentVectorCount} vectors in namespace "${namespace}"`, 'pinecone');
+      } else if (blankNamespaceCount > 0) {
+        currentVectorCount = blankNamespaceCount;
+        log(`Index now contains ${currentVectorCount} vectors in blank namespace (no records in "${namespace}")`, 'pinecone');
+        
+        // Report the blank namespace as the actual used namespace for clarity
+        namespace = '';
+      } else {
+        currentVectorCount = 0;
+        log(`Index contains no vectors in either blank namespace or "${namespace}" namespace`, 'pinecone');
+      }
     } catch (statsError) {
       log(`Error checking final vector count: ${statsError}`, 'pinecone');
     }
