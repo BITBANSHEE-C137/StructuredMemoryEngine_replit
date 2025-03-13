@@ -64,12 +64,13 @@ export function useChatMessages() {
     setMessages(prev => [...prev, tempUserMessage]);
     
     try {
-      const response = await apiRequest("POST", API_ROUTES.CHAT, { 
-        content, 
-        modelId 
+      const response = await apiRequest(API_ROUTES.CHAT, {
+        method: 'POST',
+        data: { 
+          content, 
+          modelId 
+        }
       });
-      
-      const data = await response.json();
       
       // Update messages with the real data from API
       setMessages(prev => {
@@ -86,11 +87,11 @@ export function useChatMessages() {
         };
         
         // Add both real messages in correct order
-        return [...filtered, userMessage, data.message];
+        return [...filtered, userMessage, response.message];
       });
       
       // Return the context for memory panel
-      return data.context;
+      return response.context;
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -150,14 +151,16 @@ export function useSettings() {
   const updateSettings = useCallback(async (updatedSettings: Partial<Settings>) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", API_ROUTES.SETTINGS, updatedSettings);
-      const data = await response.json();
-      setSettings(data);
+      const response = await apiRequest(API_ROUTES.SETTINGS, {
+        method: 'PATCH',
+        data: updatedSettings
+      });
+      setSettings(response);
       toast({
         title: "Success",
         description: "Settings updated successfully"
       });
-      return data;
+      return response;
     } catch (error) {
       console.error("Error updating settings:", error);
       toast({

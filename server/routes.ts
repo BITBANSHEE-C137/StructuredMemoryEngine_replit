@@ -72,6 +72,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       handleError(err, res);
     }
   });
+  
+  // Add PATCH endpoint to support client's expectation
+  router.patch("/settings", authMiddleware, async (req, res) => {
+    try {
+      const validatedData = insertSettingsSchema.parse(req.body);
+      const settings = await storage.updateSettings(validatedData);
+      res.json(settings);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
 
   // Get all models
   router.get("/models", async (req, res) => {
