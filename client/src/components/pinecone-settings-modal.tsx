@@ -342,6 +342,15 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                               </Badge>
                             )}
                             <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleWipeIndex(index.name, settings?.namespace || 'default')}
+                              disabled={isLoading}
+                              className="mr-1"
+                            >
+                              Wipe
+                            </Button>
+                            <Button 
                               variant="destructive" 
                               size="sm"
                               onClick={() => handleDeleteIndex(index.name)}
