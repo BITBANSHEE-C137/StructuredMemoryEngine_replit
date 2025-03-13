@@ -113,7 +113,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </span>
               </div>
             </div>
-            <p className="mt-1 text-xs text-primary/60 italic">Set in Settings</p>
           </div>
           
           <div className="flex flex-col">

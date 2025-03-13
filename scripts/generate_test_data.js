@@ -16,8 +16,10 @@
  * 2. The script inserts data directly into the database
  */
 
-const { Client } = require('pg');
-const crypto = require('crypto');
+import pg from 'pg';
+import crypto from 'crypto';
+
+const { Client } = pg;
 
 // Database configuration - reads from environment variables
 const dbConfig = {
@@ -237,8 +239,8 @@ async function generateAndInsertTestData() {
   try {
     // First, clear existing test data
     console.log('Clearing existing test data...');
-    await client.query('DELETE FROM memories WHERE metadata->\'source\' = \'test_generator\'');
-    await client.query('DELETE FROM messages WHERE content LIKE \'%[Test Data]%\'');
+    await client.query("DELETE FROM memories WHERE metadata->>'source' = 'test_generator'");
+    await client.query("DELETE FROM messages WHERE content LIKE '%[Test Data]%'");
     
     // Generate original conversations
     const originalCount = Math.floor(TOTAL_CONVERSATIONS * (1 - DUPLICATION_RATE));
@@ -349,9 +351,8 @@ async function generateAndInsertTestData() {
   }
 }
 
-// Execute the function if this script is run directly
-if (require.main === module) {
-  generateAndInsertTestData().catch(console.error);
-}
+// Execute the function
+generateAndInsertTestData().catch(console.error);
 
-module.exports = { generateAndInsertTestData };
+// Export for potential imports from other modules
+export { generateAndInsertTestData };
