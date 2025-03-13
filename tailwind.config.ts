@@ -5,62 +5,116 @@ export default {
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          '"Inter var"',
+          'Inter',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          'Roboto',
+          '"Helvetica Neue"',
+          'Arial',
+          'sans-serif',
+        ],
+      },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--app-radius)",
+        md: "calc(var(--app-radius) - 0.125rem)",
+        sm: "calc(var(--app-radius) - 0.25rem)",
       },
       colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        // Map our app- variables to Tailwind's color system
+        app: {
+          primary: "hsl(var(--app-primary))",
+          "primary-foreground": "hsl(var(--app-primary-foreground))",
+          "primary-hover": "hsl(var(--app-primary-hover))",
+          
+          secondary: "hsl(var(--app-secondary))",
+          "secondary-foreground": "hsl(var(--app-secondary-foreground))",
+          
+          success: "hsl(var(--app-success))",
+          info: "hsl(var(--app-info))",
+          warning: "hsl(var(--app-warning))",
+          danger: "hsl(var(--app-danger))"
+        },
+        
+        // Legacy system
+        background: "hsl(var(--app-background))",
+        foreground: "hsl(var(--app-foreground))",
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: "hsl(var(--app-card))",
+          foreground: "hsl(var(--app-card-foreground))",
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: "hsl(var(--app-card))",
+          foreground: "hsl(var(--app-card-foreground))",
         },
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: "hsl(var(--app-primary))",
+          foreground: "hsl(var(--app-primary-foreground))",
+          light: "hsl(var(--app-muted-foreground))",
+          dark: "hsl(var(--app-primary-hover))",
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "hsl(var(--app-info))",
+          foreground: "hsl(var(--app-primary-foreground))",
+          dark: "hsl(202 94% 45%)",
+        },
+        success: {
+          DEFAULT: "hsl(var(--app-success))",
+        },
+        error: {
+          DEFAULT: "hsl(var(--app-danger))",
+          dark: "hsl(0 84% 55%)",
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: "hsl(var(--app-muted))",
+          foreground: "hsl(var(--app-muted-foreground))",
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: "hsl(var(--app-accent))",
+          foreground: "hsl(var(--app-accent-foreground))",
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: "hsl(var(--app-danger))",
+          foreground: "hsl(var(--app-primary-foreground))",
         },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
+        neutral: {
+          DEFAULT: "hsl(var(--app-muted))",
+          dark: "hsl(var(--app-border))",
+          light: "hsl(210 40% 98%)",
+        },
+        border: "hsl(var(--app-border))",
+        input: "hsl(var(--app-border))",
+        ring: "hsl(var(--app-primary))",
+        
+        // Chart colors
         chart: {
-          "1": "hsl(var(--chart-1))",
-          "2": "hsl(var(--chart-2))",
-          "3": "hsl(var(--chart-3))",
-          "4": "hsl(var(--chart-4))",
-          "5": "hsl(var(--chart-5))",
+          "1": "hsl(var(--app-primary))",
+          "2": "hsl(var(--app-info))",
+          "3": "hsl(var(--app-success))",
+          "4": "hsl(var(--app-warning))",
+          "5": "hsl(var(--app-danger))",
         },
+        
+        // Sidebar colors
         sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
+          DEFAULT: "hsl(var(--app-sidebar-background))",
+          foreground: "hsl(var(--app-sidebar-foreground))",
+          primary: "hsl(var(--app-primary))",
+          "primary-foreground": "hsl(var(--app-primary-foreground))",
+          accent: "hsl(var(--app-accent))",
+          "accent-foreground": "hsl(var(--app-accent-foreground))",
+          border: "hsl(var(--app-sidebar-border))",
+          ring: "hsl(var(--app-primary))",
         },
+      },
+      boxShadow: {
+        'app-sm': '0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)',
+        'app': '0 0.5rem 1rem rgba(0, 0, 0, 0.08)',
+        'app-lg': '0 1rem 3rem rgba(0, 0, 0, 0.1)',
       },
       keyframes: {
         "accordion-down": {
