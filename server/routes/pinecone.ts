@@ -4,7 +4,8 @@ import {
   listPineconeIndexes, 
   createPineconeIndexIfNotExists, 
   deletePineconeIndex,
-  wipePineconeIndex 
+  wipePineconeIndex,
+  fetchAllVectorsFromIndex
 } from '../utils/pinecone';
 import { log } from '../vite';
 
@@ -236,6 +237,59 @@ router.get('/stats', async (_req: Request, res: Response) => {
   } catch (error) {
     log(`Error fetching Pinecone stats: ${error}`, 'pinecone');
     res.status(500).json({ error: 'Failed to fetch Pinecone stats' });
+  }
+});
+
+// Get direct vector data from a specific index
+router.get('/indexes/:name/vectors', async (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+    const { namespace = 'default', limit = 100 } = req.query;
+    
+    const isPineconeAvailable = await storage.isPineconeAvailable();
+    
+    if (!isPineconeAvailable) {
+      return res.status(503).json({ 
+        error: 'Pinecone service is not available',
+        message: 'Check your API key and connection'
+      });
+    }
+    
+    const vectors = await fetchAllVectorsFromIndex(
+      name, 
+      namespace as string, 
+      parseInt(limit as string) || 100
+    );
+    
+    // Return the vectors but limit metadata size for response performance
+    const simplifiedVectors = vectors.map(v => ({
+      id: v.id,
+      score: v.score,
+      hasValues: Array.isArray(v.values) && v.values.length > 0,
+      valuesDimension: Array.isArray(v.values) ? v.values.length : 0,
+      metadata: v.metadata ? {
+        type: v.metadata.type,
+        messageId: v.metadata.messageId,
+        content: typeof v.metadata.content === 'string' && v.metadata.content.length > 100 
+          ? v.metadata.content.substring(0, 100) + '...' 
+          : v.metadata.content,
+        ...v.metadata
+      } : null
+    }));
+    
+    res.json({
+      indexName: name,
+      namespace: namespace,
+      count: vectors.length,
+      vectors: simplifiedVectors,
+      rawSample: vectors.length > 0 ? vectors[0] : null
+    });
+  } catch (error) {
+    log(`Error fetching vectors from index ${req.params.name}: ${error}`, 'pinecone');
+    res.status(500).json({ 
+      error: 'Failed to fetch vectors',
+      message: error instanceof Error ? error.message : String(error)
+    });
   }
 });
 

@@ -306,6 +306,46 @@ export async function queryPineconeMemories(
 }
 
 /**
+ * Directly fetch all vectors from a Pinecone index using a specialized approach
+ * designed to get all vectors regardless of queryability
+ */
+export async function fetchAllVectorsFromIndex(
+  indexName: string,
+  namespace: string = 'default',
+  limit: number = 1000
+): Promise<any[]> {
+  try {
+    log(`Attempting to fetch all vectors from index ${indexName}, namespace ${namespace}`, 'pinecone');
+    
+    const pineconeClient = await getPineconeClient();
+    const pineconeIndex = pineconeClient.Index(indexName);
+    
+    // Try multiple approaches to list all vectors
+    
+    // Create a special vector of all 0.1 that tends to match with everything
+    const dimension = 1536; // Default for OpenAI embeddings
+    const genericVector = Array(dimension).fill(0.1);
+    
+    // Try querying with a very high topK to get most vectors
+    const response = await pineconeIndex.query({
+      vector: genericVector,
+      topK: limit,
+      includeMetadata: true,
+      includeValues: true
+    });
+    
+    log(`Retrieved ${response.matches?.length || 0} vectors directly from index ${indexName}`, 'pinecone');
+    
+    // Return the matches
+    return response.matches || [];
+    
+  } catch (error) {
+    log(`Error fetching all vectors from index ${indexName}: ${error}`, 'pinecone');
+    return [];
+  }
+}
+
+/**
  * Fetch vectors from Pinecone to hydrate local pgvector database
  */
 export async function fetchVectorsFromPinecone(

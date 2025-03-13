@@ -412,6 +412,27 @@ export class DatabaseStorage implements IStorage {
         console.error('Pinecone is not available. Check API key and connection.');
         throw new Error('Pinecone is not available. Check API key and connection.');
       }
+      
+      // Verify the index exists and has vectors
+      try {
+        console.log(`Verifying index ${indexName} exists and has vectors...`);
+        const indexes = await listPineconeIndexes();
+        const targetIndex = indexes.find(idx => idx.name === indexName);
+        
+        if (!targetIndex) {
+          throw new Error(`Index ${indexName} does not exist in Pinecone`);
+        }
+        
+        if (targetIndex.vectorCount === 0) {
+          console.log(`Index ${indexName} exists but contains no vectors. Nothing to hydrate.`);
+          return { success: true, count: 0 };
+        }
+        
+        console.log(`Index ${indexName} found with ${targetIndex.vectorCount} vectors total`);
+      } catch (indexError) {
+        console.error(`Error verifying index: ${indexError}`);
+        // Continue anyway as we'll try to fetch directly
+      }
 
       // Important: We're no longer clearing all memories before hydrating
       // This preserves local memories and just merges in Pinecone data
