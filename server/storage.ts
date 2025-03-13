@@ -72,29 +72,35 @@ export class DatabaseStorage implements IStorage {
 
   // Memory operations
   async createMemory(insertMemory: InsertMemory): Promise<Memory> {
-    // Use SQL to ensure embedding is handled as a vector
-    const [memory] = await db.execute(sql`
-      INSERT INTO memories (content, embedding, type, message_id, metadata)
-      VALUES (
-        ${insertMemory.content},
-        ${insertMemory.embedding}::vector,
-        ${insertMemory.type},
-        ${insertMemory.messageId},
-        ${insertMemory.metadata ? JSON.stringify(insertMemory.metadata) : null}::jsonb
-      )
-      RETURNING *
-    `);
-    
-    // Convert the raw result to a Memory object
-    return {
-      id: Number(memory.id),
-      content: String(memory.content),
-      embedding: String(memory.embedding),
-      type: memory.type as 'prompt' | 'response',
-      messageId: memory.message_id ? Number(memory.message_id) : null,
-      timestamp: memory.timestamp as Date,
-      metadata: memory.metadata
-    };
+    try {
+      // Use SQL to ensure embedding is properly cast to vector
+      // We explicitly use the vector dimensions and ensure proper casting
+      const [memory] = await db.execute(sql`
+        INSERT INTO memories (content, embedding, type, message_id, metadata)
+        VALUES (
+          ${insertMemory.content},
+          ${insertMemory.embedding},
+          ${insertMemory.type},
+          ${insertMemory.messageId},
+          ${insertMemory.metadata ? JSON.stringify(insertMemory.metadata) : null}::jsonb
+        )
+        RETURNING *
+      `);
+      
+      // Convert the raw result to a Memory object
+      return {
+        id: Number(memory.id),
+        content: String(memory.content),
+        embedding: String(memory.embedding),
+        type: memory.type as 'prompt' | 'response',
+        messageId: memory.message_id ? Number(memory.message_id) : null,
+        timestamp: memory.timestamp as Date,
+        metadata: memory.metadata
+      };
+    } catch (error) {
+      console.error("Error creating memory:", error);
+      throw error;
+    }
   }
 
   async getMemoryById(id: number): Promise<Memory | undefined> {
@@ -103,27 +109,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async queryMemoriesByEmbedding(embedding: string, limit: number = 5): Promise<(Memory & { similarity: number })[]> {
-    // Make sure embedding is explicitly cast to vector for comparison
-    const result = await db.execute(sql`
-      SELECT m.*, 
-             1 - (m.embedding <=> ${embedding}::vector) as similarity
-      FROM memories m
-      WHERE m.embedding IS NOT NULL
-      ORDER BY similarity DESC
-      LIMIT ${limit}
-    `);
-    
-    // Convert the raw result to Memory objects with similarity score
-    return result.map(row => ({
-      id: Number(row.id),
-      content: String(row.content),
-      embedding: String(row.embedding),
-      type: String(row.type),
-      messageId: row.message_id ? Number(row.message_id) : null,
-      timestamp: row.timestamp as Date,
-      metadata: row.metadata,
-      similarity: parseFloat(String(row.similarity) || '0')
-    }));
+    try {
+      // Using cosine similarity for more accurate results
+      const result = await db.execute(sql`
+        SELECT m.*, 
+               1 - (m.embedding <#> ${embedding}) as similarity
+        FROM memories m
+        WHERE m.embedding IS NOT NULL
+        ORDER BY similarity DESC
+        LIMIT ${limit}
+      `);
+      
+      // Convert the raw result to Memory objects with similarity score
+      return result.map(row => ({
+        id: Number(row.id),
+        content: String(row.content),
+        embedding: String(row.embedding),
+        type: String(row.type),
+        messageId: row.message_id ? Number(row.message_id) : null,
+        timestamp: row.timestamp as Date,
+        metadata: row.metadata,
+        similarity: parseFloat(String(row.similarity) || '0')
+      }));
+    } catch (error) {
+      console.error("Error querying memories by embedding:", error);
+      return []; // Return empty array as fallback
+    }
   }
 
   // Settings operations

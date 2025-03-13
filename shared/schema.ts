@@ -37,10 +37,11 @@ export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
 
 // Memory table for storing embeddings
-// Create a vector data type for pgvector
+// Create a vector data type for pgvector with explicit dimensions for OpenAI embeddings
 const vector = customType<{ data: string }>({
   dataType() {
-    return 'vector';
+    // Use vector(1536) for OpenAI embedding dimensions
+    return 'vector(1536)';
   },
 });
 
@@ -49,7 +50,7 @@ export const memories = pgTable(
   {
     id: serial("id").primaryKey(),
     content: text("content").notNull(),
-    embedding: vector("embedding").notNull(), // Vector type for embeddings
+    embedding: vector("embedding").notNull(), // Vector type for OpenAI embeddings (1536 dimensions)
     type: text("type").notNull(), // prompt, response, etc.
     messageId: integer("message_id").references(() => messages.id, { onDelete: 'cascade' }),
     timestamp: timestamp("timestamp").defaultNow().notNull(),
