@@ -567,10 +567,10 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                   </div>
                 </div>
                 {currentOperation !== 'none' && (
-                  <div className="text-xs flex items-center pt-2 border-t border-gray-200 text-amber-600">
+                  <div className="text-xs flex items-center pt-2 border-t border-gray-200 text-rose-600">
                     <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                     <span>
-                      {currentOperation === 'sync' ? 'Syncing to' : 'Hydrating from'} 
+                      <strong>Memory System Locked:</strong> {currentOperation === 'sync' ? 'Syncing to' : 'Hydrating from'} 
                       {operationIndex && ` "${operationIndex}"`}
                       {operationNamespace && ` (namespace: ${operationNamespace})`}...
                     </span>
@@ -578,9 +578,9 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 )}
                 {/* Data Lock Status Indicator */}
                 <div className="flex items-center justify-between border-t border-gray-200 pt-2 mt-1">
-                  <div className={`flex items-center text-xs ${currentOperation !== 'none' ? 'text-red-500' : 'text-green-500'}`}>
-                    <div className={`w-2 h-2 rounded-full mr-1.5 ${currentOperation !== 'none' ? 'bg-red-500' : 'bg-green-500'}`}></div>
-                    <span>{currentOperation !== 'none' ? 'Locked' : 'Unlocked'}</span>
+                  <div className={`flex items-center text-xs ${currentOperation !== 'none' ? 'text-rose-600' : 'text-emerald-600'}`}>
+                    <div className={`w-2 h-2 rounded-full mr-1.5 ${currentOperation !== 'none' ? 'bg-rose-600' : 'bg-emerald-600'}`}></div>
+                    <span>Memory system: <strong>{currentOperation !== 'none' ? 'Locked' : 'Unlocked'}</strong></span>
                   </div>
                   
                   {settings?.lastSyncTimestamp && (
