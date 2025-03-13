@@ -214,9 +214,9 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                 </div>
                 
                 {pineconeStats.activeIndex && (
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="text-primary/70 text-xs">Active Index:</div>
-                    <div className="text-primary font-medium truncate max-w-[150px]">
+                  <div className="mt-2 pt-2 border-t border-primary/10">
+                    <div className="text-primary/70 text-xs mb-1">Active Index:</div>
+                    <div className="text-primary font-medium text-xs bg-primary/5 p-1.5 rounded break-all">
                       {pineconeStats.activeIndex}
                     </div>
                   </div>
