@@ -90,9 +90,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const anthropicModels = models.filter(model => model.provider === 'anthropic');
   
   // Display system message + all messages or just messages if there are any
-  // If we have messages, we reverse them to get oldest at top and newest at bottom
+  // Messages come from the server/storage in chronological order (oldest first)
+  // and we display them the same way (oldest at top, newest at bottom)
   const displayMessages = messages.length > 0 
-    ? [...messages].reverse() 
+    ? [...messages] // No modification needed - already in chronological order
     : [DEFAULT_SYSTEM_MESSAGE];
   
   return (
@@ -112,7 +113,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </span>
               </div>
             </div>
-            <p className="mt-1 text-xs text-primary/60 italic">Set in Settings</p>
           </div>
           
           <div className="flex flex-col">
@@ -125,7 +125,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <span>{selectedEmbeddingModelId}</span>
               </div>
             </div>
-            <p className="mt-1 text-xs text-primary/60 italic">Set in Settings</p>
           </div>
         </div>
         

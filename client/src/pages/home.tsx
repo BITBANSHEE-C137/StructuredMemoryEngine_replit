@@ -1,12 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChatInterface } from '@/components/chat-interface';
 import { MemoryPanel } from '@/components/memory-panel';
 import { SettingsModal } from '@/components/settings-modal';
+import { PineconeSettingsModal } from '@/components/pinecone-settings-modal';
 import { useChatMessages, useSettings, useModels, useApiStatus, useMobile } from '@/lib/hooks';
 import { DEFAULT_SETTINGS, API_ROUTES } from '@/lib/constants';
 import { RelevantMemory, Settings } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useLocation, useSearch } from 'wouter';
+import { apiRequest } from '@/lib/queryClient';
+import { usePineconeSettings } from '@/hooks/usePineconeSettings';
 
 // User menu with logout button
 function UserMenuWithLogout() {
@@ -41,15 +46,21 @@ function UserMenuWithLogout() {
 export default function Home() {
   const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(true);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isPineconeModalOpen, setIsPineconeModalOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_SETTINGS.defaultModelId);
   const [selectedEmbeddingModelId, setSelectedEmbeddingModelId] = useState(DEFAULT_SETTINGS.defaultEmbeddingModelId);
   const [relevantMemories, setRelevantMemories] = useState<RelevantMemory[]>([]);
   
   const isMobile = useMobile();
+  const [location, setLocation] = useLocation();
+  const search = useSearch();
+  const { toast } = useToast();
   const { messages, isLoading: isMessagesLoading, fetchMessages, sendMessage } = useChatMessages();
   const { settings, isLoading: isSettingsLoading, fetchSettings, updateSettings } = useSettings();
   const { models, isLoading: isModelsLoading, fetchModels } = useModels();
   const { status, isLoading: isStatusLoading, checkApiStatus } = useApiStatus();
+  const { currentOperation } = usePineconeSettings();
+  const isPineconeOperationActive = currentOperation !== 'none';
   
   // Close memory panel on mobile initially
   useEffect(() => {
@@ -57,6 +68,31 @@ export default function Home() {
       setIsMemoryPanelOpen(false);
     }
   }, [isMobile]);
+  
+  // Check for URL parameters that might indicate a special action
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const requestType = params.get('request');
+    
+    if (requestType === 'pinecone_api_key') {
+      // Ask for Pinecone API key
+      askForPineconeApiKey();
+      
+      // Remove the parameter after handling it
+      setLocation('/', { replace: true });
+    }
+  }, [search, setLocation]);
+  
+  // Request the Pinecone API key from the user
+  const askForPineconeApiKey = useCallback(async () => {
+    // Using ask_secrets tool here would redirect to appropriate function
+    toast({
+      title: "Pinecone API Key Required",
+      description: "To use Pinecone for persistent memory storage, you need to add a Pinecone API key in your project settings.",
+      variant: "destructive",
+      duration: 7000
+    });
+  }, [toast]);
   
   // Fetch initial data
   useEffect(() => {
@@ -116,9 +152,25 @@ export default function Home() {
     return await updateSettings(DEFAULT_SETTINGS);
   };
   
-  // Calculate the total number of memories
-  // In a real app, this would come from the backend
-  const totalMemories = messages.length;
+  // State to store total memories count from the API
+  const [totalMemoriesCount, setTotalMemoriesCount] = useState(0);
+  
+  // Fetch total memories count
+  useEffect(() => {
+    async function fetchMemoriesCount() {
+      try {
+        // apiRequest already parses the JSON for us
+        const data = await apiRequest(`${API_ROUTES.MEMORIES}?page=1&pageSize=1`);
+        if (data && typeof data === 'object' && 'total' in data) {
+          setTotalMemoriesCount(data.total);
+        }
+      } catch (error) {
+        console.error('Failed to fetch memories count:', error);
+      }
+    }
+    
+    fetchMemoriesCount();
+  }, [messages]); // Refresh when messages change
   
   // Get recent memories for the memory panel
   const recentMemories = messages.slice(-5).map((msg, i) => ({
@@ -132,6 +184,8 @@ export default function Home() {
   }));
   
   const isLoading = isMessagesLoading || isSettingsLoading || isModelsLoading;
+  
+  // Pinecone operation status defined at the top with hooks
   
   return (
     <div className="bg-neutral-light text-primary h-full flex flex-col">
@@ -198,20 +252,46 @@ export default function Home() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
-              <span className="text-xs text-white/70 mr-2">API Status:</span>
-              <span className="flex items-center">
-                <span className={`h-2.5 w-2.5 rounded-full mr-1.5 ${
-                  status?.status === 'ok' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
-                }`}></span>
-                <span className="text-xs font-medium text-white">
-                  {isStatusLoading 
-                    ? 'Checking...' 
-                    : status?.status === 'ok' 
-                      ? 'Connected' 
-                      : 'Error'}
+            <div className="flex items-center space-x-2">
+              {/* API Status Indicator */}
+              <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
+                <span className="text-xs text-white/70 mr-2">API Status:</span>
+                <span className="flex items-center">
+                  <span className={`h-2.5 w-2.5 rounded-full mr-1.5 ${
+                    status?.status === 'ok' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                  }`}></span>
+                  <span className="text-xs font-medium text-white">
+                    {isStatusLoading 
+                      ? 'Checking...' 
+                      : status?.status === 'ok' 
+                        ? 'Connected' 
+                        : 'Error'}
+                  </span>
                 </span>
-              </span>
+              </div>
+              
+              {/* Pinecone Operation Status Indicator */}
+              <div 
+                className={`flex items-center bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border ${isPineconeOperationActive ? 'border-rose-400/30' : 'border-white/10'}`}
+                onClick={() => setIsPineconeModalOpen(true)}
+                title="Click to open Pinecone settings"
+                role="button"
+                tabIndex={0}
+              >
+                <span className="text-xs text-white/70 mr-2">Memory:</span>
+                <span className="flex items-center">
+                  <span className={`h-2.5 w-2.5 rounded-full mr-1.5 ${
+                    isPineconeOperationActive 
+                      ? 'bg-rose-500 animate-pulse' 
+                      : 'bg-emerald-400'
+                  }`}></span>
+                  <span className="text-xs font-medium text-white">
+                    {isPineconeOperationActive 
+                      ? 'Locked' 
+                      : 'Ready'}
+                  </span>
+                </span>
+              </div>
             </div>
             
             <UserMenuWithLogout />
@@ -250,7 +330,7 @@ export default function Home() {
           isOpen={isMemoryPanelOpen}
           onClose={() => setIsMemoryPanelOpen(false)}
           isMobile={isMobile}
-          totalMemories={totalMemories}
+          totalMemories={totalMemoriesCount}
           relevantMemories={relevantMemories}
         />
       </div>
@@ -265,6 +345,12 @@ export default function Home() {
         onReset={handleResetSettings}
         isLoading={isSettingsLoading}
         models={models}
+      />
+      
+      {/* Pinecone Settings Modal */}
+      <PineconeSettingsModal
+        isOpen={isPineconeModalOpen}
+        onClose={() => setIsPineconeModalOpen(false)}
       />
     </div>
   );

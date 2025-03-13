@@ -4,6 +4,9 @@ import { format } from 'date-fns';
 import { API_ROUTES } from '@/lib/constants';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
+import { usePineconeStats } from '@/hooks/usePineconeStats';
+import { usePineconeSettings } from '@/hooks/usePineconeSettings';
+import { Loader2 } from 'lucide-react';
 
 interface MemoryPanelProps {
   memories: Memory[];
@@ -25,8 +28,27 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
   const [memories, setMemories] = useState<Memory[]>(initialMemories);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const [total, setTotal] = useState(totalMemories);
+  const [total, setTotal] = useState(totalMemories || 0);
   const [loading, setLoading] = useState(false);
+  
+  // Fetch Pinecone stats
+  const { stats: pineconeStats, isLoading: loadingPinecone } = usePineconeStats();
+  
+  // Fetch Pinecone operation status and settings functions
+  const { 
+    currentOperation,
+    operationIndex, 
+    operationNamespace,
+    resetDedupMetrics,
+    isLoading: pineconeLoading
+  } = usePineconeSettings();
+
+  // Initialize with total memories from props
+  useEffect(() => {
+    if (totalMemories > 0) {
+      setTotal(totalMemories);
+    }
+  }, [totalMemories]);
 
   // Fetch memories when panel is open
   useEffect(() => {
@@ -40,12 +62,10 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
     
     setLoading(true);
     try {
-      const response = await apiRequest(
-        'GET',
+      // apiRequest already parses the JSON for us
+      const data = await apiRequest(
         `${API_ROUTES.MEMORIES}?page=${pageNum}&pageSize=${pageSizeNum}`
       );
-      
-      const data = await response.json();
       if (data && typeof data === 'object' && 'memories' in data && 'total' in data) {
         setMemories(data.memories);
         setTotal(data.total);
@@ -71,8 +91,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
 
   if (!isOpen) return null;
 
-  // Calculate total tokens (rough estimate)
-  const totalTokens = total * 500;
+  // We're not calculating token usage as it requires a precise tokenization algorithm
+  // that matches the one used by the embedding model
   
   return (
     <aside 
@@ -102,33 +122,212 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
         
         {/* Memory Stats */}
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-5 mb-5 border border-primary/10">
-          <h3 className="text-sm font-semibold text-primary mb-4 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Memory Stats
-          </h3>
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-              <div className="text-primary/70 font-medium mb-1">Total Memories</div>
-              <div className="text-primary text-lg font-bold">{totalMemories}</div>
-            </div>
-            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-              <div className="text-primary/70 font-medium mb-1">Tokens Used</div>
-              <div className="text-primary text-lg font-bold">
-                {totalTokens > 1000 
-                  ? `${(totalTokens / 1000).toFixed(1)}k` 
-                  : totalTokens}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-semibold text-primary flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Memory Stats
+            </h3>
+            
+            {/* Status indicator */}
+            {currentOperation !== 'none' && (
+              <div className="flex items-center bg-rose-50 text-rose-600 text-xs px-2 py-1 rounded-full border border-rose-200">
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                <span>{currentOperation === 'sync' ? 'Syncing...' : 'Hydrating...'}</span>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-1 gap-3 text-xs">
+            {/* Local PGVector Stats */}
+            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10 col-span-1">
+              <div className="text-primary/70 font-medium mb-1 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Local Storage (PGVector)
+              </div>
+              <div className="flex justify-between items-center mt-2">
+                <div className="text-primary font-medium">
+                  <span className="text-lg font-bold">{total}</span> 
+                  <span className="text-xs ml-1 text-primary/70">memories</span>
+                </div>
+                <div className={`text-xs ${loading ? 'text-primary/70 bg-primary/10' : 'text-emerald-600 bg-emerald-100'} px-2 py-1 rounded-full`}>
+                  {loading ? 'Updating...' : 'Ready'}
+                </div>
               </div>
             </div>
-            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-              <div className="text-primary/70 font-medium mb-1">Vector Dimension</div>
-              <div className="text-primary text-lg font-bold">1536</div>
-            </div>
-            <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
-              <div className="text-primary/70 font-medium mb-1">Database</div>
-              <div className="text-primary text-lg font-bold">PGVector</div>
-            </div>
+            
+            {/* Pinecone Stats */}
+            {pineconeStats.enabled && (
+              <div className="bg-primary/5 p-3 rounded-lg border border-primary/10 col-span-1">
+                <div className="text-primary/70 font-medium mb-1 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Long-term Memory (Pinecone)
+                </div>
+                <div className="flex justify-between items-center mt-2">
+                  <div className="text-primary font-medium">
+                    <span className="text-lg font-bold">{pineconeStats.vectorCount}</span> 
+                    <span className="text-xs ml-1 text-primary/70">vectors</span>
+                    {pineconeStats.vectorCount > 0 && (
+                      <div className="text-[10px] text-primary/60 mt-1">
+                        Each vector expands to multiple memories
+                      </div>
+                    )}
+                  </div>
+                  <div className={`text-xs ${currentOperation !== 'none' || loadingPinecone 
+                      ? 'text-amber-600 bg-amber-100' 
+                      : 'text-emerald-600 bg-emerald-100'} 
+                    px-2 py-1 rounded-full flex items-center`}>
+                    {currentOperation !== 'none' && <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />}
+                    {currentOperation !== 'none' 
+                      ? `${currentOperation === 'sync' ? 'Syncing' : 'Hydrating'}...` 
+                      : `Ready`}
+                  </div>
+                </div>
+                
+                {/* Deduplication metrics */}
+                <div className="mt-3 pt-2 border-t border-primary/10">
+                  <div className="text-primary/70 text-xs mb-1.5 font-medium flex items-center justify-between">
+                    <div className="flex items-center">
+                      Duplicate Detection Rates:
+                      <span className="ml-1 text-[10px] bg-primary/10 px-1 py-0.5 rounded" title="Percentage of records that were identified as duplicates during sync/recall operations. Shown separately for each operation type.">?</span>
+                    </div>
+                    <button 
+                      onClick={() => resetDedupMetrics()}
+                      className="text-[10px] hover:text-primary/90 text-primary/60 flex items-center"
+                      title="Reset deduplication metrics to 0%"
+                      disabled={pineconeLoading || currentOperation !== 'none'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Reset
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 text-xs">
+                    {pineconeStats.lastSyncDedupRate !== undefined && (
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center"
+                           title="Percentage of duplicates detected during the most recent SYNC operation (sending local memories to Pinecone)">
+                        <span className="text-xs font-bold text-primary">
+                          {Number.isFinite(pineconeStats.lastSyncDedupRate) ? parseFloat(pineconeStats.lastSyncDedupRate.toString()).toFixed(1) : "0.0"}%
+                        </span>
+                        <span className="text-[10px] text-primary/70">Sync →</span>
+                      </div>
+                    )}
+                    {pineconeStats.lastHydrateDedupRate !== undefined && (
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center"
+                           title="Percentage of duplicates detected during the most recent RECALL operation (retrieving memories from Pinecone)">
+                        <span className="text-xs font-bold text-primary">
+                          {Number.isFinite(pineconeStats.lastHydrateDedupRate) ? parseFloat(pineconeStats.lastHydrateDedupRate.toString()).toFixed(1) : "0.0"}%
+                        </span>
+                        <span className="text-[10px] text-primary/70">← Recall</span>
+                      </div>
+                    )}
+                    {pineconeStats.avgDedupRate !== undefined && (
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center"
+                           title="Average deduplication rate across both operations">
+                        <span className="text-xs font-bold text-primary">
+                          {Number.isFinite(pineconeStats.avgDedupRate) ? parseFloat(pineconeStats.avgDedupRate.toString()).toFixed(1) : "0.0"}%
+                        </span>
+                        <span className="text-[10px] text-primary/70">Average</span>
+                      </div>
+                    )}
+                    {!pineconeStats.lastSyncDedupRate && !pineconeStats.lastHydrateDedupRate && !pineconeStats.avgDedupRate && (
+                      <div className="col-span-3 text-[10px] text-primary/60 text-center py-1">
+                        No deduplication metrics available yet.
+                        <br />
+                        <span className="text-[9px]">Run SYNC or RECALL operations to generate data</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                {pineconeStats.activeIndex && (
+                  <div className="mt-2 pt-2 border-t border-primary/10">
+                    <div className="text-primary/70 text-xs mb-1">Active Index:</div>
+                    <div className="text-primary font-medium text-xs bg-primary/5 p-1.5 rounded break-all">
+                      {pineconeStats.activeIndex}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Memory operations buttons */}
+                <div className="mt-2 pt-2 border-t border-primary/10">
+                  <div className="text-primary/70 text-xs mb-1.5">Memory Operations:</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full h-8 text-xs"
+                      disabled={currentOperation !== 'none' || !pineconeStats.activeIndex}
+                      onClick={() => {
+                        if (pineconeStats.activeIndex) {
+                          // Use the same function from usePineconeSettings
+                          window.dispatchEvent(new CustomEvent('pinecone-sync-requested', { 
+                            detail: { indexName: pineconeStats.activeIndex, namespace: 'default' } 
+                          }));
+                        }
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 11 L12 6 L17 11" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6 L12 18" />
+                      </svg>
+                      SYNC
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full h-8 text-xs"
+                      disabled={currentOperation !== 'none' || !pineconeStats.activeIndex}
+                      onClick={() => {
+                        if (pineconeStats.activeIndex) {
+                          // Use the same function from usePineconeSettings
+                          window.dispatchEvent(new CustomEvent('pinecone-hydrate-requested', { 
+                            detail: { indexName: pineconeStats.activeIndex, namespace: 'default' } 
+                          }));
+                        }
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 13 L12 18 L17 13" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18 L12 6" />
+                      </svg>
+                      RECALL
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Operation status indicator */}
+                {currentOperation !== 'none' && (
+                  <div className="mt-2 pt-2 border-t border-primary/10">
+                    <div className="flex items-center justify-between">
+                      <div className="text-primary/70 text-xs">Operation:</div>
+                      <div className="flex items-center">
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin text-rose-500" />
+                        <span className="text-xs font-medium text-rose-500">
+                          {currentOperation === 'sync' ? 'Syncing' : 'Hydrating'}
+                        </span>
+                      </div>
+                    </div>
+                    {operationIndex && (
+                      <div className="text-xs text-primary/70 mt-1 line-clamp-1">
+                        Index: <span className="font-medium">{operationIndex}</span>
+                        {operationNamespace && ` (${operationNamespace})`}
+                      </div>
+                    )}
+                    <div className="text-[10px] text-rose-400 mt-1">
+                      Memory system is locked until operation completes
+                    </div>
+                  </div>
+                )}
+                
+                {/* Namespaces information has been simplified to avoid redundancy */}
+              </div>
+            )}
           </div>
         </div>
         
@@ -235,7 +434,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                   {memory.similarity !== undefined && (
                     <span className="text-primary/60 text-[10px] flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l7-7 3 3-7 7-3-3z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 13l-1.5-7.5L9 12l-3-3 7-7L19.5 4.5 18 13z" />
                       </svg>
                       Similarity: {memory.similarity.toFixed(2)}
                     </span>

@@ -35,6 +35,9 @@ export function useChatMessages() {
       const response = await fetch(API_ROUTES.MESSAGES);
       if (!response.ok) throw new Error("Failed to fetch messages");
       const data = await response.json();
+      // Messages come in reverse chronological order from the server (newest first)
+      // but we need to display them in chronological order (oldest first)
+      // No need to use reverse() as the server already returns them in the correct order from DB
       setMessages(data);
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -61,15 +64,17 @@ export function useChatMessages() {
       modelId
     };
     
+    // Add the temporary message at the end (chronological order)
     setMessages(prev => [...prev, tempUserMessage]);
     
     try {
-      const response = await apiRequest("POST", API_ROUTES.CHAT, { 
-        content, 
-        modelId 
+      const response = await apiRequest(API_ROUTES.CHAT, {
+        method: 'POST',
+        data: { 
+          content, 
+          modelId 
+        }
       });
-      
-      const data = await response.json();
       
       // Update messages with the real data from API
       setMessages(prev => {
@@ -85,12 +90,13 @@ export function useChatMessages() {
           modelId
         };
         
-        // Add both real messages in correct order
-        return [...filtered, userMessage, data.message];
+        // Add both real messages in correct order (chronological)
+        // The user message followed by the assistant response
+        return [...filtered, userMessage, response.message];
       });
       
       // Return the context for memory panel
-      return data.context;
+      return response.context;
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -150,14 +156,16 @@ export function useSettings() {
   const updateSettings = useCallback(async (updatedSettings: Partial<Settings>) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest("POST", API_ROUTES.SETTINGS, updatedSettings);
-      const data = await response.json();
-      setSettings(data);
+      const response = await apiRequest(API_ROUTES.SETTINGS, {
+        method: 'PATCH',
+        data: updatedSettings
+      });
+      setSettings(response);
       toast({
         title: "Success",
         description: "Settings updated successfully"
       });
-      return data;
+      return response;
     } catch (error) {
       console.error("Error updating settings:", error);
       toast({
