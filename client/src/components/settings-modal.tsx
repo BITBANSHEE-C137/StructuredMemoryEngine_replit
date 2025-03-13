@@ -24,6 +24,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [contextSize, setContextSize] = useState(DEFAULT_SETTINGS.contextSize);
   const [similarityThreshold, setSimilarityThreshold] = useState(DEFAULT_SETTINGS.similarityThreshold);
   const [autoClearMemories, setAutoClearMemories] = useState(DEFAULT_SETTINGS.autoClearMemories);
+  const [defaultModelId, setDefaultModelId] = useState(DEFAULT_SETTINGS.defaultModelId);
   const [defaultEmbeddingModelId, setDefaultEmbeddingModelId] = useState(DEFAULT_SETTINGS.defaultEmbeddingModelId);
   
   // Sync state with props when settings change
@@ -32,6 +33,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setContextSize(settings.contextSize);
       setSimilarityThreshold(settings.similarityThreshold);
       setAutoClearMemories(settings.autoClearMemories);
+      setDefaultModelId(settings.defaultModelId || DEFAULT_SETTINGS.defaultModelId);
       setDefaultEmbeddingModelId(settings.defaultEmbeddingModelId || DEFAULT_SETTINGS.defaultEmbeddingModelId);
     }
   }, [settings]);
@@ -43,6 +45,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       contextSize,
       similarityThreshold,
       autoClearMemories,
+      defaultModelId,
       defaultEmbeddingModelId
     });
     
@@ -57,6 +60,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setContextSize(reset.contextSize);
       setSimilarityThreshold(reset.similarityThreshold);
       setAutoClearMemories(reset.autoClearMemories);
+      setDefaultModelId(reset.defaultModelId || DEFAULT_SETTINGS.defaultModelId);
       setDefaultEmbeddingModelId(reset.defaultEmbeddingModelId || DEFAULT_SETTINGS.defaultEmbeddingModelId);
     }
   };
@@ -212,6 +216,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span>Lower Precision</span>
                 <span>Higher Precision</span>
               </div>
+            </div>
+            
+            <div>
+              <label htmlFor="default-model" className="text-sm mb-1 block">
+                Default Chat Model
+              </label>
+              <select
+                id="default-model"
+                value={defaultModelId}
+                onChange={(e) => setDefaultModelId(e.target.value)}
+                className="w-full p-2 border border-neutral-dark rounded text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+              >
+                <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (Anthropic)</option>
+              </select>
+              <p className="text-xs text-primary-light mt-1">
+                Default model used for chat responses
+              </p>
             </div>
             
             <div>
