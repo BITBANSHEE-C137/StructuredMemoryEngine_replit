@@ -80,7 +80,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
 
   if (!isOpen) return null;
 
-  // Calculate total tokens (rough estimate)
+  // Calculate total tokens - typical average for embedding models is ~500 tokens per memory
+  // This is a rough estimate; actual token usage will vary based on content length
   const totalTokens = total * 500;
   
   return (
@@ -173,16 +174,18 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                   </div>
                 )}
                 
-                {pineconeStats.namespaces.length > 0 && pineconeStats.namespaces.some(ns => ns.name !== 'default') && (
+                {/* Only show namespaces section if there are namespaces other than default */}
+                {pineconeStats.namespaces.length > 0 && 
+                 pineconeStats.namespaces.some(ns => ns.name !== 'default') && (
                   <div className="mt-2 border-t border-primary/10 pt-2">
-                    <div className="text-xs text-primary/70 mb-1">Namespaces:</div>
+                    <div className="text-xs text-primary/70 mb-1">Custom Namespaces:</div>
                     <div className="text-xs space-y-1">
                       {pineconeStats.namespaces
                         .filter(ns => ns.name !== 'default')
                         .map(ns => (
                           <div key={ns.name} className="flex justify-between">
                             <span className="text-primary/80">{ns.name}</span>
-                            <span className="text-primary font-medium">{ns.vectorCount} vectors</span>
+                            <span className="text-primary font-medium">{ns.vectorCount}</span>
                           </div>
                         ))
                       }
