@@ -56,9 +56,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       
       const data = await response.json();
       
+      // Force refresh of messages in the parent component and across the app
+      window.dispatchEvent(new CustomEvent('memories-cleared', { 
+        detail: { count: data.count, messagesCount: data.messagesCount }
+      }));
+      
       toast({
-        title: "Memories Cleared",
-        description: data.message || `Successfully cleared ${data.count || 0} memories`,
+        title: "Memories and Chat Cleared",
+        description: `Successfully cleared ${data.count || 0} memories and ${data.messagesCount || 0} messages`,
         variant: "default"
       });
       

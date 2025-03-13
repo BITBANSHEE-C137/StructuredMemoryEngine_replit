@@ -156,16 +156,22 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  // Method to clear all memories
-  async clearAllMemories(): Promise<{ count: number }> {
+  // Method to clear all memories and messages
+  async clearAllMemories(): Promise<{ count: number, messagesCount: number }> {
     try {
-      // Delete all memories from the database
-      const result = await db.delete(memories);
+      // First delete all memories from the database
+      const memoriesResult = await db.delete(memories);
       
-      // Return the count of deleted memories
-      return { count: Number(result.length) };
+      // Then delete all messages from the database
+      const messagesResult = await db.delete(messages);
+      
+      // Return the count of deleted items
+      return { 
+        count: Number(memoriesResult.length), 
+        messagesCount: Number(messagesResult.length) 
+      };
     } catch (error) {
-      console.error("Error clearing memories:", error);
+      console.error("Error clearing memories and messages:", error);
       throw error;
     }
   }

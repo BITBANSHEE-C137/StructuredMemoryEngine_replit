@@ -405,7 +405,12 @@ These settings determine how the system processes your queries and retrieves rel
   router.post("/memories/clear", async (req, res) => {
     try {
       const result = await storage.clearAllMemories();
-      res.json({ success: true, count: result.count, message: `Successfully cleared ${result.count} memories` });
+      res.json({ 
+        success: true, 
+        count: result.count, 
+        messagesCount: result.messagesCount, 
+        message: `Successfully cleared ${result.count} memories and ${result.messagesCount} messages` 
+      });
     } catch (err) {
       handleError(err, res);
     }
