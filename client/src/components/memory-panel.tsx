@@ -5,6 +5,8 @@ import { API_ROUTES } from '@/lib/constants';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { usePineconeStats } from '@/hooks/usePineconeStats';
+import { usePineconeSettings } from '@/hooks/usePineconeSettings';
+import { Loader2 } from 'lucide-react';
 
 interface MemoryPanelProps {
   memories: Memory[];
@@ -31,6 +33,9 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
   
   // Fetch Pinecone stats
   const { stats: pineconeStats, isLoading: loadingPinecone } = usePineconeStats();
+  
+  // Fetch Pinecone operation status
+  const { currentOperation, operationIndex, operationNamespace } = usePineconeSettings();
 
   // Initialize with total memories from props
   useEffect(() => {
@@ -161,6 +166,30 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     <div className="text-primary/70 text-xs">Active Index:</div>
                     <div className="text-primary font-medium truncate max-w-[150px]">
                       {pineconeStats.activeIndex}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Operation status indicator */}
+                {currentOperation !== 'none' && (
+                  <div className="mt-2 pt-2 border-t border-primary/10">
+                    <div className="flex items-center justify-between">
+                      <div className="text-primary/70 text-xs">Operation:</div>
+                      <div className="flex items-center">
+                        <Loader2 className="h-3 w-3 mr-1 animate-spin text-rose-500" />
+                        <span className="text-xs font-medium text-rose-500">
+                          {currentOperation === 'sync' ? 'Syncing' : 'Hydrating'}
+                        </span>
+                      </div>
+                    </div>
+                    {operationIndex && (
+                      <div className="text-xs text-primary/70 mt-1 line-clamp-1">
+                        Index: <span className="font-medium">{operationIndex}</span>
+                        {operationNamespace && ` (${operationNamespace})`}
+                      </div>
+                    )}
+                    <div className="text-[10px] text-rose-400 mt-1">
+                      Memory system is locked during this operation
                     </div>
                   </div>
                 )}

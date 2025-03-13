@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useSearch } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
+import { usePineconeSettings } from '@/hooks/usePineconeSettings';
 
 // User menu with logout button
 function UserMenuWithLogout() {
@@ -182,6 +183,10 @@ export default function Home() {
   
   const isLoading = isMessagesLoading || isSettingsLoading || isModelsLoading;
   
+  // Access the Pinecone operation status
+  const { currentOperation } = usePineconeSettings();
+  const isPineconeOperationActive = currentOperation !== 'none';
+  
   return (
     <div className="bg-neutral-light text-primary h-full flex flex-col">
       {/* Header */}
@@ -247,20 +252,46 @@ export default function Home() {
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
-              <span className="text-xs text-white/70 mr-2">API Status:</span>
-              <span className="flex items-center">
-                <span className={`h-2.5 w-2.5 rounded-full mr-1.5 ${
-                  status?.status === 'ok' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
-                }`}></span>
-                <span className="text-xs font-medium text-white">
-                  {isStatusLoading 
-                    ? 'Checking...' 
-                    : status?.status === 'ok' 
-                      ? 'Connected' 
-                      : 'Error'}
+            <div className="flex items-center space-x-2">
+              {/* API Status Indicator */}
+              <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/10">
+                <span className="text-xs text-white/70 mr-2">API Status:</span>
+                <span className="flex items-center">
+                  <span className={`h-2.5 w-2.5 rounded-full mr-1.5 ${
+                    status?.status === 'ok' ? 'bg-emerald-400 animate-pulse' : 'bg-rose-500'
+                  }`}></span>
+                  <span className="text-xs font-medium text-white">
+                    {isStatusLoading 
+                      ? 'Checking...' 
+                      : status?.status === 'ok' 
+                        ? 'Connected' 
+                        : 'Error'}
+                  </span>
                 </span>
-              </span>
+              </div>
+              
+              {/* Pinecone Operation Status Indicator */}
+              <div 
+                className={`flex items-center bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border ${isPineconeOperationActive ? 'border-rose-400/30' : 'border-white/10'}`}
+                onClick={() => setIsPineconeModalOpen(true)}
+                title="Click to open Pinecone settings"
+                role="button"
+                tabIndex={0}
+              >
+                <span className="text-xs text-white/70 mr-2">Memory:</span>
+                <span className="flex items-center">
+                  <span className={`h-2.5 w-2.5 rounded-full mr-1.5 ${
+                    isPineconeOperationActive 
+                      ? 'bg-rose-500 animate-pulse' 
+                      : 'bg-emerald-400'
+                  }`}></span>
+                  <span className="text-xs font-medium text-white">
+                    {isPineconeOperationActive 
+                      ? 'Locked' 
+                      : 'Ready'}
+                  </span>
+                </span>
+              </div>
             </div>
             
             <UserMenuWithLogout />
