@@ -96,7 +96,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     : [DEFAULT_SYSTEM_MESSAGE];
   
   return (
-    <main className="flex-1 flex flex-col bg-white shadow-md h-screen overflow-hidden">
+    <main className="flex-1 flex flex-col bg-white shadow-md h-full overflow-hidden">
       {/* Model Selection Bar - Fixed at top */}
       <div className="bg-gradient-to-r from-primary/5 to-transparent border-b border-primary/10 p-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center space-x-4">

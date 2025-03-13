@@ -102,9 +102,9 @@ export default function Home() {
   const isLoading = isMessagesLoading || isSettingsLoading || isModelsLoading;
   
   return (
-    <div className="bg-neutral-light text-primary min-h-screen flex flex-col">
+    <div className="bg-neutral-light text-primary h-full flex flex-col">
       {/* Header */}
-      <header className="bg-gradient-to-r from-primary/90 to-primary shadow-lg border-b border-primary/20">
+      <header className="bg-gradient-to-r from-primary/90 to-primary shadow-lg border-b border-primary/20 z-20">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="relative h-10 w-10 flex items-center justify-center rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 shadow-inner">
@@ -153,7 +153,7 @@ export default function Home() {
       </header>
       
       {/* Main Content */}
-      <div className="flex-1 flex flex-col md:flex-row">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         <ChatInterface 
           messages={messages}
           models={models}
