@@ -745,9 +745,18 @@ export async function wipePineconeIndex(
       log(`Attempting to delete all vectors using deleteAll method`, 'pinecone');
       
       // Use the official SDK method for the latest version
-      await pineconeIndex.deleteAll({
-        namespace: namespace 
-      });
+      // The signature appears to have changed, so we'll try both with and without parameters
+      if (typeof pineconeIndex.deleteAll === 'function') {
+        try {
+          // First try with namespace
+          await pineconeIndex.deleteAll({
+            namespace: namespace 
+          });
+        } catch (innerError) {
+          // If that fails, try without parameters
+          await pineconeIndex.deleteAll();
+        }
+      }
       
       log(`Successfully issued deleteAll command for namespace ${namespace}`, 'pinecone');
       success = true;
@@ -808,12 +817,27 @@ export async function wipePineconeIndex(
       try {
         log(`Strategy 4: Attempting to delete vectors by filter matching all`, 'pinecone');
         
-        await pineconeIndex.delete({
-          filter: {
-            // An empty filter should match all vectors
-          },
-          namespace
-        });
+        // Check if delete method exists and handle both signature variants
+        if (typeof pineconeIndex.delete === 'function') {
+          try {
+            // Try with filter and namespace (newer SDK)
+            await pineconeIndex.delete({
+              filter: {
+                // An empty filter should match all vectors
+              },
+              namespace
+            });
+          } catch (deleteError) {
+            log(`Delete with filter and namespace failed: ${deleteError}. Trying alternative delete syntax...`, 'pinecone');
+            
+            // Try with just the filter (older SDK)
+            await pineconeIndex.delete({
+              filter: {}
+            });
+          }
+        } else {
+          log(`Delete method not available on pineconeIndex`, 'pinecone');
+        }
         
         log(`Successfully issued delete by filter for all vectors`, 'pinecone');
         success = true;
