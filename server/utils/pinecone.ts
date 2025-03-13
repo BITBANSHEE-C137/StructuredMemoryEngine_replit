@@ -341,7 +341,7 @@ export async function createPineconeIndexIfNotExists(
     
     log(`Creating new index: ${indexName} with dimension ${dimension}`, 'pinecone');
     
-    // Create index with required spec
+    // Create index with required spec - using us-east-1 which is supported in free plan
     await client.createIndex({
       name: indexName,
       dimension,
@@ -349,7 +349,7 @@ export async function createPineconeIndexIfNotExists(
       spec: {
         serverless: {
           cloud: 'aws',
-          region: 'us-west-2'
+          region: 'us-east-1'  // Using us-east-1 instead of us-west-2 for free tier compatibility
         }
       }
     });
