@@ -318,61 +318,96 @@ export async function fetchVectorsFromPinecone(
     const client = await getPineconeClient();
     const pineconeIndex = client.index(indexName);
     
-    // List all vector IDs in the namespace
-    log(`Getting index stats for ${indexName}`, 'pinecone');
-    const stats = await pineconeIndex.describeIndexStats();
-    log(`Index stats: ${JSON.stringify(stats)}`, 'pinecone');
+    // Force fetch vectors even if stats say there are none
+    // Try different methods to get vectors from index
     
-    const namespaceStats = stats.namespaces?.[namespace];
-    log(`Namespace stats for ${namespace}: ${JSON.stringify(namespaceStats)}`, 'pinecone');
+    // First, we'll create several different random vectors to try to fetch data
+    // from different regions of the vector space
+    const dimension = 1536; // Use default OpenAI dimension
+    log(`Using dimension ${dimension} for vector space search`, 'pinecone');
     
-    if (!namespaceStats || namespaceStats.recordCount === 0) {
-      log(`No records found in namespace ${namespace}`, 'pinecone');
-      return [];
+    // Create multiple random vectors to increase chances of finding matches
+    const randomVectors = [
+      Array(dimension).fill(0).map(() => Math.random() * 0.01), // Very small random values
+      Array(dimension).fill(0).map(() => Math.random()), // Standard random values
+      Array(dimension).fill(0).map(() => (Math.random() * 2) - 1), // Both positive and negative values
+      Array(dimension).fill(0.0001) // Uniform very small values
+    ];
+    
+    let allMatches: any[] = [];
+    
+    // Try each random vector
+    for (let i = 0; i < randomVectors.length; i++) {
+      log(`Trying query with random vector approach #${i+1}`, 'pinecone');
+      
+      try {
+        // Try with namespace parameter (may fail on newer SDK)
+        const response = await pineconeIndex.query({
+          vector: randomVectors[i],
+          topK: limit,
+          includeMetadata: true,
+          includeValues: true,
+          namespace
+        });
+        
+        if (response.matches && response.matches.length > 0) {
+          log(`Found ${response.matches.length} matches with vector approach #${i+1}`, 'pinecone');
+          allMatches = [...allMatches, ...response.matches];
+          // Deduplicate based on ID
+          const uniqueIds = new Set();
+          allMatches = allMatches.filter(match => {
+            if (uniqueIds.has(match.id)) return false;
+            uniqueIds.add(match.id);
+            return true;
+          });
+        }
+      } catch (e) {
+        try {
+          // Try without namespace (for newer SDK)
+          const response = await pineconeIndex.query({
+            vector: randomVectors[i],
+            topK: limit,
+            includeMetadata: true,
+            includeValues: true
+          });
+          
+          if (response.matches && response.matches.length > 0) {
+            log(`Found ${response.matches.length} matches with vector approach #${i+1} (no namespace)`, 'pinecone');
+            allMatches = [...allMatches, ...response.matches];
+            // Deduplicate based on ID
+            const uniqueIds = new Set();
+            allMatches = allMatches.filter(match => {
+              if (uniqueIds.has(match.id)) return false;
+              uniqueIds.add(match.id);
+              return true;
+            });
+          }
+        } catch (innerError) {
+          log(`Error with approach #${i+1}: ${innerError}`, 'pinecone');
+        }
+      }
     }
     
-    log(`Found ${namespaceStats.recordCount} records in namespace ${namespace}`, 'pinecone');
+    log(`Total unique matches found across all approaches: ${allMatches.length}`, 'pinecone');
     
-    // Fetch vectors in batches to respect rate limits
-    // Since Pinecone doesn't have a simple "fetch all vectors" we have to query
-    // by ID - a common approach is to fetch in sparse batches
-    // This is a simplified implementation
-    
-    // First we'll send a query with a near-zero vector to get some IDs
-    const dummyVector = Array(stats.dimension).fill(0.0001);
-    log(`Using dummy vector of dimension ${stats.dimension} to query Pinecone`, 'pinecone');
-    
-    // Try both with and without namespace parameter to handle different SDK versions
-    let queryResponse;
-    try {
-      // Method 1: Try with namespace parameter (older SDK)
-      log(`Attempting query with namespace parameter (SDK compatibility)`, 'pinecone');
-      queryResponse = await pineconeIndex.query({
-        vector: dummyVector,
-        topK: Math.min(limit, namespaceStats.recordCount),
-        includeMetadata: true,
-        includeValues: true,
-        namespace
-      });
-    } catch (e) {
-      log(`Namespace parameter not supported, using new SDK method: ${e}`, 'pinecone');
-      // Method 2: Try without namespace parameter (newer SDK)
-      queryResponse = await pineconeIndex.query({
-        vector: dummyVector,
-        topK: Math.min(limit, namespaceStats.recordCount),
-        includeMetadata: true,
-        includeValues: true
-      });
-    }
-    
-    log(`Query response matches: ${queryResponse.matches.length}`, 'pinecone');
-    
-    if (queryResponse.matches.length > 0) {
-      log(`Sample match: ${JSON.stringify(queryResponse.matches[0])}`, 'pinecone');
+    if (allMatches.length > 0) {
+      log(`Sample match: ${JSON.stringify(allMatches[0])}`, 'pinecone');
+    } else {
+      // Last resort: try to get stats to debug what's happening
+      try {
+        const stats = await pineconeIndex.describeIndexStats();
+        log(`Index stats (debug): ${JSON.stringify(stats)}`, 'pinecone');
+        
+        if (stats.totalRecordCount > 0) {
+          log(`Index reports ${stats.totalRecordCount} total records but query returns none`, 'pinecone');
+        }
+      } catch (statsError) {
+        log(`Error getting index stats: ${statsError}`, 'pinecone');
+      }
     }
     
     // Transform the response into our vector format
-    const vectors = queryResponse.matches.map(match => ({
+    const vectors = allMatches.map(match => ({
       id: match.id,
       values: match.values || [],
       metadata: match.metadata || {}
