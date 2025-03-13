@@ -384,6 +384,9 @@ export class DatabaseStorage implements IStorage {
       // Insert each memory into pgvector
       let successCount = 0;
       
+      // Keep track of created message IDs to handle foreign key references
+      const createdMessageMap = new Map<number, number>();
+      
       console.log(`Starting to process ${pineconeVectors.length} vectors from Pinecone`);
       for (const vector of pineconeVectors) {
         try {
@@ -391,9 +394,52 @@ export class DatabaseStorage implements IStorage {
           const metadata = vector.metadata || {};
           console.log(`Vector metadata: ${JSON.stringify(metadata)}`);
           
-          // Create message if needed for the memory
-          let messageId = metadata.messageId;
-          if (metadata.content && !messageId) {
+          // Handle message_id foreign key constraint
+          let messageId: number | null = null;
+          
+          // Case 1: messageId exists in metadata 
+          if (metadata.messageId) {
+            // Check if we've already created a replacement for this message ID
+            if (createdMessageMap.has(metadata.messageId)) {
+              messageId = createdMessageMap.get(metadata.messageId)!;
+              console.log(`Using previously created message ID ${messageId} for reference to ${metadata.messageId}`);
+            } else {
+              // Check if the message exists in the database
+              try {
+                const existingMessage = await this.getMessageById(metadata.messageId);
+                if (existingMessage) {
+                  messageId = existingMessage.id;
+                  console.log(`Message ID ${messageId} exists in database, using it`);
+                } else {
+                  // Create a placeholder message since original doesn't exist
+                  console.log(`Message ID ${metadata.messageId} doesn't exist, creating placeholder message`);
+                  const placeholderContent = metadata.content || `Placeholder for message ID ${metadata.messageId}`;
+                  const message = await this.createMessage({
+                    content: placeholderContent,
+                    role: metadata.type === 'prompt' ? 'user' : 'assistant',
+                    modelId: metadata.modelId || 'unknown'
+                  });
+                  messageId = message.id;
+                  createdMessageMap.set(metadata.messageId, messageId);
+                  console.log(`Created placeholder message with ID: ${messageId} for original ID: ${metadata.messageId}`);
+                }
+              } catch (msgErr) {
+                console.log(`Error checking message, creating new placeholder: ${msgErr}`);
+                // Create a placeholder message
+                const placeholderContent = metadata.content || `Placeholder for message ID ${metadata.messageId}`;
+                const message = await this.createMessage({
+                  content: placeholderContent,
+                  role: metadata.type === 'prompt' ? 'user' : 'assistant',
+                  modelId: metadata.modelId || 'unknown'
+                });
+                messageId = message.id;
+                createdMessageMap.set(metadata.messageId, messageId);
+                console.log(`Created placeholder message with ID: ${messageId} for original ID: ${metadata.messageId}`);
+              }
+            }
+          } 
+          // Case 2: No messageId but content exists
+          else if (metadata.content) {
             console.log(`Creating new message for content: ${metadata.content.substring(0, 50)}...`);
             const message = await this.createMessage({
               content: metadata.content,
@@ -403,18 +449,35 @@ export class DatabaseStorage implements IStorage {
             messageId = message.id;
             console.log(`Created new message with ID: ${messageId}`);
           }
+          // Case 3: No messageId and no content - create a basic placeholder
+          else {
+            console.log(`Creating generic placeholder message for vector without content`);
+            const message = await this.createMessage({
+              content: `Imported memory from Pinecone index: ${indexName}`,
+              role: metadata.type === 'prompt' ? 'user' : 'assistant',
+              modelId: metadata.modelId || 'unknown'
+            });
+            messageId = message.id;
+            console.log(`Created generic placeholder message with ID: ${messageId}`);
+          }
           
-          // Create memory in pgvector - we'll use the hash ID to ensure uniqueness
+          // Create memory in pgvector with our valid message ID
           console.log(`Creating/updating memory in local database, embedding length: ${vector.values.length}`);
           
-          // We should check if we can use the memoryIdForUpsert from our schema here
-          // This would ensure we don't create duplicates
+          // Ensure memory content exists
+          const memoryContent = metadata.content || `Memory imported from Pinecone index: ${indexName}`;
+          
           const memory = await this.createMemory({
-            content: metadata.content || '',
+            content: memoryContent,
             embedding: JSON.stringify(vector.values),
             type: metadata.type || 'prompt',
             messageId: messageId,
-            metadata: metadata.metadata || {}
+            metadata: {
+              ...(metadata.metadata || {}),
+              importedFrom: indexName,
+              originalMessageId: metadata.messageId || null,
+              importTimestamp: new Date().toISOString()
+            }
           });
           console.log(`Created memory with ID: ${memory.id}`);
           

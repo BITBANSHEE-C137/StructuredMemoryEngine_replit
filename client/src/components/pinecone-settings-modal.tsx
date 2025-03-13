@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Check, AlertCircle, Key } from "lucide-react";
+import { Loader2, Check, AlertCircle, Key, CircleAlert } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { usePineconeSettings } from '@/hooks/usePineconeSettings';
@@ -332,13 +332,38 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                             <div className="text-xs text-muted-foreground space-y-1 mt-1">
                               <p>Dimension: {index.dimension}</p>
                               <p>Metric: {index.metric}</p>
-                              <p>Total vectors: {index.vectorCount}</p>
+                              <p>
+                                Total vectors: {index.vectorCount} 
+                                {index.vectorCount === 0 && settings?.activeIndexName === index.name && (
+                                  <span className="text-amber-500 ml-1">(Empty index)</span>
+                                )}
+                              </p>
+                              {index.namespaces && index.namespaces.length > 0 && (
+                                <div className="text-xs mt-1">
+                                  <details>
+                                    <summary className="cursor-pointer text-muted-foreground hover:text-blue-500 mb-1">
+                                      Namespaces ({index.namespaces.length})
+                                    </summary>
+                                    <div className="pl-2 space-y-1 border-l-2 border-zinc-200 dark:border-zinc-700">
+                                      {index.namespaces.map(ns => (
+                                        <p key={ns.name || 'default'} className="flex justify-between">
+                                          <span>{ns.name || '(default)'}</span>
+                                          <span>{ns.vectorCount} vectors</span>
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </details>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center space-x-2">
                             {settings?.activeIndexName === index.name && (
-                              <Badge variant="outline" className="mr-2">
-                                Active
+                              <Badge variant="outline" className="mr-2 flex items-center">
+                                <span className="mr-1">Active</span>
+                                {index.vectorCount === 0 && (
+                                  <CircleAlert className="h-3 w-3 text-amber-500" />
+                                )}
                               </Badge>
                             )}
                             <Button 
