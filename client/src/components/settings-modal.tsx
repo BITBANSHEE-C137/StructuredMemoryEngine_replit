@@ -50,13 +50,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setClearingMemories(true);
       
       const response = await apiRequest(
-        API_ROUTES.CLEAR_MEMORIES,
-        { method: 'POST' }
+        'POST',
+        API_ROUTES.CLEAR_MEMORIES
       );
+      
+      const data = await response.json();
       
       toast({
         title: "Memories Cleared",
-        description: response.message || `Successfully cleared ${response.count || 0} memories`,
+        description: data.message || `Successfully cleared ${data.count || 0} memories`,
         variant: "default"
       });
       
