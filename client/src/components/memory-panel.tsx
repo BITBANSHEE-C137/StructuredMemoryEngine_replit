@@ -26,11 +26,18 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
   const [memories, setMemories] = useState<Memory[]>(initialMemories);
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const [total, setTotal] = useState(totalMemories);
+  const [total, setTotal] = useState(totalMemories || 0);
   const [loading, setLoading] = useState(false);
   
   // Fetch Pinecone stats
   const { stats: pineconeStats, isLoading: loadingPinecone } = usePineconeStats();
+
+  // Initialize with total memories from props
+  useEffect(() => {
+    if (totalMemories > 0) {
+      setTotal(totalMemories);
+    }
+  }, [totalMemories]);
 
   // Fetch memories when panel is open
   useEffect(() => {
@@ -168,16 +175,19 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                   </div>
                 )}
                 
-                {pineconeStats.namespaces.length > 0 && (
+                {pineconeStats.namespaces.length > 0 && pineconeStats.namespaces.some(ns => ns.name !== 'default') && (
                   <div className="mt-2 border-t border-primary/10 pt-2">
                     <div className="text-xs text-primary/70 mb-1">Namespaces:</div>
                     <div className="text-xs space-y-1">
-                      {pineconeStats.namespaces.map(ns => (
-                        <div key={ns.name} className="flex justify-between">
-                          <span className="text-primary/80">{ns.name}</span>
-                          <span className="text-primary font-medium">{ns.vectorCount} vectors</span>
-                        </div>
-                      ))}
+                      {pineconeStats.namespaces
+                        .filter(ns => ns.name !== 'default')
+                        .map(ns => (
+                          <div key={ns.name} className="flex justify-between">
+                            <span className="text-primary/80">{ns.name}</span>
+                            <span className="text-primary font-medium">{ns.vectorCount} vectors</span>
+                          </div>
+                        ))
+                      }
                     </div>
                   </div>
                 )}
