@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Model, ApiStatus } from '@/lib/types';
-import { DEFAULT_SETTINGS, API_ROUTES, ERROR_MESSAGES } from '@/lib/constants';
-import { apiRequest } from '@/lib/queryClient';
+import { DEFAULT_SETTINGS, API_ROUTES, ERROR_MESSAGES, DEFAULT_SYSTEM_MESSAGE } from '@/lib/constants';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useChatMessages } from '@/lib/hooks';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -45,6 +46,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   
   if (!isOpen) return null;
   
+  const { clearMessages } = useChatMessages();
+
   const handleClearMemories = async () => {
     try {
       setClearingMemories(true);
@@ -56,10 +59,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       
       const data = await response.json();
       
-      // Force refresh of messages in the parent component and across the app
-      window.dispatchEvent(new CustomEvent('memories-cleared', { 
-        detail: { count: data.count, messagesCount: data.messagesCount }
-      }));
+      // Directly invalidate the queries
+      queryClient.invalidateQueries({ queryKey: ['/api/messages'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/memories'] });
+      
+      // Also clear the messages from the chat state
+      clearMessages();
       
       toast({
         title: "Memories and Chat Cleared",

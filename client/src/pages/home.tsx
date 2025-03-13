@@ -32,19 +32,6 @@ export default function Home() {
     fetchSettings();
     fetchModels();
     checkApiStatus();
-    
-    // Listen for memory clear events from settings modal
-    const handleMemoriesCleared = () => {
-      // Refresh messages after memories are cleared
-      fetchMessages();
-      setRelevantMemories([]);
-    };
-    
-    window.addEventListener('memories-cleared', handleMemoriesCleared);
-    
-    return () => {
-      window.removeEventListener('memories-cleared', handleMemoriesCleared);
-    };
   }, [fetchMessages, fetchSettings, fetchModels, checkApiStatus]);
   
   // Update selected models when settings are loaded

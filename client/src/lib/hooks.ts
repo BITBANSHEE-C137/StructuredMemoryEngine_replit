@@ -111,8 +111,13 @@ export function useChatMessages() {
   const addMessage = useCallback((message: Message) => {
     setMessages(prev => [...prev, message]);
   }, []);
+  
+  // Clear all messages from the state
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
 
-  return { messages, isLoading, fetchMessages, sendMessage, addMessage };
+  return { messages, isLoading, fetchMessages, sendMessage, addMessage, clearMessages };
 }
 
 // Hook to manage settings
