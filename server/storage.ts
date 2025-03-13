@@ -431,16 +431,17 @@ export class DatabaseStorage implements IStorage {
       });
       
       // Return comprehensive response with all sync statistics
-      return { 
-        success: result.success, 
-        count: result.count,
+      // Make sure we're passing through exactly what upsertMemoriesToPinecone returns
+      return {
+        success: result.success,
+        count: result.upsertedCount !== undefined ? result.upsertedCount : result.count,
         duplicateCount: result.duplicateCount,
         dedupRate: result.dedupRate,
         totalProcessed: result.totalProcessed,
         vectorCount: result.vectorCount,
-        indexName: result.indexName,
-        namespace: result.namespace,
-        timestamp: result.timestamp
+        indexName: result.indexName || indexName,
+        namespace: result.namespace || namespace,
+        timestamp: result.timestamp || new Date().toISOString()
       };
     } catch (error) {
       console.error("Error syncing memories to Pinecone:", error);
