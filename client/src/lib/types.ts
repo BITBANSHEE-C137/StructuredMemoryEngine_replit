@@ -6,6 +6,8 @@ export interface Message {
   role: 'user' | 'assistant';
   timestamp: string;
   modelId: string;
+  // Add optional property for relevant memories
+  relevantMemories?: RelevantMemory[];
 }
 
 export interface Memory {

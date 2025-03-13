@@ -199,7 +199,10 @@ export class DatabaseStorage implements IStorage {
 
   async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.5): Promise<(Memory & { similarity: number })[]> {
     try {
-      console.log(`Querying memories with similarityThreshold: ${similarityThreshold}`);
+      // Make sure similarityThreshold is a proper number between 0 and 1
+      const threshold = Math.min(1, Math.max(0, similarityThreshold));
+      
+      console.log(`Querying memories with similarityThreshold: ${threshold} (${threshold * 100}%)`);
       
       // Ensure embedding is cast as vector and using the cosine distance operator (<->)
       // Added filtering by similarity threshold
@@ -208,12 +211,12 @@ export class DatabaseStorage implements IStorage {
                1 - (m.embedding <-> ${embedding}::vector) as similarity
         FROM memories m
         WHERE m.embedding IS NOT NULL
-        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${similarityThreshold}
+        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${threshold}
         ORDER BY m.embedding <-> ${embedding}::vector
         LIMIT ${limit}
       `);
       
-      console.log(`Successfully found ${result.length} relevant memories`);
+      console.log(`Successfully found ${result.length} relevant memories with similarity >= ${threshold}`);
       
       // Convert the raw result to Memory objects with similarity score
       return result.map(row => ({
