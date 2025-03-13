@@ -526,19 +526,10 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
               )}
               
               {!isAvailable && (
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="flex items-center"
-                  onClick={() => {
-                    onClose(); // Close the modal before redirecting
-                    
-                    // Redirect to settings to get API key
-                    window.location.href = '/?request=pinecone_api_key';
-                  }}
-                >
-                  <Key className="h-3 w-3 mr-1" /> Add API Key
-                </Button>
+                <div className="text-xs text-muted-foreground bg-amber-100/50 px-2 py-1 rounded-md">
+                  <AlertCircle className="h-3 w-3 inline mr-1 text-amber-600" /> 
+                  Pinecone API key is managed in secrets
+                </div>
               )}
             </div>
           </div>
