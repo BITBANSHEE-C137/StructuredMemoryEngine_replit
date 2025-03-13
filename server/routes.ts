@@ -256,24 +256,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 4. Retrieve relevant memories based on the embedding
       const contextSize = settings.contextSize || 5;
       // Parse the similarity threshold as a float (it's stored as a string in the DB)
-      // Add explicit debug log for the similarity threshold
       console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}"`);
       
-      // Ensure we have a valid number between 0 and 1 - handle both string formats ("0.75" and "75%")
-      let similarityThreshold = 0.75; // Default value
+      // Get the current setting value and parse it more carefully
+      let similarityThreshold = 0.75; // Default fallback value
       
-      if (settings.similarityThreshold) {
-        if (typeof settings.similarityThreshold === 'string') {
+      try {
+        if (settings.similarityThreshold) {
+          const rawValue = settings.similarityThreshold.toString().trim();
+          
           // Handle percentage format (e.g. "75%")
-          if (settings.similarityThreshold.includes('%')) {
-            similarityThreshold = parseFloat(settings.similarityThreshold) / 100;
+          if (rawValue.includes('%')) {
+            similarityThreshold = parseFloat(rawValue) / 100;
           } else {
             // Handle decimal format (e.g. "0.75")
-            similarityThreshold = parseFloat(settings.similarityThreshold);
+            similarityThreshold = parseFloat(rawValue);
           }
-        } else if (typeof settings.similarityThreshold === 'number') {
-          similarityThreshold = settings.similarityThreshold;
+          
+          // Check for NaN and apply limits
+          if (isNaN(similarityThreshold)) {
+            console.warn('Invalid similarity threshold value - using default 0.75');
+            similarityThreshold = 0.75;
+          }
         }
+      } catch (error) {
+        console.error('Error parsing similarity threshold:', error);
       }
       
       // Ensure the threshold is a valid value between 0 and 1

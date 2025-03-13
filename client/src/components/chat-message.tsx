@@ -4,15 +4,15 @@ import { cn } from '@/lib/utils';
 
 interface ChatMessageProps {
   message: Message;
-  relevantMemories?: RelevantMemory[];
   isLast?: boolean;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
-  relevantMemories,
   isLast = false,
 }) => {
+  // Use memories attached to the message itself (if available)
+  const relevantMemories = message.relevantMemories;
   const isUser = message.role === 'user';
 
   return (

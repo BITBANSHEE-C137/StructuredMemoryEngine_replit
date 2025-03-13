@@ -90,9 +90,15 @@ export function useChatMessages() {
           modelId
         };
         
+        // Attach the relevant memories to the assistant's response message directly
+        const assistantMessage = {
+          ...response.message,
+          relevantMemories: response.context?.relevantMemories || []
+        };
+        
         // Add both real messages in correct order (chronological)
         // The user message followed by the assistant response
-        return [...filtered, userMessage, response.message];
+        return [...filtered, userMessage, assistantMessage];
       });
       
       // Return the context for memory panel

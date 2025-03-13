@@ -168,7 +168,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <ChatMessage 
                 key={message.id} 
                 message={message}
-                relevantMemories={relevantMemoriesMap[message.id]}
                 isLast={i === displayMessages.length - 1}
               />
             ))}
