@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Check, AlertCircle, Key, CircleAlert } from "lucide-react";
+import { Loader2, Check, AlertCircle, Key, CircleAlert, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { usePineconeSettings } from '@/hooks/usePineconeSettings';
+import { usePineconeStats } from '@/hooks/usePineconeStats';
 import { useToast } from '@/hooks/use-toast';
 
 interface PineconeSettingsModalProps {
@@ -36,6 +37,9 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     hydrateFromPinecone,
     fetchVectorsFromIndex
   } = usePineconeSettings();
+  
+  // Add Pinecone stats hook for real-time stats refresh
+  const { stats, refetch: refreshStats, isLoading: isStatsLoading } = usePineconeStats();
   
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreatingIndex, setIsCreatingIndex] = useState(false);

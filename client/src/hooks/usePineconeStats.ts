@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants';
+import { queryClient } from '@/lib/queryClient';
 
 export interface PineconeStats {
   enabled: boolean;
@@ -13,11 +13,21 @@ export interface PineconeStats {
 }
 
 export function usePineconeStats() {
+  const queryKey = [API_ROUTES.PINECONE + '/stats'];
+  
   const { data, isLoading, error, refetch } = useQuery<PineconeStats>({
-    queryKey: [API_ROUTES.PINECONE + '/stats'],
-    refetchInterval: 60 * 1000, // Refresh every minute
+    queryKey,
+    refetchInterval: 30 * 1000, // Refresh more frequently (every 30 seconds)
     refetchOnWindowFocus: true,
+    staleTime: 0, // Override the Infinity staleTime to ensure refetching
+    gcTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  // Function to manually refresh stats
+  const refreshStats = async () => {
+    await queryClient.invalidateQueries({ queryKey });
+    return refetch();
+  };
 
   return {
     stats: data || {
@@ -28,6 +38,6 @@ export function usePineconeStats() {
     },
     isLoading,
     error,
-    refetch,
+    refetch: refreshStats,
   };
 }
