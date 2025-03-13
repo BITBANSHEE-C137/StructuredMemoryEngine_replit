@@ -23,6 +23,9 @@ interface PineconeIndex {
 interface SyncResult {
   success: boolean;
   count: number;
+  duplicateCount?: number;
+  dedupRate?: number;
+  totalProcessed?: number;
 }
 
 interface WipeResult {
@@ -226,9 +229,17 @@ export function usePineconeSettings() {
         data: { indexName, namespace }
       });
       
+      // Create a detailed success message including deduplication info if available
+      let successMessage = `Successfully synced ${result.count} memories to Pinecone`;
+      
+      // Add deduplication information if available
+      if (result.duplicateCount !== undefined && result.dedupRate !== undefined) {
+        successMessage += ` (${result.duplicateCount} duplicates skipped, ${result.dedupRate.toFixed(1)}% deduplication rate)`;
+      }
+      
       toast({
         title: "Success",
-        description: `Successfully synced ${result.count} memories to Pinecone`,
+        description: successMessage,
         variant: "default"
       });
       

@@ -59,6 +59,15 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
   const [syncNamespace, setSyncNamespace] = useState('default');
   const [selectedIndex, setSelectedIndex] = useState('');
   
+  // Track deduplication information from last sync
+  const [lastSyncResults, setLastSyncResults] = useState<{
+    count: number;
+    duplicateCount?: number;
+    dedupRate?: number;
+    totalProcessed?: number;
+    timestamp: Date;
+  } | null>(null);
+  
   useEffect(() => {
     if (isOpen) {
       fetchSettings();
@@ -131,6 +140,18 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     try {
       const result = await syncToPinecone(selectedIndex, syncNamespace);
       console.log('Sync result:', result);
+      
+      // Store the sync results for display
+      if (result) {
+        setLastSyncResults({
+          count: result.count,
+          duplicateCount: result.duplicateCount,
+          dedupRate: result.dedupRate,
+          totalProcessed: result.totalProcessed,
+          timestamp: new Date()
+        });
+      }
+      
       // Refresh stats after sync operation completes
       await refreshStats();
     } catch (error) {
