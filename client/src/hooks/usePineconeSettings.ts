@@ -312,6 +312,35 @@ export function usePineconeSettings() {
       setIsLoading(false);
     }
   }, [fetchIndexes, toast]);
+  
+  // Function to fetch direct vector data from a Pinecone index for debugging
+  const fetchVectorsFromIndex = useCallback(async (indexName: string, namespace: string = 'default', limit: number = 100) => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest({
+        url: `/api/pinecone/indexes/${indexName}/vectors?namespace=${encodeURIComponent(namespace)}&limit=${limit}`,
+        method: 'GET'
+      });
+      
+      toast({
+        title: "Success",
+        description: `Retrieved ${response.vectors?.length || 0} vectors from index ${indexName}`,
+        variant: "default"
+      });
+      
+      return response;
+    } catch (error) {
+      console.error("Error fetching vector data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch vector data. Check console for details.",
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   return {
     settings,
