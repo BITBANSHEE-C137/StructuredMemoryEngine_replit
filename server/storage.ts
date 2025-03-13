@@ -50,7 +50,13 @@ export interface IStorage {
   // Pinecone operations
   getPineconeSettings(): Promise<PineconeSettings>;
   updatePineconeSettings(settings: Partial<InsertPineconeSettings>): Promise<PineconeSettings>;
-  syncMemoriesToPinecone(indexName: string, namespace?: string): Promise<{ success: boolean; count: number }>;
+  syncMemoriesToPinecone(indexName: string, namespace?: string): Promise<{ 
+    success: boolean; 
+    count: number; 
+    duplicateCount?: number; 
+    dedupRate?: number; 
+    totalProcessed?: number;
+  }>;
   hydrateFromPinecone(indexName: string, namespace?: string, limit?: number): Promise<{ success: boolean; count: number }>;
   isPineconeAvailable(): Promise<boolean>;
 }
@@ -364,7 +370,13 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async syncMemoriesToPinecone(indexName: string, namespace: string = 'default'): Promise<{ success: boolean; count: number }> {
+  async syncMemoriesToPinecone(indexName: string, namespace: string = 'default'): Promise<{ 
+    success: boolean; 
+    count: number;
+    duplicateCount?: number; 
+    dedupRate?: number; 
+    totalProcessed?: number;
+  }> {
     try {
       // Check if Pinecone is available
       const isPineconeActive = await this.isPineconeAvailable();
@@ -379,7 +391,7 @@ export class DatabaseStorage implements IStorage {
         return { success: true, count: 0 };
       }
 
-      // Sync memories to Pinecone
+      // Sync memories to Pinecone with enhanced deduplication tracking
       const result = await upsertMemoriesToPinecone(pgvectorMemories, indexName, namespace);
       
       // Update the last sync timestamp
@@ -390,9 +402,13 @@ export class DatabaseStorage implements IStorage {
         lastSyncTimestamp: new Date()
       });
       
+      // Return enhanced response with deduplication stats
       return { 
         success: result.success, 
-        count: result.upsertedCount 
+        count: result.upsertedCount,
+        duplicateCount: result.duplicateCount,
+        dedupRate: result.dedupRate,
+        totalProcessed: result.totalProcessed
       };
     } catch (error) {
       console.error("Error syncing memories to Pinecone:", error);

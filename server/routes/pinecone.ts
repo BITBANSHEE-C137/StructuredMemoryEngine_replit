@@ -129,9 +129,17 @@ router.post('/sync', async (req: Request, res: Response) => {
       });
     }
     
-    const result = await storage.syncMemoriesToPinecone(indexName, namespace);
+    // Get enhanced sync result with deduplication information
+    const syncResult = await storage.syncMemoriesToPinecone(indexName, namespace);
     
-    res.json(result);
+    // Return complete response with all deduplication data
+    res.json({
+      success: syncResult.success,
+      count: syncResult.count,
+      duplicateCount: syncResult.duplicateCount || 0,
+      dedupRate: syncResult.dedupRate || 0,
+      totalProcessed: syncResult.totalProcessed || syncResult.count
+    });
   } catch (error) {
     log(`Error syncing memories to Pinecone: ${error}`, 'pinecone');
     res.status(500).json({ error: 'Failed to sync memories to Pinecone' });
