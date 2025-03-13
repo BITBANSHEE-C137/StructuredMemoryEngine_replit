@@ -413,6 +413,43 @@ export function usePineconeSettings() {
   const canChangeIndexSettings = useCallback(() => {
     return currentOperation === 'none';
   }, [currentOperation]);
+  
+  // Store function references to use in event listeners
+  useEffect(() => {
+    syncToPineconeRef.current = syncToPinecone;
+    hydrateFromPineconeRef.current = hydrateFromPinecone;
+  }, [syncToPinecone, hydrateFromPinecone]);
+  
+  // Set up event listeners for sync and hydrate operations
+  useEffect(() => {
+    // Handler for sync event
+    const handleSyncRequest = (event: CustomEvent) => {
+      if (syncToPineconeRef.current && event.detail) {
+        const { indexName, namespace } = event.detail;
+        console.log(`Sync requested for index: ${indexName}, namespace: ${namespace}`);
+        syncToPineconeRef.current(indexName, namespace);
+      }
+    };
+    
+    // Handler for hydrate event
+    const handleHydrateRequest = (event: CustomEvent) => {
+      if (hydrateFromPineconeRef.current && event.detail) {
+        const { indexName, namespace, limit } = event.detail;
+        console.log(`Hydrate requested for index: ${indexName}, namespace: ${namespace}`);
+        hydrateFromPineconeRef.current(indexName, namespace, limit);
+      }
+    };
+    
+    // Add event listeners
+    window.addEventListener('pinecone-sync-requested', handleSyncRequest as EventListener);
+    window.addEventListener('pinecone-hydrate-requested', handleHydrateRequest as EventListener);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('pinecone-sync-requested', handleSyncRequest as EventListener);
+      window.removeEventListener('pinecone-hydrate-requested', handleHydrateRequest as EventListener);
+    };
+  }, []);
 
   return {
     settings,
