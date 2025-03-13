@@ -29,6 +29,7 @@ export const API_ROUTES = {
   HEALTH: "/api/health",
   CLEAR_MEMORIES: "/api/memories/clear",
   MEMORIES: "/api/memories",
+  PINECONE: "/api/pinecone",
   AUTH: {
     LOGIN: "/api/auth/login",
     LOGOUT: "/api/auth/logout",

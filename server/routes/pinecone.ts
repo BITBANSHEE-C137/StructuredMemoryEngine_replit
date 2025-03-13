@@ -192,6 +192,53 @@ router.post('/indexes/:name/wipe', async (req: Request, res: Response) => {
   }
 });
 
+// Get stats for active Pinecone index
+router.get('/stats', async (_req: Request, res: Response) => {
+  try {
+    const settings = await storage.getPineconeSettings();
+    
+    if (!settings.isEnabled || !settings.activeIndexName) {
+      return res.json({ 
+        enabled: false,
+        vectorCount: 0,
+        activeIndex: null,
+        namespaces: []
+      });
+    }
+    
+    const isPineconeAvailable = await storage.isPineconeAvailable();
+    
+    if (!isPineconeAvailable) {
+      return res.status(503).json({ 
+        error: 'Pinecone service is not available',
+        message: 'Check your API key and connection'
+      });
+    }
+    
+    const indexes = await listPineconeIndexes();
+    const activeIndex = indexes.find(index => index.name === settings.activeIndexName);
+    
+    if (!activeIndex) {
+      return res.json({
+        enabled: true,
+        vectorCount: 0,
+        activeIndex: settings.activeIndexName,
+        namespaces: []
+      });
+    }
+    
+    res.json({
+      enabled: true,
+      vectorCount: activeIndex.vectorCount,
+      activeIndex: settings.activeIndexName,
+      namespaces: activeIndex.namespaces || []
+    });
+  } catch (error) {
+    log(`Error fetching Pinecone stats: ${error}`, 'pinecone');
+    res.status(500).json({ error: 'Failed to fetch Pinecone stats' });
+  }
+});
+
 // Check if Pinecone is available
 router.get('/status', async (_req: Request, res: Response) => {
   try {

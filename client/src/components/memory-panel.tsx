@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { API_ROUTES } from '@/lib/constants';
 import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
+import { usePineconeStats } from '@/hooks/usePineconeStats';
 
 interface MemoryPanelProps {
   memories: Memory[];
@@ -27,6 +28,9 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(totalMemories);
   const [loading, setLoading] = useState(false);
+  
+  // Fetch Pinecone stats
+  const { stats: pineconeStats, isLoading: loadingPinecone } = usePineconeStats();
 
   // Fetch memories when panel is open
   useEffect(() => {
@@ -129,6 +133,43 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
               <div className="text-primary/70 font-medium mb-1">Database</div>
               <div className="text-primary text-lg font-bold">PGVector</div>
             </div>
+            
+            {/* Pinecone Stats */}
+            {pineconeStats.enabled && (
+              <>
+                <div className="bg-primary/5 p-3 rounded-lg border border-primary/10 col-span-2">
+                  <div className="text-primary/70 font-medium mb-1 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Pinecone Index: {pineconeStats.activeIndex}
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="text-primary font-medium">
+                      <span className="text-lg font-bold">{pineconeStats.vectorCount}</span> 
+                      <span className="text-xs ml-1 text-primary/70">vectors</span>
+                    </div>
+                    <div className="text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded-full">
+                      {loadingPinecone ? 'Updating...' : 'Synced'}
+                    </div>
+                  </div>
+                  
+                  {pineconeStats.namespaces.length > 0 && (
+                    <div className="mt-2 border-t border-primary/10 pt-2">
+                      <div className="text-xs text-primary/70 mb-1">Namespaces:</div>
+                      <div className="text-xs space-y-1">
+                        {pineconeStats.namespaces.map(ns => (
+                          <div key={ns.name} className="flex justify-between">
+                            <span className="text-primary/80">{ns.name}</span>
+                            <span className="text-primary font-medium">{ns.vectorCount} vectors</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
         
