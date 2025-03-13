@@ -311,11 +311,52 @@ router.get('/stats', async (_req: Request, res: Response) => {
       });
     }
     
+    // Get the pinecone settings to check for last sync/hydrate operations
+    const pineconeSettings = await storage.getPineconeSettings();
+    
+    // Calculate deduplication metrics if available
+    let lastSyncDedupRate = null;
+    let lastHydrateDedupRate = null;
+    let avgDedupRate = null;
+    
+    // Attempt to query the database for recent sync operations to extract deduplication metrics
+    try {
+      // You could add a db query here to get historical deduplication metrics from recent operations
+      // For now, we'll use placeholder values if they exist in the settings
+      if (pineconeSettings.metadata && typeof pineconeSettings.metadata === 'object') {
+        const metadata = pineconeSettings.metadata as any;
+        
+        if (metadata.lastSyncResult && metadata.lastSyncResult.dedupRate) {
+          lastSyncDedupRate = metadata.lastSyncResult.dedupRate;
+        }
+        
+        if (metadata.lastHydrateResult && metadata.lastHydrateResult.dedupRate) {
+          lastHydrateDedupRate = metadata.lastHydrateResult.dedupRate;
+        }
+        
+        // Calculate average if both metrics are available
+        if (lastSyncDedupRate !== null && lastHydrateDedupRate !== null) {
+          avgDedupRate = (lastSyncDedupRate + lastHydrateDedupRate) / 2;
+        } else if (lastSyncDedupRate !== null) {
+          avgDedupRate = lastSyncDedupRate;
+        } else if (lastHydrateDedupRate !== null) {
+          avgDedupRate = lastHydrateDedupRate;
+        }
+      }
+    } catch (err) {
+      log(`Error getting deduplication metrics: ${err}`, 'pinecone');
+      // Continue without deduplication metrics
+    }
+    
     res.json({
       enabled: true,
       vectorCount: activeIndex.vectorCount,
       activeIndex: settings.activeIndexName,
-      namespaces: activeIndex.namespaces || []
+      namespaces: activeIndex.namespaces || [],
+      // Include deduplication metrics if available
+      ...(lastSyncDedupRate !== null && { lastSyncDedupRate }),
+      ...(lastHydrateDedupRate !== null && { lastHydrateDedupRate }),
+      ...(avgDedupRate !== null && { avgDedupRate })
     });
   } catch (error) {
     log(`Error fetching Pinecone stats: ${error}`, 'pinecone');

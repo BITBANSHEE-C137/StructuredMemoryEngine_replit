@@ -422,12 +422,27 @@ export class DatabaseStorage implements IStorage {
       // Sync memories to Pinecone with enhanced deduplication tracking
       const result = await upsertMemoriesToPinecone(pgvectorMemories, indexName, namespace);
       
-      // Update the last sync timestamp
+      // Store the sync result in the settings metadata for future reference
+      const currentSettings = await this.getPineconeSettings();
+      const metadata = currentSettings.metadata ? { ...currentSettings.metadata } : {};
+      
+      // Add the sync result to metadata
+      metadata.lastSyncResult = {
+        count: result.count,
+        duplicateCount: result.duplicateCount,
+        dedupRate: result.dedupRate,
+        totalProcessed: result.totalProcessed,
+        vectorCount: result.vectorCount,
+        timestamp: result.timestamp || new Date().toISOString()
+      };
+      
+      // Update the settings with result and last sync timestamp
       await this.updatePineconeSettings({
         activeIndexName: indexName,
         namespace,
         isEnabled: true,
-        lastSyncTimestamp: new Date()
+        lastSyncTimestamp: new Date(),
+        metadata
       });
       
       // Return comprehensive response with all sync statistics
@@ -685,32 +700,50 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`Successfully hydrated ${successCount} memories from Pinecone`);
       
-      // Update the pinecone settings
+      // Calculate deduplication rate
+      const dedupRate = totalProcessed > 0 ? duplicateCount / totalProcessed : 0;
+      const dedupRatePercent = parseFloat((dedupRate * 100).toFixed(2));
+      
+      // Get final vector count for reporting
+      let finalVectorCount = 0;
+      try {
+        const indexes = await listPineconeIndexes();
+        const targetIndex = indexes.find(idx => idx.name === indexName);
+        if (targetIndex) {
+          finalVectorCount = targetIndex.vectorCount;
+        }
+      } catch (error) {
+        console.error("Error getting final vector count:", error);
+      }
+      
+      // Store the hydrate result in the settings metadata for future reference
+      const currentSettings = await this.getPineconeSettings();
+      const metadataObj = typeof currentSettings.metadata === 'object' && currentSettings.metadata !== null 
+        ? { ...currentSettings.metadata as object } 
+        : {};
+      
+      // Add the hydrate result to metadata
+      (metadataObj as any).lastHydrateResult = {
+        count: successCount,
+        duplicateCount,
+        dedupRate: dedupRatePercent,
+        totalProcessed,
+        vectorCount: finalVectorCount,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Update the pinecone settings with metadata
       console.log(`Updating Pinecone settings to reflect successful hydration`);
       await this.updatePineconeSettings({
         activeIndexName: indexName,
         namespace,
         isEnabled: true,
-        lastSyncTimestamp: new Date()
+        lastSyncTimestamp: new Date(),
+        metadata: metadataObj as any
       });
       
-      // Calculate deduplication rate
-      const dedupRate = totalProcessed > 0 ? duplicateCount / totalProcessed : 0;
-      
       console.log(`Hydration from Pinecone completed successfully`);
-      console.log(`Deduplication stats: ${duplicateCount} duplicates out of ${totalProcessed} total vectors (${(dedupRate * 100).toFixed(2)}%)`);
-      
-      // Get final vector count for reporting
-      let vectorCount = 0;
-      try {
-        const indexes = await listPineconeIndexes();
-        const targetIndex = indexes.find(idx => idx.name === indexName);
-        if (targetIndex) {
-          vectorCount = targetIndex.vectorCount;
-        }
-      } catch (error) {
-        console.error("Error getting final vector count:", error);
-      }
+      console.log(`Deduplication stats: ${duplicateCount} duplicates out of ${totalProcessed} total vectors (${dedupRatePercent}%)`);
       
       const timestamp = new Date().toISOString();
       
@@ -718,9 +751,9 @@ export class DatabaseStorage implements IStorage {
         success: true, 
         count: successCount,
         duplicateCount,
-        dedupRate: parseFloat((dedupRate * 100).toFixed(2)),
+        dedupRate: dedupRatePercent,
         totalProcessed,
-        vectorCount,
+        vectorCount: finalVectorCount,
         indexName,
         namespace,
         timestamp
