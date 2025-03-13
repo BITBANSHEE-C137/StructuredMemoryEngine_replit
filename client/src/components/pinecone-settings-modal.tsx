@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Check, AlertCircle, Key, CircleAlert, RefreshCw } from "lucide-react";
+import { Loader2, Check, AlertCircle, Key, CircleAlert, RefreshCw, CheckCircle, Clock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { usePineconeSettings } from '@/hooks/usePineconeSettings';
@@ -820,6 +820,46 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                   <p className="text-xs text-muted-foreground mt-1">
                     Pushes all local vector memories to the selected Pinecone index.
                   </p>
+                  
+                  {/* Display deduplication stats if available */}
+                  {lastSyncResults && (
+                    <div className="mt-3 p-3 bg-secondary/30 rounded-md border border-border">
+                      <div className="text-sm font-medium mb-1 flex items-center">
+                        <CheckCircle className="h-4 w-4 mr-1 text-green-500" />
+                        Last Sync Results
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-muted-foreground">Vectors Synced:</span>
+                          <span className="ml-1 font-medium">{lastSyncResults.count}</span>
+                        </div>
+                        {lastSyncResults.duplicateCount !== undefined && (
+                          <div>
+                            <span className="text-muted-foreground">Duplicates:</span>
+                            <span className="ml-1 font-medium">{lastSyncResults.duplicateCount}</span>
+                          </div>
+                        )}
+                        {lastSyncResults.totalProcessed !== undefined && (
+                          <div>
+                            <span className="text-muted-foreground">Total Processed:</span>
+                            <span className="ml-1 font-medium">{lastSyncResults.totalProcessed}</span>
+                          </div>
+                        )}
+                        {lastSyncResults.dedupRate !== undefined && (
+                          <div>
+                            <span className="text-muted-foreground">Dedup Rate:</span>
+                            <span className="ml-1 font-medium">
+                              {(lastSyncResults.dedupRate * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                        )}
+                        <div className="col-span-2 text-muted-foreground">
+                          <Clock className="h-3 w-3 inline mr-1" />
+                          {lastSyncResults.timestamp ? new Date(lastSyncResults.timestamp).toLocaleTimeString() : 'Unknown time'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <div className="flex flex-col space-y-2 mt-2">
