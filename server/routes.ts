@@ -255,9 +255,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 4. Retrieve relevant memories based on the embedding
       const contextSize = settings.contextSize || 5;
+      // Parse the similarity threshold as a float (it's stored as a string in the DB)
+      const similarityThreshold = parseFloat(settings.similarityThreshold) || 0.5;
+      
+      // Pass both contextSize and similarityThreshold to the storage method
       const relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
-        contextSize
+        contextSize,
+        similarityThreshold
       );
       
       // 5. Format context from relevant memories
