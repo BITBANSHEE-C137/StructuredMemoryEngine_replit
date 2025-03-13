@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ChatInterface } from '@/components/chat-interface';
 import { MemoryPanel } from '@/components/memory-panel';
 import { SettingsModal } from '@/components/settings-modal';
+import { PineconeSettingsModal } from '@/components/pinecone-settings-modal';
 import { useChatMessages, useSettings, useModels, useApiStatus, useMobile } from '@/lib/hooks';
 import { DEFAULT_SETTINGS, API_ROUTES } from '@/lib/constants';
 import { RelevantMemory, Settings } from '@/lib/types';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useLocation, useSearch } from 'wouter';
 
 // User menu with logout button
 function UserMenuWithLogout() {
@@ -41,11 +44,15 @@ function UserMenuWithLogout() {
 export default function Home() {
   const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(true);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isPineconeModalOpen, setIsPineconeModalOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_SETTINGS.defaultModelId);
   const [selectedEmbeddingModelId, setSelectedEmbeddingModelId] = useState(DEFAULT_SETTINGS.defaultEmbeddingModelId);
   const [relevantMemories, setRelevantMemories] = useState<RelevantMemory[]>([]);
   
   const isMobile = useMobile();
+  const [location, setLocation] = useLocation();
+  const search = useSearch();
+  const { toast } = useToast();
   const { messages, isLoading: isMessagesLoading, fetchMessages, sendMessage } = useChatMessages();
   const { settings, isLoading: isSettingsLoading, fetchSettings, updateSettings } = useSettings();
   const { models, isLoading: isModelsLoading, fetchModels } = useModels();
@@ -57,6 +64,31 @@ export default function Home() {
       setIsMemoryPanelOpen(false);
     }
   }, [isMobile]);
+  
+  // Check for URL parameters that might indicate a special action
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const requestType = params.get('request');
+    
+    if (requestType === 'pinecone_api_key') {
+      // Ask for Pinecone API key
+      askForPineconeApiKey();
+      
+      // Remove the parameter after handling it
+      setLocation('/', { replace: true });
+    }
+  }, [search, setLocation]);
+  
+  // Request the Pinecone API key from the user
+  const askForPineconeApiKey = useCallback(async () => {
+    // Using ask_secrets tool here would redirect to appropriate function
+    toast({
+      title: "Pinecone API Key Required",
+      description: "To use Pinecone for persistent memory storage, you need to add a Pinecone API key in your project settings.",
+      variant: "destructive",
+      duration: 7000
+    });
+  }, [toast]);
   
   // Fetch initial data
   useEffect(() => {
@@ -265,6 +297,12 @@ export default function Home() {
         onReset={handleResetSettings}
         isLoading={isSettingsLoading}
         models={models}
+      />
+      
+      {/* Pinecone Settings Modal */}
+      <PineconeSettingsModal
+        isOpen={isPineconeModalOpen}
+        onClose={() => setIsPineconeModalOpen(false)}
       />
     </div>
   );

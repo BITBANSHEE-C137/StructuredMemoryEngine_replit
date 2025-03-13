@@ -62,6 +62,13 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     }
   }, [settings]);
   
+  // Load indexes when the settings tab is active and Pinecone is available
+  useEffect(() => {
+    if (isOpen && isAvailable && selectedTab === 'settings') {
+      fetchIndexes();
+    }
+  }, [isOpen, isAvailable, selectedTab, fetchIndexes]);
+  
   const handleCreateIndex = async () => {
     setIsCreatingIndex(true);
     try {
@@ -150,7 +157,10 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 variant="outline" 
                 className="flex items-center"
                 onClick={() => {
-                  alert("To connect to Pinecone, you need to add the PINECONE_API_KEY and PINECONE_ENVIRONMENT environment variables in your project.");
+                  onClose(); // Close the modal before redirecting
+                  
+                  // Redirect to settings to get API key
+                  window.location.href = '/?request=pinecone_api_key';
                 }}
               >
                 <Key className="h-3 w-3 mr-1" /> Add API Key
@@ -200,6 +210,30 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 />
                 <p className="text-sm text-muted-foreground">
                   Default namespace for organizing vectors in Pinecone.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="active-index">Active Index</Label>
+                <Select 
+                  value={settings?.activeIndexName || ''} 
+                  onValueChange={(value) => updateSettings({ activeIndexName: value || null })}
+                  disabled={isLoading || !isAvailable || indexes.length === 0}
+                >
+                  <SelectTrigger id="active-index">
+                    <SelectValue placeholder="Select active index" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {indexes.map(index => (
+                      <SelectItem key={index.name} value={index.name}>
+                        {index.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  The active index will be used for memory operations when Pinecone is enabled.
                 </p>
               </div>
               
