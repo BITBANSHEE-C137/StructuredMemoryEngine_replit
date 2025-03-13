@@ -42,6 +42,7 @@ export async function seedModels() {
     
     // Insert default OpenAI models
     await db.insert(models).values([
+      // Chat models
       {
         id: "gpt-4o",
         name: "GPT-4o",
@@ -56,9 +57,24 @@ export async function seedModels() {
         maxTokens: 4096,
         isEnabled: true,
       },
+      // Embedding models
       {
         id: "text-embedding-ada-002",
         name: "Ada 002 (Embeddings)",
+        provider: "openai",
+        maxTokens: 8191,
+        isEnabled: true,
+      },
+      {
+        id: "text-embedding-3-small",
+        name: "Embedding 3 Small",
+        provider: "openai",
+        maxTokens: 8191,
+        isEnabled: true,
+      },
+      {
+        id: "text-embedding-3-large",
+        name: "Embedding 3 Large",
         provider: "openai",
         maxTokens: 8191,
         isEnabled: true,
