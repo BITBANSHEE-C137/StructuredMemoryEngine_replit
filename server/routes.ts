@@ -8,6 +8,7 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { insertMessageSchema, insertSettingsSchema, type Model, type Settings } from "@shared/schema";
 import authRouter from "./routes/auth";
+import pineconeRouter from "./routes/pinecone";
 import { authMiddleware, isAuthenticated } from "./middleware/auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -63,6 +64,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Update settings (protected)
   router.post("/settings", authMiddleware, async (req, res) => {
+    try {
+      const validatedData = insertSettingsSchema.parse(req.body);
+      const settings = await storage.updateSettings(validatedData);
+      res.json(settings);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+  
+  // Add PATCH endpoint to support client's expectation
+  router.patch("/settings", authMiddleware, async (req, res) => {
     try {
       const validatedData = insertSettingsSchema.parse(req.body);
       const settings = await storage.updateSettings(validatedData);
@@ -243,9 +255,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 4. Retrieve relevant memories based on the embedding
       const contextSize = settings.contextSize || 5;
+      // Parse the similarity threshold as a float (it's stored as a string in the DB)
+      console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}"`);
+      
+      // Get the current setting value and parse it more carefully
+      let similarityThreshold = 0.75; // Default fallback value
+      
+      try {
+        if (settings.similarityThreshold) {
+          const rawValue = settings.similarityThreshold.toString().trim();
+          
+          // Handle percentage format (e.g. "75%")
+          if (rawValue.includes('%')) {
+            similarityThreshold = parseFloat(rawValue) / 100;
+          } else {
+            // Handle decimal format (e.g. "0.75")
+            similarityThreshold = parseFloat(rawValue);
+          }
+          
+          // Check for NaN and apply limits
+          if (isNaN(similarityThreshold)) {
+            console.warn('Invalid similarity threshold value - using default 0.75');
+            similarityThreshold = 0.75;
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing similarity threshold:', error);
+      }
+      
+      // Ensure the threshold is a valid value between 0 and 1
+      similarityThreshold = Math.max(0, Math.min(1, similarityThreshold));
+      
+      console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
+      
+      // Pass both contextSize and similarityThreshold to the storage method
       const relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
-        contextSize
+        contextSize,
+        similarityThreshold
       );
       
       // 5. Format context from relevant memories
@@ -410,8 +457,7 @@ These settings determine how the system processes your queries and retrieves rel
       res.json({ 
         success: true, 
         count: result.count, 
-        messagesCount: result.messagesCount, 
-        message: `Successfully cleared ${result.count} memories and ${result.messagesCount} messages` 
+        message: `Successfully cleared ${result.count} memories and messages` 
       });
     } catch (err) {
       handleError(err, res);
@@ -420,6 +466,9 @@ These settings determine how the system processes your queries and retrieves rel
 
   // Register auth router
   app.use("/api/auth", authRouter);
+  
+  // Register Pinecone router
+  app.use("/api/pinecone", pineconeRouter);
   
   // Register all API routes with /api prefix
   app.use("/api", router);

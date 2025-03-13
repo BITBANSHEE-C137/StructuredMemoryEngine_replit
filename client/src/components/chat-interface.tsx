@@ -71,17 +71,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     
     // Store relevant memories for this message
     if (context && context.relevantMemories) {
-      // Find the message ID of the latest assistant message
-      // Since we're reversing messages in display, we don't need to reverse here
-      const latestAssistantMessage = messages
-        .find(msg => msg.role === 'assistant');
-      
-      if (latestAssistantMessage) {
-        setRelevantMemoriesMap(prev => ({
-          ...prev,
-          [latestAssistantMessage.id]: context.relevantMemories
-        }));
-      }
+      // We need to wait for the messages to update with the new assistant response
+      setTimeout(() => {
+        // Find the latest assistant message (should be the last one)
+        const latestAssistantMessage = [...messages].reverse()
+          .find(msg => msg.role === 'assistant');
+        
+        if (latestAssistantMessage) {
+          console.log('Setting relevant memories for message ID:', latestAssistantMessage.id);
+          setRelevantMemoriesMap(prev => ({
+            ...prev,
+            [latestAssistantMessage.id]: context.relevantMemories
+          }));
+        }
+      }, 100); // Small delay to ensure messages are updated
     }
   };
   
@@ -90,9 +93,10 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const anthropicModels = models.filter(model => model.provider === 'anthropic');
   
   // Display system message + all messages or just messages if there are any
-  // If we have messages, we reverse them to get oldest at top and newest at bottom
+  // Messages come from the server/storage in chronological order (oldest first)
+  // and we display them the same way (oldest at top, newest at bottom)
   const displayMessages = messages.length > 0 
-    ? [...messages].reverse() 
+    ? [...messages] // No modification needed - already in chronological order
     : [DEFAULT_SYSTEM_MESSAGE];
   
   return (
@@ -112,7 +116,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </span>
               </div>
             </div>
-            <p className="mt-1 text-xs text-primary/60 italic">Set in Settings</p>
           </div>
           
           <div className="flex flex-col">
@@ -125,7 +128,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <span>{selectedEmbeddingModelId}</span>
               </div>
             </div>
-            <p className="mt-1 text-xs text-primary/60 italic">Set in Settings</p>
           </div>
         </div>
         
@@ -166,7 +168,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <ChatMessage 
                 key={message.id} 
                 message={message}
-                relevantMemories={relevantMemoriesMap[message.id]}
                 isLast={i === displayMessages.length - 1}
               />
             ))}
