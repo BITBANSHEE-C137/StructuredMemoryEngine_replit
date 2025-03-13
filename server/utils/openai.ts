@@ -6,11 +6,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Generate embeddings for a given text using ada-002 model
-export async function generateEmbedding(text: string): Promise<string> {
+// Generate embeddings for a given text using the configured embedding model
+export async function generateEmbedding(text: string, embeddingModel: string = "text-embedding-ada-002"): Promise<string> {
   try {
     const response = await openai.embeddings.create({
-      model: "text-embedding-ada-002",
+      model: embeddingModel,
       input: text,
     });
     

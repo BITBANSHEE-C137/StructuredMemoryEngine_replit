@@ -127,11 +127,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userMessage = await storage.createMessage({
         content,
         role: "user",
-        modelId: "text-embedding-ada-002" // We always use ada-002 for embeddings
+        modelId
       });
       
-      // 2. Generate embedding for the user message
-      const embedding = await openai.generateEmbedding(content);
+      // 2. Generate embedding for the user message using the configured embedding model
+      const embeddingModel = settings.defaultEmbeddingModelId || "text-embedding-ada-002";
+      const embedding = await openai.generateEmbedding(content, embeddingModel);
       
       // 3. Store memory with embedding
       const userMemory = await storage.createMemory({
@@ -175,8 +176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelId
       });
       
-      // 8. Generate embedding for the response
-      const responseEmbedding = await openai.generateEmbedding(response);
+      // 8. Generate embedding for the response using the same embedding model
+      const responseEmbedding = await openai.generateEmbedding(response, embeddingModel);
       
       // 9. Store memory with embedding
       const assistantMemory = await storage.createMemory({

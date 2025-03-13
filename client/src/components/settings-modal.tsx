@@ -57,6 +57,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setContextSize(reset.contextSize);
       setSimilarityThreshold(reset.similarityThreshold);
       setAutoClearMemories(reset.autoClearMemories);
+      setDefaultEmbeddingModelId(reset.defaultEmbeddingModelId || DEFAULT_SETTINGS.defaultEmbeddingModelId);
     }
   };
   
@@ -211,6 +212,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span>Lower Precision</span>
                 <span>Higher Precision</span>
               </div>
+            </div>
+            
+            <div>
+              <label htmlFor="embedding-model" className="text-sm mb-1 block">
+                Embedding Model
+              </label>
+              <select
+                id="embedding-model"
+                value={defaultEmbeddingModelId}
+                onChange={(e) => setDefaultEmbeddingModelId(e.target.value)}
+                className="w-full p-2 border border-neutral-dark rounded text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+              >
+                <option value="text-embedding-ada-002">text-embedding-ada-002 (OpenAI)</option>
+                <option value="text-embedding-3-small">text-embedding-3-small (OpenAI)</option>
+                <option value="text-embedding-3-large">text-embedding-3-large (OpenAI)</option>
+              </select>
+              <p className="text-xs text-primary-light mt-1">
+                Model used for embedding queries and memories for vector retrieval
+              </p>
             </div>
             
             <div className="flex items-center">
