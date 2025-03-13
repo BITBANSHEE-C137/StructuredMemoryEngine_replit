@@ -32,7 +32,7 @@ export interface IStorage {
   // Memory operations
   createMemory(memory: InsertMemory): Promise<Memory>;
   getMemoryById(id: number): Promise<Memory | undefined>;
-  queryMemoriesByEmbedding(embedding: string, limit?: number): Promise<(Memory & { similarity: number })[]>;
+  queryMemoriesByEmbedding(embedding: string, limit?: number, similarityThreshold?: number): Promise<(Memory & { similarity: number })[]>;
   clearAllMemories(): Promise<{ count: number }>; // Method to clear all memories
   getMemories(page?: number, pageSize?: number): Promise<{ memories: Memory[], total: number }>; // Method to get paginated memories
   
@@ -197,21 +197,26 @@ export class DatabaseStorage implements IStorage {
     return memory;
   }
 
-  async queryMemoriesByEmbedding(embedding: string, limit: number = 5): Promise<(Memory & { similarity: number })[]> {
+  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.5): Promise<(Memory & { similarity: number })[]> {
     try {
-      console.log("Input embedding format:", embedding.substring(0, 50) + "...");
+      // Make sure similarityThreshold is a proper number between 0 and 1
+      const threshold = Math.min(1, Math.max(0, similarityThreshold));
+      
+      console.log(`Querying memories with similarityThreshold: ${threshold} (${threshold * 100}%)`);
       
       // Ensure embedding is cast as vector and using the cosine distance operator (<->)
+      // Added filtering by similarity threshold
       const result = await db.execute(sql`
         SELECT m.*, 
                1 - (m.embedding <-> ${embedding}::vector) as similarity
         FROM memories m
         WHERE m.embedding IS NOT NULL
+        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${threshold}
         ORDER BY m.embedding <-> ${embedding}::vector
         LIMIT ${limit}
       `);
       
-      console.log(`Successfully found ${result.length} relevant memories`);
+      console.log(`Successfully found ${result.length} relevant memories with similarity >= ${threshold}`);
       
       // Convert the raw result to Memory objects with similarity score
       return result.map(row => ({

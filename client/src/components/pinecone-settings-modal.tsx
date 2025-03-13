@@ -476,7 +476,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseRequest}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto flex flex-col">
         <DialogHeader>
           <DialogTitle>Pinecone Vector Database Integration</DialogTitle>
           <DialogDescription>
