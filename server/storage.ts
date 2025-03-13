@@ -356,48 +356,65 @@ export class DatabaseStorage implements IStorage {
 
   async hydrateFromPinecone(indexName: string, namespace: string = 'default', limit: number = 1000): Promise<{ success: boolean; count: number }> {
     try {
+      console.log(`Starting hydration from Pinecone index ${indexName}, namespace ${namespace}, limit ${limit}`);
+      
       // Check if Pinecone is available
       const isPineconeActive = await this.isPineconeAvailable();
+      console.log(`Pinecone availability check: ${isPineconeActive}`);
+      
       if (!isPineconeActive) {
+        console.error('Pinecone is not available. Check API key and connection.');
         throw new Error('Pinecone is not available. Check API key and connection.');
       }
 
       // First clear all existing memories in pgvector
-      await this.clearAllMemories();
+      console.log('Clearing all existing memories from local database');
+      const clearResult = await this.clearAllMemories();
+      console.log(`Cleared ${clearResult.count} items from local database`);
 
       // Fetch vectors from Pinecone
+      console.log(`Fetching vectors from Pinecone index ${indexName}, namespace ${namespace}`);
       const pineconeVectors = await fetchVectorsFromPinecone(indexName, namespace, limit);
+      console.log(`Fetched ${pineconeVectors.length} vectors from Pinecone`);
       
       if (pineconeVectors.length === 0) {
+        console.log('No vectors found in Pinecone, nothing to hydrate');
         return { success: true, count: 0 };
       }
 
       // Insert each memory into pgvector
       let successCount = 0;
       
+      console.log(`Starting to process ${pineconeVectors.length} vectors from Pinecone`);
       for (const vector of pineconeVectors) {
         try {
+          console.log(`Processing vector ID: ${vector.id}`);
           const metadata = vector.metadata || {};
+          console.log(`Vector metadata: ${JSON.stringify(metadata)}`);
           
           // Create message if needed for the memory
           let messageId = metadata.messageId;
           if (metadata.content && !messageId) {
+            console.log(`Creating new message for content: ${metadata.content.substring(0, 50)}...`);
             const message = await this.createMessage({
               content: metadata.content,
               role: metadata.type === 'prompt' ? 'user' : 'assistant',
               modelId: metadata.modelId || 'unknown'
             });
             messageId = message.id;
+            console.log(`Created new message with ID: ${messageId}`);
           }
           
           // Create memory in pgvector
-          await this.createMemory({
+          console.log(`Creating memory in local database, embedding length: ${vector.values.length}`);
+          const memory = await this.createMemory({
             content: metadata.content || '',
             embedding: JSON.stringify(vector.values),
             type: metadata.type || 'prompt',
             messageId: messageId,
             metadata: metadata.metadata || {}
           });
+          console.log(`Created memory with ID: ${memory.id}`);
           
           successCount++;
         } catch (err) {
@@ -406,7 +423,10 @@ export class DatabaseStorage implements IStorage {
         }
       }
       
+      console.log(`Successfully hydrated ${successCount} memories from Pinecone`);
+      
       // Update the pinecone settings
+      console.log(`Updating Pinecone settings to reflect successful hydration`);
       await this.updatePineconeSettings({
         activeIndexName: indexName,
         namespace,
@@ -414,6 +434,7 @@ export class DatabaseStorage implements IStorage {
         lastSyncTimestamp: new Date()
       });
       
+      console.log(`Hydration from Pinecone completed successfully`);
       return { 
         success: true, 
         count: successCount 

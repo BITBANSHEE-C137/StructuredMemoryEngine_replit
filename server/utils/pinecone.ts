@@ -314,16 +314,24 @@ export async function fetchVectorsFromPinecone(
   limit: number = 1000
 ): Promise<PineconeVector[]> {
   try {
+    log(`Fetching vectors from Pinecone index ${indexName}, namespace ${namespace}`, 'pinecone');
     const client = await getPineconeClient();
     const pineconeIndex = client.index(indexName);
     
     // List all vector IDs in the namespace
+    log(`Getting index stats for ${indexName}`, 'pinecone');
     const stats = await pineconeIndex.describeIndexStats();
+    log(`Index stats: ${JSON.stringify(stats)}`, 'pinecone');
+    
     const namespaceStats = stats.namespaces?.[namespace];
+    log(`Namespace stats for ${namespace}: ${JSON.stringify(namespaceStats)}`, 'pinecone');
     
     if (!namespaceStats || namespaceStats.recordCount === 0) {
+      log(`No records found in namespace ${namespace}`, 'pinecone');
       return [];
     }
+    
+    log(`Found ${namespaceStats.recordCount} records in namespace ${namespace}`, 'pinecone');
     
     // Fetch vectors in batches to respect rate limits
     // Since Pinecone doesn't have a simple "fetch all vectors" we have to query
@@ -332,11 +340,13 @@ export async function fetchVectorsFromPinecone(
     
     // First we'll send a query with a near-zero vector to get some IDs
     const dummyVector = Array(stats.dimension).fill(0.0001);
+    log(`Using dummy vector of dimension ${stats.dimension} to query Pinecone`, 'pinecone');
     
     // Try both with and without namespace parameter to handle different SDK versions
     let queryResponse;
     try {
       // Method 1: Try with namespace parameter (older SDK)
+      log(`Attempting query with namespace parameter (SDK compatibility)`, 'pinecone');
       queryResponse = await pineconeIndex.query({
         vector: dummyVector,
         topK: Math.min(limit, namespaceStats.recordCount),
@@ -345,7 +355,7 @@ export async function fetchVectorsFromPinecone(
         namespace
       });
     } catch (e) {
-      log(`Namespace parameter not supported, using new SDK method`, 'pinecone');
+      log(`Namespace parameter not supported, using new SDK method: ${e}`, 'pinecone');
       // Method 2: Try without namespace parameter (newer SDK)
       queryResponse = await pineconeIndex.query({
         vector: dummyVector,
@@ -355,12 +365,21 @@ export async function fetchVectorsFromPinecone(
       });
     }
     
+    log(`Query response matches: ${queryResponse.matches.length}`, 'pinecone');
+    
+    if (queryResponse.matches.length > 0) {
+      log(`Sample match: ${JSON.stringify(queryResponse.matches[0])}`, 'pinecone');
+    }
+    
     // Transform the response into our vector format
-    return queryResponse.matches.map(match => ({
+    const vectors = queryResponse.matches.map(match => ({
       id: match.id,
       values: match.values || [],
       metadata: match.metadata || {}
     }));
+    
+    log(`Returning ${vectors.length} vectors from Pinecone`, 'pinecone');
+    return vectors;
   } catch (error) {
     log(`Error fetching vectors from Pinecone: ${error}`, 'pinecone');
     throw error;
