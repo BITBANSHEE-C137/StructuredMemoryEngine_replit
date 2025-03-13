@@ -132,19 +132,19 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
           </div>
         </div>
         
-        {/* Embedding Visualization */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-5 mb-5 border border-primary/10">
-          <h3 className="text-sm font-semibold text-primary mb-2 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        {/* Embedding Visualization - Smaller sized */}
+        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-4 mb-5 border border-primary/10">
+          <h3 className="text-xs font-semibold text-primary mb-1 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
             </svg>
             Memory Retrieval
           </h3>
-          <div className="text-xs text-primary/60 mb-3">
-            Embedding similarity for current context
+          <div className="text-[10px] text-primary/60 mb-1">
+            Embedding similarity visualization
           </div>
-          <div className="rounded-xl overflow-hidden bg-gradient-to-b from-primary/5 to-white h-48 p-4 relative border border-primary/10">
-            <svg viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+          <div className="rounded-lg overflow-hidden bg-gradient-to-b from-primary/5 to-white h-24 p-2 relative border border-primary/10">
+            <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
               <defs>
                 <radialGradient id="pulseGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
                   <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.3" />
@@ -153,23 +153,23 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
               </defs>
               
               {/* Pulse effect for center node */}
-              <circle cx="100" cy="75" r="15" fill="url(#pulseGradient)" className="animate-pulse-slow" />
+              <circle cx="100" cy="50" r="10" fill="url(#pulseGradient)" className="animate-pulse-slow" />
               
               {/* Center node */}
-              <circle cx="100" cy="75" r="4" fill="var(--color-primary)" />
+              <circle cx="100" cy="50" r="3" fill="var(--color-primary)" />
               
               {relevantMemories.map((memory, i) => {
                 // Position circles based on similarity (higher = closer)
-                const distance = 40 * (1 - Math.min(memory.similarity, 0.99));
+                const distance = 30 * (1 - Math.min(memory.similarity, 0.99));
                 const angle = (i / relevantMemories.length) * Math.PI * 2;
                 const x = 100 + distance * Math.cos(angle);
-                const y = 75 + distance * Math.sin(angle);
+                const y = 50 + distance * Math.sin(angle);
                 
                 return (
                   <React.Fragment key={memory.id}>
                     <line 
                       x1="100" 
-                      y1="75" 
+                      y1="50" 
                       x2={x} 
                       y2={y} 
                       stroke="var(--color-primary)" 
@@ -180,15 +180,15 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     <circle 
                       cx={x} 
                       cy={y} 
-                      r={3} 
+                      r={2} 
                       fill={memory.similarity > 0.8 ? "var(--color-primary)" : "var(--color-primary-light)"} 
                     />
                   </React.Fragment>
                 );
               })}
             </svg>
-            <div className="absolute bottom-2 right-2">
-              <div className="text-center text-xs font-mono text-primary/70 z-10 bg-white/80 backdrop-blur-sm px-2 py-1 rounded-lg shadow-sm border border-primary/10">
+            <div className="absolute bottom-1 right-1">
+              <div className="text-center text-[8px] font-mono text-primary/70 z-10 bg-white/80 backdrop-blur-sm px-1 py-0.5 rounded-md shadow-sm border border-primary/10">
                 Query vector
               </div>
             </div>
