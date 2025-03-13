@@ -122,6 +122,52 @@ export class DatabaseStorage implements IStorage {
       };
     } catch (error) {
       console.error("Error creating memory:", error);
+      
+      // Handle foreign key constraint violation
+      if (error.code === '23503' && error.detail?.includes('message_id')) {
+        console.log(`Foreign key constraint error on messageId: ${insertMemory.messageId}`);
+        
+        // Create a placeholder message to satisfy the constraint
+        console.log(`Creating placeholder message for memory with foreign key constraint issue`);
+        const message = await this.createMessage({
+          content: `Imported memory from external source`,
+          role: insertMemory.type === 'prompt' ? 'user' : 'assistant',
+          modelId: 'unknown'
+        });
+        
+        // Try again with the newly created message ID
+        console.log(`Retrying memory creation with new messageId: ${message.id}`);
+        const [memory] = await db.execute(sql`
+          INSERT INTO memories (content, embedding, type, message_id, metadata)
+          VALUES (
+            ${insertMemory.content},
+            ${insertMemory.embedding},
+            ${insertMemory.type},
+            ${message.id},
+            ${insertMemory.metadata ? JSON.stringify({
+              ...JSON.parse(JSON.stringify(insertMemory.metadata)),
+              originalMessageId: insertMemory.messageId,
+              importedWithPlaceholder: true
+            }) : JSON.stringify({
+              originalMessageId: insertMemory.messageId,
+              importedWithPlaceholder: true
+            })}::jsonb
+          )
+          RETURNING *
+        `);
+        
+        // Convert the raw result to a Memory object
+        return {
+          id: Number(memory.id),
+          content: String(memory.content),
+          embedding: String(memory.embedding),
+          type: memory.type as 'prompt' | 'response',
+          messageId: message.id,
+          timestamp: memory.timestamp as Date,
+          metadata: memory.metadata
+        };
+      }
+      
       throw error;
     }
   }
