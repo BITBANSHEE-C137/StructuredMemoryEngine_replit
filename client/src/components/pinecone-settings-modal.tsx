@@ -66,6 +66,9 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     duplicateCount?: number;
     dedupRate?: number;
     totalProcessed?: number;
+    vectorCount?: number;
+    indexName?: string;
+    namespace?: string;
     timestamp: Date;
   } | null>(null);
   
@@ -75,6 +78,9 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     duplicateCount?: number;
     dedupRate?: number;
     totalProcessed?: number;
+    vectorCount?: number;
+    indexName?: string;
+    namespace?: string;
     timestamp: Date;
   } | null>(null);
   
@@ -164,7 +170,10 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
           duplicateCount: result.duplicateCount,
           dedupRate: result.dedupRate,
           totalProcessed: result.totalProcessed,
-          timestamp: new Date()
+          vectorCount: result.vectorCount,
+          indexName: result.indexName || selectedIndex,
+          namespace: result.namespace || syncNamespace,
+          timestamp: result.timestamp ? new Date(result.timestamp) : new Date()
         });
       }
       
@@ -198,7 +207,10 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
           duplicateCount: result.duplicateCount,
           dedupRate: result.dedupRate,
           totalProcessed: result.totalProcessed,
-          timestamp: new Date()
+          vectorCount: result.vectorCount,
+          indexName: result.indexName || selectedIndex,
+          namespace: result.namespace || syncNamespace,
+          timestamp: result.timestamp ? new Date(result.timestamp) : new Date()
         });
       }
       

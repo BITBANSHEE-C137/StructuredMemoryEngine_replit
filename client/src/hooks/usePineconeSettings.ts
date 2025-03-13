@@ -26,6 +26,10 @@ interface SyncResult {
   duplicateCount?: number;
   dedupRate?: number;
   totalProcessed?: number;
+  vectorCount?: number;
+  indexName?: string;
+  namespace?: string;
+  timestamp?: string;
 }
 
 interface WipeResult {

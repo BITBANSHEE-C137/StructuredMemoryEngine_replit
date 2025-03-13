@@ -67,6 +67,10 @@ export interface IStorage {
     duplicateCount?: number; 
     dedupRate?: number;
     totalProcessed?: number;
+    vectorCount?: number;
+    indexName?: string;
+    namespace?: string;
+    timestamp?: string;
   }>;
   isPineconeAvailable(): Promise<boolean>;
 }
