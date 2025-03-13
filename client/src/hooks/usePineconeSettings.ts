@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,6 +32,9 @@ export function usePineconeSettings() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Declare fetchIndexes reference first
+  const fetchIndexesRef = useRef<() => Promise<any>>();
+
   const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -55,7 +58,7 @@ export function usePineconeSettings() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   const updateSettings = useCallback(async (updatedSettings: Partial<PineconeSettings>) => {
     setIsLoading(true);
@@ -83,31 +86,8 @@ export function usePineconeSettings() {
       setIsLoading(false);
     }
   }, [toast]);
-
-  const checkAvailability = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      console.log('Checking Pinecone availability...');
-      const response = await apiRequest('/api/pinecone/status');
-      console.log('Pinecone status response:', response);
-      
-      const isAvailable = response?.available || false;
-      console.log('Pinecone is available:', isAvailable);
-      
-      setIsAvailable(isAvailable);
-      if (isAvailable) {
-        fetchIndexes();
-      }
-      return isAvailable;
-    } catch (error) {
-      console.error('Error checking Pinecone availability:', error);
-      setIsAvailable(false);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [fetchIndexes]);
-
+  
+  // Define the actual function
   const fetchIndexes = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -126,6 +106,35 @@ export function usePineconeSettings() {
       setIsLoading(false);
     }
   }, [toast]);
+  
+  // Assign the function to the ref
+  useEffect(() => {
+    fetchIndexesRef.current = fetchIndexes;
+  }, [fetchIndexes]);
+
+  const checkAvailability = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      console.log('Checking Pinecone availability...');
+      const response = await apiRequest('/api/pinecone/status');
+      console.log('Pinecone status response:', response);
+      
+      const isAvailable = response?.available || false;
+      console.log('Pinecone is available:', isAvailable);
+      
+      setIsAvailable(isAvailable);
+      if (isAvailable && fetchIndexesRef.current) {
+        fetchIndexesRef.current();
+      }
+      return isAvailable;
+    } catch (error) {
+      console.error('Error checking Pinecone availability:', error);
+      setIsAvailable(false);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   const createIndex = useCallback(async (name: string, dimension: number = 1536, metric: string = 'cosine') => {
     setIsLoading(true);

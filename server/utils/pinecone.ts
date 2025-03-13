@@ -32,9 +32,12 @@ async function initializePinecone() {
     // Check for newer SDK version compatibility
     log('Creating new Pinecone client instance...', 'pinecone');
     pineconeClient = new Pinecone({
-      apiKey: pineconeApiKey,
-      environment: pineconeEnvironment,
+      apiKey: pineconeApiKey, 
+      // Note: The Pinecone SDK no longer accepts 'environment' as a direct parameter
+      // in newer versions. We'll log this info for debugging purposes.
     });
+    
+    log(`Using controllerHostUrl: ${pineconeEnvironment}`, 'pinecone');
     
     // Verify connection with a simple operation
     log('Testing connection by listing indexes...', 'pinecone');
