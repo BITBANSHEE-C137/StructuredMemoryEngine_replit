@@ -39,8 +39,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     // Operation lock states
     currentOperation,
     operationIndex,
-    operationNamespace,
-    canChangeIndexSettings
+    operationNamespace
   } = usePineconeSettings();
   
   // Add Pinecone stats hook for real-time stats refresh
@@ -118,6 +117,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       return;
     }
     
+    setIsSyncing(true);
     try {
       await deleteIndex(indexName);
       // After deleting an index, refresh the indexes list and stats
@@ -125,6 +125,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       await refreshStats();
     } catch (error) {
       console.error('Error deleting index:', error);
+    } finally {
+      setIsSyncing(false);
     }
   };
   
@@ -133,12 +135,15 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       return;
     }
     
+    setIsSyncing(true);
     try {
       await wipeIndex(indexName, namespace);
       // After wiping an index, refresh stats to show updated vector count
       await refreshStats();
     } catch (error) {
       console.error('Error wiping index:', error);
+    } finally {
+      setIsSyncing(false);
     }
   };
   
