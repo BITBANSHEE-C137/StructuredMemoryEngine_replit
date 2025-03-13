@@ -129,12 +129,15 @@ export type PineconeSettings = typeof pineconeSettings.$inferSelect;
  * Used for deduplication and consistency when upserting to Pinecone
  */
 export function memoryIdForUpsert(memory: Memory): string {
-  // Create a string combining critical fields that uniquely identify the memory
-  const uniqueString = `${memory.content}_${memory.type}_${memory.messageId}_${memory.timestamp}`;
+  // Create a string combining only content and type for effective deduplication
+  // Important: Do NOT include unique IDs or timestamps in this string
+  const contentNormalized = memory.content.trim().toLowerCase();
+  const uniqueString = `${contentNormalized}_${memory.type}`;
   
   // Generate a hash to use as the ID
   const hash = createHash('sha256').update(uniqueString).digest('hex');
   
-  // Return the memory ID and hash as the unique identifier
-  return `mem_${memory.id}_${hash.substring(0, 8)}`;
+  // Return a deduplication hash that doesn't include the memory ID
+  // This ensures identical content generates the same hash
+  return `dedup_${hash.substring(0, 16)}`;
 }
