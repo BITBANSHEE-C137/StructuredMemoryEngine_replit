@@ -451,6 +451,46 @@ export function usePineconeSettings() {
     };
   }, []);
 
+  // Function to reset deduplication metrics
+  const resetDedupMetrics = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiRequest('/api/pinecone/reset-metrics', {
+        method: 'POST'
+      });
+      
+      if (response.success) {
+        toast({
+          title: "Metrics Reset",
+          description: "Deduplication metrics have been reset to 0%",
+          variant: "default"
+        });
+        
+        // Refresh pinecone stats
+        queryClient.invalidateQueries({ queryKey: ['/api/pinecone/stats'] });
+        
+        return true;
+      } else {
+        toast({
+          title: "Reset Failed",
+          description: response.message || "Failed to reset deduplication metrics",
+          variant: "destructive"
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Error resetting deduplication metrics:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reset deduplication metrics",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
   return {
     settings,
     indexes,
@@ -466,6 +506,7 @@ export function usePineconeSettings() {
     syncToPinecone,
     hydrateFromPinecone,
     fetchVectorsFromIndex,
+    resetDedupMetrics,  // New function to reset deduplication metrics
     // Expose operation state
     currentOperation,
     operationIndex,

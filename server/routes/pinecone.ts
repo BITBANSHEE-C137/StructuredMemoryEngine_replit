@@ -440,4 +440,54 @@ router.get('/status', async (_req: Request, res: Response) => {
   }
 });
 
+// Endpoint to reset deduplication metrics
+router.post('/reset-metrics', async (_req: Request, res: Response) => {
+  try {
+    const pineconeSettings = await storage.getPineconeSettings();
+    
+    // If there's no metadata, nothing to reset
+    if (!pineconeSettings.metadata) {
+      return res.json({ 
+        success: true, 
+        message: "No metrics to reset" 
+      });
+    }
+    
+    // Create a copy of existing metadata
+    const updatedMetadata = { ...pineconeSettings.metadata as any };
+    
+    // Reset the deduplication metrics
+    if (updatedMetadata.lastSyncResult) {
+      updatedMetadata.lastSyncResult.dedupRate = 0;
+      updatedMetadata.lastSyncResult.duplicateCount = 0;
+      
+      // Preserve other data for historical reference
+      updatedMetadata.lastSyncResult.wasReset = true;
+      updatedMetadata.lastSyncResult.resetTimestamp = new Date().toISOString();
+    }
+    
+    if (updatedMetadata.lastHydrateResult) {
+      updatedMetadata.lastHydrateResult.dedupRate = 0;
+      updatedMetadata.lastHydrateResult.duplicateCount = 0;
+      
+      // Preserve other data for historical reference
+      updatedMetadata.lastHydrateResult.wasReset = true;
+      updatedMetadata.lastHydrateResult.resetTimestamp = new Date().toISOString();
+    }
+    
+    // Update the settings with the modified metadata
+    await storage.updatePineconeSettings({
+      metadata: updatedMetadata
+    });
+    
+    res.json({ 
+      success: true, 
+      message: "Deduplication metrics reset successfully" 
+    });
+  } catch (error) {
+    log(`Error resetting deduplication metrics: ${error}`, 'pinecone');
+    res.status(500).json({ error: 'Failed to reset deduplication metrics' });
+  }
+});
+
 export default router;

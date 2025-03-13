@@ -184,9 +184,22 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                 
                 {/* Deduplication metrics */}
                 <div className="mt-3 pt-2 border-t border-primary/10">
-                  <div className="text-primary/70 text-xs mb-1.5 font-medium flex items-center">
-                    Duplicate Detection Rates:
-                    <span className="ml-1 text-[10px] bg-primary/10 px-1 py-0.5 rounded" title="Percentage of records that were identified as duplicates during sync/recall operations. Shown separately for each operation type.">?</span>
+                  <div className="text-primary/70 text-xs mb-1.5 font-medium flex items-center justify-between">
+                    <div className="flex items-center">
+                      Duplicate Detection Rates:
+                      <span className="ml-1 text-[10px] bg-primary/10 px-1 py-0.5 rounded" title="Percentage of records that were identified as duplicates during sync/recall operations. Shown separately for each operation type.">?</span>
+                    </div>
+                    <button 
+                      onClick={() => usePineconeSettingsHook.resetDedupMetrics()}
+                      className="text-[10px] hover:text-primary/90 text-primary/60 flex items-center"
+                      title="Reset deduplication metrics to 0%"
+                      disabled={isLoading || currentOperation !== 'none'}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Reset
+                    </button>
                   </div>
                   <div className="grid grid-cols-3 gap-1 text-xs">
                     {pineconeStats.lastSyncDedupRate !== undefined && (
