@@ -256,7 +256,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 4. Retrieve relevant memories based on the embedding
       const contextSize = settings.contextSize || 5;
       // Parse the similarity threshold as a float (it's stored as a string in the DB)
-      const similarityThreshold = parseFloat(settings.similarityThreshold) || 0.5;
+      // Add explicit debug log for the similarity threshold
+      console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}"`);
+      
+      // Ensure we have a valid number between 0 and 1 - handle both string formats ("0.75" and "75%")
+      let similarityThreshold = 0.75; // Default value
+      
+      if (settings.similarityThreshold) {
+        if (typeof settings.similarityThreshold === 'string') {
+          // Handle percentage format (e.g. "75%")
+          if (settings.similarityThreshold.includes('%')) {
+            similarityThreshold = parseFloat(settings.similarityThreshold) / 100;
+          } else {
+            // Handle decimal format (e.g. "0.75")
+            similarityThreshold = parseFloat(settings.similarityThreshold);
+          }
+        } else if (typeof settings.similarityThreshold === 'number') {
+          similarityThreshold = settings.similarityThreshold;
+        }
+      }
+      
+      // Ensure the threshold is a valid value between 0 and 1
+      similarityThreshold = Math.max(0, Math.min(1, similarityThreshold));
+      
+      console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       
       // Pass both contextSize and similarityThreshold to the storage method
       const relevantMemories = await storage.queryMemoriesByEmbedding(

@@ -84,7 +84,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               
               {/* Content section */}
               <div className="p-3">
-                {relevantMemories.length > 0 ? (
+                {relevantMemories && relevantMemories.length > 0 ? (
                   <>
                     <div className="text-[10px] text-primary/70 mb-2 flex justify-between items-center">
                       <span>Showing relevant context used to generate this response</span>
