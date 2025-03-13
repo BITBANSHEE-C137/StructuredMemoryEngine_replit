@@ -10,6 +10,7 @@ interface SettingsModalProps {
   onSave: (settings: Partial<Settings>) => Promise<Settings | null>;
   onReset: () => Promise<Settings | null>;
   isLoading: boolean;
+  models?: Model[];
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -19,7 +20,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   apiStatus,
   onSave,
   onReset,
-  isLoading
+  isLoading,
+  models = []
 }) => {
   const [contextSize, setContextSize] = useState(DEFAULT_SETTINGS.contextSize);
   const [similarityThreshold, setSimilarityThreshold] = useState(DEFAULT_SETTINGS.similarityThreshold);
@@ -122,7 +124,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex justify-between text-primary-light">
                   <span>Models Available</span>
                   <span className="font-medium">
-                    {apiStatus?.providers.openai === 'connected' ? '3' : '0'}
+                    {apiStatus?.providers.openai === 'connected' 
+                      ? models.filter(m => m.provider === 'openai').length 
+                      : '0'}
                   </span>
                 </div>
               </div>
@@ -228,8 +232,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onChange={(e) => setDefaultModelId(e.target.value)}
                 className="w-full p-2 border border-neutral-dark rounded text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
               >
-                <option value="gpt-4o">GPT-4o (OpenAI)</option>
-                <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (Anthropic)</option>
+                {models.length > 0 ? (
+                  // Group models by provider
+                  <>
+                    <optgroup label="OpenAI Models">
+                      {models
+                        .filter(model => model.provider === 'openai' && !model.id.includes('embedding'))
+                        .map(model => (
+                          <option key={model.id} value={model.id}>
+                            {model.name}
+                          </option>
+                        ))
+                      }
+                    </optgroup>
+                    <optgroup label="Anthropic Models">
+                      {models
+                        .filter(model => model.provider === 'anthropic')
+                        .map(model => (
+                          <option key={model.id} value={model.id}>
+                            {model.name}
+                          </option>
+                        ))
+                      }
+                    </optgroup>
+                  </>
+                ) : (
+                  <>
+                    <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                    <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (Anthropic)</option>
+                  </>
+                )}
               </select>
               <p className="text-xs text-primary-light mt-1">
                 Default model used for chat responses

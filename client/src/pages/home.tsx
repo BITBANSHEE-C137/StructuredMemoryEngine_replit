@@ -186,6 +186,7 @@ export default function Home() {
         onSave={handleSaveSettings}
         onReset={handleResetSettings}
         isLoading={isSettingsLoading}
+        models={models}
       />
     </div>
   );
