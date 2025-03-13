@@ -34,6 +34,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [showConfirmClear, setShowConfirmClear] = useState(false);
   const { toast } = useToast();
   
+  // Get chat message functions
+  const { clearMessages } = useChatMessages();
+  
   // Sync state with props when settings change
   useEffect(() => {
     if (settings) {
@@ -45,8 +48,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }, [settings]);
   
   if (!isOpen) return null;
-  
-  const { clearMessages } = useChatMessages();
 
   const handleClearMemories = async () => {
     try {
