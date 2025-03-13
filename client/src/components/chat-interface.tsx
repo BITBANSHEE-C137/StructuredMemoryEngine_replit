@@ -90,9 +90,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const anthropicModels = models.filter(model => model.provider === 'anthropic');
   
   // Display system message + all messages or just messages if there are any
-  // If we have messages, we reverse them to get oldest at top and newest at bottom
+  // Display messages with oldest at top and newest at bottom (natural chronological order)
   const displayMessages = messages.length > 0 
-    ? [...messages].reverse() 
+    ? [...messages] // No reverse needed - display in original order
     : [DEFAULT_SYSTEM_MESSAGE];
   
   return (

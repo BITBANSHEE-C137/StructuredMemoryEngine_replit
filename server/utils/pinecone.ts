@@ -194,7 +194,17 @@ export async function upsertMemoriesToPinecone(
             type: memory.type,
             messageId: memory.messageId,
             timestamp: memory.timestamp,
-            metadata: memory.metadata || {}
+            // Pinecone requires metadata values to be primitive types (string, number, boolean)
+            // or arrays of strings. Convert complex objects to strings.
+            relevant_ids: memory.metadata && typeof memory.metadata === 'object' && 
+                           'relevantMemories' in memory.metadata && 
+                           Array.isArray(memory.metadata.relevantMemories) ? 
+              memory.metadata.relevantMemories.map((id: number) => id.toString()) : 
+              [],
+            memory_timestamp: memory.metadata && typeof memory.metadata === 'object' && 
+                             'timestamp' in memory.metadata ? 
+              String(memory.metadata.timestamp) : 
+              new Date().toISOString()
           }
         };
       });
@@ -202,8 +212,17 @@ export async function upsertMemoriesToPinecone(
       if (records.length > 0) {
         try {
           // Upsert records to Pinecone with namespace
-          const upsertOptions = { namespace };
-          await pineconeIndex.upsert(records, upsertOptions);
+          // Handle both old and new SDK versions
+          try {
+            // Method 1: Try with namespace parameter (older SDK)
+            const upsertOptions = { namespace };
+            await pineconeIndex.upsert(records, upsertOptions);
+          } catch (e) {
+            // Method 2: Try without namespace parameter (newer SDK)
+            await pineconeIndex.upsert(records);
+            log(`Upserted using new SDK method without namespace parameter`, 'pinecone');
+          }
+          
           successCount += records.length;
         } catch (err) {
           log(`Error during batch upsert: ${err}`, 'pinecone');
@@ -235,15 +254,41 @@ export async function queryPineconeMemories(
     const client = await getPineconeClient();
     const pineconeIndex = client.index(indexName);
     
-    const queryResult = await pineconeIndex.query({
-      vector: embedding,
-      topK: limit,
-      includeMetadata: true,
-      namespace
-    });
+    // Try both with and without namespace parameter to handle different SDK versions
+    let queryResult;
+    try {
+      // Method 1: Try with namespace parameter (older SDK)
+      queryResult = await pineconeIndex.query({
+        vector: embedding,
+        topK: limit,
+        includeMetadata: true,
+        namespace
+      });
+    } catch (e) {
+      log(`Namespace parameter not supported, using new SDK method`, 'pinecone');
+      // Method 2: Try without namespace parameter (newer SDK)
+      queryResult = await pineconeIndex.query({
+        vector: embedding,
+        topK: limit,
+        includeMetadata: true
+      });
+    }
     
     return queryResult.matches.map(match => {
       const metadata = match.metadata || {};
+      // Reconstruct metadata from Pinecone-compatible format
+      const reconstructedMetadata: any = {};
+      
+      // Convert relevant_ids back to relevantMemories array if available
+      if (metadata.relevant_ids && Array.isArray(metadata.relevant_ids)) {
+        reconstructedMetadata.relevantMemories = metadata.relevant_ids.map(id => Number(id));
+      }
+      
+      // Add memory timestamp if available
+      if (metadata.memory_timestamp) {
+        reconstructedMetadata.timestamp = metadata.memory_timestamp;
+      }
+      
       return {
         id: Number(metadata.id) || 0,
         content: String(metadata.content) || '',
@@ -251,7 +296,7 @@ export async function queryPineconeMemories(
         messageId: Number(metadata.messageId) || 0,
         timestamp: String(metadata.timestamp) || new Date().toISOString(),
         similarity: match.score || 0,
-        metadata: metadata.metadata || {}
+        metadata: reconstructedMetadata
       };
     });
   } catch (error) {
@@ -287,13 +332,28 @@ export async function fetchVectorsFromPinecone(
     
     // First we'll send a query with a near-zero vector to get some IDs
     const dummyVector = Array(stats.dimension).fill(0.0001);
-    const queryResponse = await pineconeIndex.query({
-      vector: dummyVector,
-      topK: Math.min(limit, namespaceStats.recordCount),
-      includeMetadata: true,
-      includeValues: true,
-      namespace
-    });
+    
+    // Try both with and without namespace parameter to handle different SDK versions
+    let queryResponse;
+    try {
+      // Method 1: Try with namespace parameter (older SDK)
+      queryResponse = await pineconeIndex.query({
+        vector: dummyVector,
+        topK: Math.min(limit, namespaceStats.recordCount),
+        includeMetadata: true,
+        includeValues: true,
+        namespace
+      });
+    } catch (e) {
+      log(`Namespace parameter not supported, using new SDK method`, 'pinecone');
+      // Method 2: Try without namespace parameter (newer SDK)
+      queryResponse = await pineconeIndex.query({
+        vector: dummyVector,
+        topK: Math.min(limit, namespaceStats.recordCount),
+        includeMetadata: true,
+        includeValues: true
+      });
+    }
     
     // Transform the response into our vector format
     return queryResponse.matches.map(match => ({
@@ -452,7 +512,9 @@ export async function wipePineconeIndex(
         // Method 3: Use vector IDs - least efficient but most compatible
         log(`Falling back to fetching and deleting vectors by ID`, 'pinecone');
         const stats = await pineconeIndex.describeIndexStats();
-        const count = stats.namespaces?.[namespace]?.vectorCount || 0;
+        // Use recordCount (newer SDK) or vectorCount (older SDK) property
+        const count = stats.namespaces?.[namespace]?.recordCount || 
+                      (stats.namespaces?.[namespace] as any)?.vectorCount || 0;
         
         if (count > 0) {
           log(`Found ${count} vectors to delete in namespace ${namespace}`, 'pinecone');
