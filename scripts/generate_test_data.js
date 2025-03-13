@@ -257,8 +257,15 @@ async function generateEmbedding(text) {
 }
 
 // Main function to generate and insert test data
-async function generateAndInsertTestData() {
-  const TOTAL_CONVERSATIONS = 10; // Reduced for fast execution
+async function generateAndInsertTestData(size = 'small') {
+  // Define dataset sizes
+  const SIZES = {
+    small: 10,
+    medium: 100,
+    large: 300
+  };
+  
+  const TOTAL_CONVERSATIONS = SIZES[size] || 10; // Default to small if invalid size
   const DUPLICATION_RATE = 0.13; // 13% duplication
   
   // Connect to the database
@@ -330,6 +337,8 @@ async function generateAndInsertTestData() {
           new Date(),
           JSON.stringify({
             source: 'test_generator', 
+            dataset_size: size,
+            timestamp: new Date().toISOString(),
             index: idx,
             memory_id: userMemoryId,
             is_duplicate: idx >= originalCount
@@ -361,6 +370,8 @@ async function generateAndInsertTestData() {
           new Date(),
           JSON.stringify({
             source: 'test_generator',
+            dataset_size: size,
+            timestamp: new Date().toISOString(),
             index: idx,
             memory_id: assistantMemoryId,
             is_duplicate: idx >= originalCount
@@ -387,8 +398,30 @@ async function generateAndInsertTestData() {
   }
 }
 
-// Execute the function
-generateAndInsertTestData().catch(console.error);
+// Process command line arguments for size selection
+function parseArgs() {
+  const args = process.argv.slice(2);
+  let size = 'small';
+  
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--size' && i + 1 < args.length) {
+      size = args[i + 1];
+      if (!['small', 'medium', 'large'].includes(size)) {
+        console.warn(`Warning: Invalid size "${size}". Using "small" instead.`);
+        size = 'small';
+      }
+    }
+  }
+  
+  return { size };
+}
+
+// Get command line arguments
+const args = parseArgs();
+console.log(`Starting test data generation with size: ${args.size}`);
+
+// Execute the function with the specified size
+generateAndInsertTestData(args.size).catch(console.error);
 
 // Export for potential imports from other modules
 export { generateAndInsertTestData };
