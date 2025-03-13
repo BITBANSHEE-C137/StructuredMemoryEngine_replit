@@ -66,7 +66,8 @@ export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   contextSize: integer("context_size").default(5).notNull(),
   similarityThreshold: text("similarity_threshold").default("0.75").notNull(),
-  defaultModelId: text("default_model_id").default("gpt-3.5-turbo").notNull(),
+  defaultModelId: text("default_model_id").default("gpt-4o").notNull(),
+  defaultEmbeddingModelId: text("default_embedding_model_id").default("text-embedding-ada-002").notNull(),
   autoClearMemories: boolean("auto_clear_memories").default(false).notNull(),
 });
 

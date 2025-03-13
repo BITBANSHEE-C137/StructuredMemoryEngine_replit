@@ -43,6 +43,7 @@ export interface Settings {
   contextSize: number;
   similarityThreshold: string;
   defaultModelId: string;
+  defaultEmbeddingModelId: string;
   autoClearMemories: boolean;
 }
 

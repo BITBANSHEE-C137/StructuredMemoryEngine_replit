@@ -15,7 +15,8 @@ export const MEMORY_PANEL_BREAKPOINT = 768; // px
 export const DEFAULT_SETTINGS = {
   contextSize: 5,
   similarityThreshold: "0.75",
-  defaultModelId: "gpt-3.5-turbo",
+  defaultModelId: "gpt-4o",
+  defaultEmbeddingModelId: "text-embedding-ada-002",
   autoClearMemories: false
 };
 

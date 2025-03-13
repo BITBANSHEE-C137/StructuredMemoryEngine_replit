@@ -24,6 +24,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [contextSize, setContextSize] = useState(DEFAULT_SETTINGS.contextSize);
   const [similarityThreshold, setSimilarityThreshold] = useState(DEFAULT_SETTINGS.similarityThreshold);
   const [autoClearMemories, setAutoClearMemories] = useState(DEFAULT_SETTINGS.autoClearMemories);
+  const [defaultEmbeddingModelId, setDefaultEmbeddingModelId] = useState(DEFAULT_SETTINGS.defaultEmbeddingModelId);
   
   // Sync state with props when settings change
   useEffect(() => {
@@ -31,6 +32,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setContextSize(settings.contextSize);
       setSimilarityThreshold(settings.similarityThreshold);
       setAutoClearMemories(settings.autoClearMemories);
+      setDefaultEmbeddingModelId(settings.defaultEmbeddingModelId || DEFAULT_SETTINGS.defaultEmbeddingModelId);
     }
   }, [settings]);
   
@@ -40,7 +42,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const updated = await onSave({
       contextSize,
       similarityThreshold,
-      autoClearMemories
+      autoClearMemories,
+      defaultEmbeddingModelId
     });
     
     if (updated) {
