@@ -89,9 +89,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                     <div className="text-[10px] text-primary/70 mb-2 flex justify-between items-center">
                       <span>Showing relevant context used to generate this response</span>
                       <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
-                        Minimum similarity: {Math.min(...relevantMemories.map(m => m.similarity)) > 0 
-                          ? `${(Math.min(...relevantMemories.map(m => m.similarity)) * 100).toFixed(0)}%` 
-                          : '0%'}
+                        Similarity: {relevantMemories.length > 0 && Math.min(...relevantMemories.map(m => m.similarity)) > 0 
+                          ? `${(Math.min(...relevantMemories.map(m => m.similarity)) * 100).toFixed(1)}%` 
+                          : '0.0%'}
                       </span>
                     </div>
                     
