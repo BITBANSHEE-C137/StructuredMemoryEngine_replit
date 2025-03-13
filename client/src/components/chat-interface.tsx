@@ -9,7 +9,9 @@ interface ChatInterfaceProps {
   models: Model[];
   isLoading: boolean;
   selectedModelId: string;
+  selectedEmbeddingModelId: string;
   onModelChange: (modelId: string) => void;
+  onEmbeddingModelChange: (modelId: string) => void;
   onSendMessage: (content: string, modelId: string) => Promise<{ relevantMemories: RelevantMemory[] } | null>;
   onToggleMemoryPanel?: () => void;
   isMobile: boolean;
@@ -20,7 +22,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   models,
   isLoading,
   selectedModelId,
+  selectedEmbeddingModelId,
   onModelChange,
+  onEmbeddingModelChange,
   onSendMessage,
   onToggleMemoryPanel,
   isMobile
@@ -114,8 +118,25 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
         
         <div className="flex items-center">
-          <span className="text-xs mr-2">Embedding Model:</span>
-          <span className="text-xs font-medium bg-secondary bg-opacity-10 text-secondary px-2 py-1 rounded">ada-002</span>
+          <label htmlFor="embedding-model-select" className="text-xs mr-2">Embedding Model:</label>
+          <div className="relative">
+            <select 
+              id="embedding-model-select" 
+              className="appearance-none bg-white border border-neutral-dark rounded-md py-1 pl-3 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-secondary"
+              value={selectedEmbeddingModelId}
+              onChange={(e) => onEmbeddingModelChange(e.target.value)}
+              disabled={isLoading}
+            >
+              <option value="text-embedding-ada-002">Ada 002</option>
+              <option value="text-embedding-3-small">Embedding 3 Small</option>
+              <option value="text-embedding-3-large">Embedding 3 Large</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-primary">
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
       
