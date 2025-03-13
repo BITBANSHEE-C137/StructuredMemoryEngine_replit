@@ -8,6 +8,7 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { insertMessageSchema, insertSettingsSchema, type Model, type Settings } from "@shared/schema";
 import authRouter from "./routes/auth";
+import pineconeRouter from "./routes/pinecone";
 import { authMiddleware, isAuthenticated } from "./middleware/auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -410,8 +411,7 @@ These settings determine how the system processes your queries and retrieves rel
       res.json({ 
         success: true, 
         count: result.count, 
-        messagesCount: result.messagesCount, 
-        message: `Successfully cleared ${result.count} memories and ${result.messagesCount} messages` 
+        message: `Successfully cleared ${result.count} memories and messages` 
       });
     } catch (err) {
       handleError(err, res);
@@ -420,6 +420,9 @@ These settings determine how the system processes your queries and retrieves rel
 
   // Register auth router
   app.use("/api/auth", authRouter);
+  
+  // Register Pinecone router
+  app.use("/api/pinecone", pineconeRouter);
   
   // Register all API routes with /api prefix
   app.use("/api", router);
