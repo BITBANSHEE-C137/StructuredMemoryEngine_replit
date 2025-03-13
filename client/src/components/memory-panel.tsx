@@ -80,9 +80,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
 
   if (!isOpen) return null;
 
-  // Calculate total tokens - typical average for embedding models is ~500 tokens per memory
-  // This is a rough estimate; actual token usage will vary based on content length
-  const totalTokens = total * 500;
+  // We're not calculating token usage as it requires a precise tokenization algorithm
+  // that matches the one used by the embedding model
   
   return (
     <aside 
@@ -134,14 +133,6 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                 </div>
                 <div className="text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded-full">
                   {loading ? 'Updating...' : 'Ready'}
-                </div>
-              </div>
-              <div className="flex justify-between items-center mt-2">
-                <div className="text-primary/70 text-xs">Tokens Used:</div>
-                <div className="text-primary font-medium">
-                  {totalTokens > 1000 
-                    ? `${(totalTokens / 1000).toFixed(1)}k` 
-                    : totalTokens}
                 </div>
               </div>
             </div>
