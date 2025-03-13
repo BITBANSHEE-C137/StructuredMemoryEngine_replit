@@ -27,7 +27,8 @@ export const API_ROUTES = {
   MODELS_ENABLED: "/api/models/enabled",
   SETTINGS: "/api/settings",
   HEALTH: "/api/health",
-  CLEAR_MEMORIES: "/api/memories/clear"
+  CLEAR_MEMORIES: "/api/memories/clear",
+  MEMORIES: "/api/memories"
 };
 
 export const ERROR_MESSAGES = {

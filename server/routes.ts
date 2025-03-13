@@ -388,6 +388,19 @@ These settings determine how the system processes your queries and retrieves rel
     return false;
   }
 
+  // Get memories with pagination
+  router.get("/memories", async (req, res) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string) : 10;
+      
+      const result = await storage.getMemories(page, pageSize);
+      res.json(result);
+    } catch (err) {
+      handleError(err, res);
+    }
+  });
+
   // Clear all memories endpoint
   router.post("/memories/clear", async (req, res) => {
     try {

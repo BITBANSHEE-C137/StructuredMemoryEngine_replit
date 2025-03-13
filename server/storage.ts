@@ -24,7 +24,8 @@ export interface IStorage {
   createMemory(memory: InsertMemory): Promise<Memory>;
   getMemoryById(id: number): Promise<Memory | undefined>;
   queryMemoriesByEmbedding(embedding: string, limit?: number): Promise<(Memory & { similarity: number })[]>;
-  clearAllMemories(): Promise<{ count: number }>; // New method to clear all memories
+  clearAllMemories(): Promise<{ count: number }>; // Method to clear all memories
+  getMemories(page?: number, pageSize?: number): Promise<{ memories: Memory[], total: number }>; // Method to get paginated memories
   
   // Settings operations
   getSettings(): Promise<Settings>;
@@ -165,6 +166,33 @@ export class DatabaseStorage implements IStorage {
       return { count: Number(result.length) };
     } catch (error) {
       console.error("Error clearing memories:", error);
+      throw error;
+    }
+  }
+  
+  // Get all memories with pagination
+  async getMemories(page: number = 1, pageSize: number = 10): Promise<{ memories: Memory[], total: number }> {
+    try {
+      // Calculate offset based on page and pageSize
+      const offset = (page - 1) * pageSize;
+      
+      // Get total count first
+      const [{ count }] = await db.select({ count: sql`count(*)` }).from(memories);
+      
+      // Get memories with pagination
+      const result = await db
+        .select()
+        .from(memories)
+        .orderBy(desc(memories.timestamp))
+        .limit(pageSize)
+        .offset(offset);
+      
+      return { 
+        memories: result,
+        total: Number(count)
+      };
+    } catch (error) {
+      console.error("Error fetching memories:", error);
       throw error;
     }
   }

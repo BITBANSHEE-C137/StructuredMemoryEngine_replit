@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Memory, RelevantMemory } from '@/lib/types';
 import { format } from 'date-fns';
+import { API_ROUTES } from '@/lib/constants';
+import { apiRequest } from '@/lib/queryClient';
+import { Button } from '@/components/ui/button';
 
 interface MemoryPanelProps {
   memories: Memory[];
@@ -12,17 +15,62 @@ interface MemoryPanelProps {
 }
 
 export const MemoryPanel: React.FC<MemoryPanelProps> = ({
-  memories,
+  memories: initialMemories,
   isOpen,
   onClose,
   isMobile,
   totalMemories = 0,
   relevantMemories = []
 }) => {
+  const [memories, setMemories] = useState<Memory[]>(initialMemories);
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [total, setTotal] = useState(totalMemories);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch memories when panel is open
+  useEffect(() => {
+    if (isOpen) {
+      fetchMemories(page, pageSize);
+    }
+  }, [isOpen, page, pageSize]);
+
+  const fetchMemories = async (pageNum: number, pageSizeNum: number) => {
+    if (loading) return;
+    
+    setLoading(true);
+    try {
+      const response = await apiRequest(
+        `${API_ROUTES.MEMORIES}?page=${pageNum}&pageSize=${pageSizeNum}`
+      );
+      
+      if (response && typeof response === 'object' && 'memories' in response && 'total' in response) {
+        setMemories(response.memories);
+        setTotal(response.total);
+      }
+    } catch (error) {
+      console.error('Failed to fetch memories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (page * pageSize < total) {
+      setPage(prev => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (page > 1) {
+      setPage(prev => prev - 1);
+    }
+  };
+
   if (!isOpen) return null;
 
-  // Calculate total tokens (mock data for now)
-  const totalTokens = totalMemories * 500; // Rough estimate
+  // Calculate total tokens (rough estimate)
+  const totalTokens = total * 500;
   
   return (
     <aside 
@@ -195,13 +243,38 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
             ))}
           </div>
           
-          {memories.length > 3 && (
-            <button className="mt-4 w-full bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium flex items-center justify-center py-2 px-4 rounded-lg transition-colors border border-primary/10">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-              View More Memories
-            </button>
+          {/* Pagination controls */}
+          {total > 0 && (
+            <div className="mt-4 flex justify-between items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={page === 1 || loading}
+                className="text-xs p-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                </svg>
+              </Button>
+              
+              <span className="text-xs text-primary/70">
+                Page {page} of {Math.ceil(total / pageSize)}
+                {loading && <span className="ml-2 animate-pulse">Loading...</span>}
+              </span>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={page * pageSize >= total || loading}
+                className="text-xs p-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </Button>
+            </div>
           )}
           
           {memories.length === 0 && (
