@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation, useSearch } from 'wouter';
+import { apiRequest } from '@/lib/queryClient';
 
 // User menu with logout button
 function UserMenuWithLogout() {
@@ -148,9 +149,25 @@ export default function Home() {
     return await updateSettings(DEFAULT_SETTINGS);
   };
   
-  // Calculate the total number of memories
-  // In a real app, this would come from the backend
-  const totalMemories = messages.length;
+  // State to store total memories count from the API
+  const [totalMemoriesCount, setTotalMemoriesCount] = useState(0);
+  
+  // Fetch total memories count
+  useEffect(() => {
+    async function fetchMemoriesCount() {
+      try {
+        const response = await apiRequest('GET', `${API_ROUTES.MEMORIES}?page=1&pageSize=1`);
+        const data = await response.json();
+        if (data && typeof data === 'object' && 'total' in data) {
+          setTotalMemoriesCount(data.total);
+        }
+      } catch (error) {
+        console.error('Failed to fetch memories count:', error);
+      }
+    }
+    
+    fetchMemoriesCount();
+  }, [messages]); // Refresh when messages change
   
   // Get recent memories for the memory panel
   const recentMemories = messages.slice(-5).map((msg, i) => ({
@@ -282,7 +299,7 @@ export default function Home() {
           isOpen={isMemoryPanelOpen}
           onClose={() => setIsMemoryPanelOpen(false)}
           isMobile={isMobile}
-          totalMemories={totalMemories}
+          totalMemories={totalMemoriesCount}
           relevantMemories={relevantMemories}
         />
       </div>

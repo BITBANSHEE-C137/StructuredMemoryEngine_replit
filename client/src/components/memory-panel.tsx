@@ -115,7 +115,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
               <div className="text-primary/70 font-medium mb-1">Total Memories</div>
-              <div className="text-primary text-lg font-bold">{totalMemories}</div>
+              <div className="text-primary text-lg font-bold">{total}</div>
             </div>
             <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
               <div className="text-primary/70 font-medium mb-1">Tokens Used</div>
