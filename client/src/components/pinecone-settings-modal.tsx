@@ -446,21 +446,17 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     }
   };
   
-  // Function to handle modal close request with safety check
+  // Function to handle modal close request
   const handleCloseRequest = () => {
-    // If an operation is in progress, show a confirmation dialog
-    if (!canChangeIndexSettings()) {
-      if (confirm(`A ${currentOperation} operation is currently in progress. Closing this window will not cancel the operation. Continue?`)) {
-        onClose();
-      }
-    } else {
+    // Only allow closing if no operation is in progress
+    if (!isSyncing) {
       onClose();
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseRequest}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Pinecone Vector Database Integration</DialogTitle>
           <DialogDescription>
@@ -468,7 +464,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-2">
+        <div className="py-2 overflow-y-auto flex-1">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center space-x-2">
               <span>Status:</span>
@@ -577,7 +573,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 <Select 
                   value={settings?.activeIndexName || "none"} 
                   onValueChange={(value) => updateSettings({ activeIndexName: value === "none" ? null : value })}
-                  disabled={isLoading || !isAvailable || indexes.length === 0 || !canChangeIndexSettings()}
+                  disabled={isLoading || !isAvailable || indexes.length === 0 || isSyncing}
                 >
                   <SelectTrigger id="active-index">
                     <SelectValue placeholder="Select active index" />
@@ -667,23 +663,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                   </div>
                 )}
                 
-                {currentOperation !== 'none' && (
-                  <div className="text-xs flex items-center pt-2 border-t border-gray-200 text-rose-600">
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    <span>
-                      <strong>Memory System Locked:</strong> {currentOperation === 'sync' ? 'Syncing to' : 'Hydrating from'} 
-                      {operationIndex && ` "${operationIndex}"`}
-                      {operationNamespace && ` (namespace: ${operationNamespace})`}...
-                    </span>
-                  </div>
-                )}
-                {/* Data Lock Status Indicator */}
+                {/* Operations indicators removed */}
                 <div className="flex items-center justify-between border-t border-gray-200 pt-2 mt-1">
-                  <div className={`flex items-center text-xs ${currentOperation !== 'none' ? 'text-rose-600' : 'text-emerald-600'}`}>
-                    <div className={`w-2 h-2 rounded-full mr-1.5 ${currentOperation !== 'none' ? 'bg-rose-600' : 'bg-emerald-600'}`}></div>
-                    <span>Memory system: <strong>{currentOperation !== 'none' ? 'Locked' : 'Unlocked'}</strong></span>
-                  </div>
-                  
                   {settings?.lastSyncTimestamp && (
                     <div className="text-xs text-muted-foreground">
                       Last sync: {new Date(settings.lastSyncTimestamp).toLocaleString()}
@@ -808,9 +789,9 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                               variant="outline" 
                               size="sm"
                               onClick={() => handleWipeIndex(index.name, settings?.namespace || 'default')}
-                              disabled={isLoading || !canChangeIndexSettings()}
+                              disabled={isLoading || isSyncing}
                               className="mr-1"
-                              title={!canChangeIndexSettings() ? "Cannot wipe index during active operation" : ""}
+                              title={isSyncing ? "Cannot wipe index during active operation" : ""}
                             >
                               Wipe
                             </Button>
@@ -818,8 +799,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                               variant="destructive" 
                               size="sm"
                               onClick={() => handleDeleteIndex(index.name)}
-                              disabled={isLoading || !canChangeIndexSettings()}
-                              title={!canChangeIndexSettings() ? "Cannot delete index during active operation" : ""}
+                              disabled={isLoading || isSyncing}
+                              title={isSyncing ? "Cannot delete index during active operation" : ""}
                             >
                               Delete
                             </Button>
@@ -992,11 +973,11 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
           <div className="text-sm text-muted-foreground">
             {settings?.isEnabled ? 'Pinecone integration is enabled' : 'Pinecone integration is disabled'}
           </div>
-          <Button onClick={handleCloseRequest}>
-            {currentOperation !== 'none' ? (
+          <Button onClick={handleCloseRequest} disabled={isSyncing}>
+            {isSyncing ? (
               <span className="flex items-center">
                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                Close (Operation in Progress)
+                Operation in Progress
               </span>
             ) : 'Close'}
           </Button>
