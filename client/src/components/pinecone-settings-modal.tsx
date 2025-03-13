@@ -80,6 +80,9 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     try {
       await createIndex(newIndexName, dimension, metric);
       setNewIndexName('');
+      // After creating an index, refresh the indexes list and stats
+      await fetchIndexes();
+      await refreshStats();
     } finally {
       setIsCreatingIndex(false);
     }
@@ -90,7 +93,14 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       return;
     }
     
-    await deleteIndex(indexName);
+    try {
+      await deleteIndex(indexName);
+      // After deleting an index, refresh the indexes list and stats
+      await fetchIndexes();
+      await refreshStats();
+    } catch (error) {
+      console.error('Error deleting index:', error);
+    }
   };
   
   const handleWipeIndex = async (indexName: string, namespace: string = 'default') => {
@@ -98,7 +108,13 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       return;
     }
     
-    await wipeIndex(indexName, namespace);
+    try {
+      await wipeIndex(indexName, namespace);
+      // After wiping an index, refresh stats to show updated vector count
+      await refreshStats();
+    } catch (error) {
+      console.error('Error wiping index:', error);
+    }
   };
   
   const handleSyncToPinecone = async () => {
@@ -108,7 +124,12 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     
     setIsSyncing(true);
     try {
-      await syncToPinecone(selectedIndex, syncNamespace);
+      const result = await syncToPinecone(selectedIndex, syncNamespace);
+      console.log('Sync result:', result);
+      // Refresh stats after sync operation completes
+      await refreshStats();
+    } catch (error) {
+      console.error('Error syncing to Pinecone:', error);
     } finally {
       setIsSyncing(false);
     }
@@ -125,7 +146,12 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     
     setIsSyncing(true);
     try {
-      await hydrateFromPinecone(selectedIndex, syncNamespace, 1000);
+      const result = await hydrateFromPinecone(selectedIndex, syncNamespace, 1000);
+      console.log('Hydrate result:', result);
+      // Refresh stats after hydrate operation completes
+      await refreshStats();
+    } catch (error) {
+      console.error('Error hydrating from Pinecone:', error);
     } finally {
       setIsSyncing(false);
     }
@@ -139,6 +165,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     
     setIsSyncing(true);
     try {
+      // Refresh stats before fetching vector data to ensure up-to-date counts
+      await refreshStats();
       const data = await fetchVectorsFromIndex(selectedIndex, syncNamespace, 100);
       console.log('Vector data from Pinecone:', data);
       
@@ -403,21 +431,39 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
               )}
             </div>
             
-            {!isAvailable && (
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="flex items-center"
-                onClick={() => {
-                  onClose(); // Close the modal before redirecting
-                  
-                  // Redirect to settings to get API key
-                  window.location.href = '/?request=pinecone_api_key';
-                }}
-              >
-                <Key className="h-3 w-3 mr-1" /> Add API Key
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {isAvailable && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex items-center"
+                  onClick={async () => {
+                    await refreshStats();
+                    await fetchIndexes();
+                  }}
+                  disabled={isStatsLoading}
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${isStatsLoading ? 'animate-spin' : ''}`} /> 
+                  Refresh Stats
+                </Button>
+              )}
+              
+              {!isAvailable && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex items-center"
+                  onClick={() => {
+                    onClose(); // Close the modal before redirecting
+                    
+                    // Redirect to settings to get API key
+                    window.location.href = '/?request=pinecone_api_key';
+                  }}
+                >
+                  <Key className="h-3 w-3 mr-1" /> Add API Key
+                </Button>
+              )}
+            </div>
           </div>
           
           <Tabs defaultValue="settings" onValueChange={setSelectedTab} value={selectedTab}>
@@ -489,13 +535,26 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 </p>
               </div>
               
-              {settings?.lastSyncTimestamp && (
-                <div className="mt-4 p-3 bg-muted rounded-md">
-                  <p className="text-sm">
-                    Last synchronized: {new Date(settings.lastSyncTimestamp).toLocaleString()}
-                  </p>
+              {/* Stats summary box */}
+              <div className="mt-4 p-3 bg-muted rounded-md space-y-2">
+                <h4 className="text-sm font-medium flex items-center justify-between">
+                  Pinecone Statistics
+                  {isStatsLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground ml-2" />}
+                </h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="text-xs">
+                    <span className="text-muted-foreground">Total vectors:</span> {stats.vectorCount}
+                  </div>
+                  <div className="text-xs">
+                    <span className="text-muted-foreground">Active index:</span> {stats.activeIndex || 'None'}
+                  </div>
                 </div>
-              )}
+                {settings?.lastSyncTimestamp && (
+                  <div className="text-xs text-muted-foreground pt-2 border-t border-gray-200">
+                    Last synchronized: {new Date(settings.lastSyncTimestamp).toLocaleString()}
+                  </div>
+                )}
+              </div>
             </TabsContent>
             
             <TabsContent value="indexes" className="space-y-4 py-4">
