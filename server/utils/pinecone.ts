@@ -193,15 +193,25 @@ export async function upsertMemoriesToPinecone(
       // Use batching to handle large numbers of vectors
       const fetchBatchSize = 100;
       
+      log(`Checking for duplicates in ${generatedIds.length} vectors`, 'pinecone');
+      
       for (let i = 0; i < generatedIds.length; i += fetchBatchSize) {
         const idBatch = generatedIds.slice(i, i + fetchBatchSize);
         try {
+          log(`Checking batch ${Math.floor(i / fetchBatchSize) + 1} of ${Math.ceil(generatedIds.length / fetchBatchSize)} for duplicates`, 'pinecone');
           const existingVectors = await pineconeIndex.fetch(idBatch);
           
           // Add existing IDs to our tracking set
-          Object.keys(existingVectors.vectors || {}).forEach(id => {
-            existingIds.add(id);
-          });
+          if (existingVectors && existingVectors.vectors) {
+            const foundIds = Object.keys(existingVectors.vectors);
+            log(`Found ${foundIds.length} existing vectors in batch`, 'pinecone');
+            
+            foundIds.forEach(id => {
+              existingIds.add(id);
+            });
+          } else {
+            log(`No existing vectors found in this batch or unexpected response format`, 'pinecone');
+          }
         } catch (e) {
           // If fetch fails (some versions of SDK behave differently), we'll just continue
           // and handle deduplication via upsert
@@ -211,7 +221,12 @@ export async function upsertMemoriesToPinecone(
       
       // Now we know which vectors already exist
       dedupCount = existingIds.size;
+      
+      // Log detailed deduplication information
       log(`Found ${dedupCount} duplicate vectors out of ${totalProcessed} total memories`, 'pinecone');
+      if (dedupCount > 0) {
+        log(`Duplicate vector IDs: ${Array.from(existingIds).slice(0, 5).join(', ')}${existingIds.size > 5 ? '...' : ''}`, 'pinecone');
+      }
       
     } catch (e) {
       // If the above approach fails, we'll fall back to just tracking the count

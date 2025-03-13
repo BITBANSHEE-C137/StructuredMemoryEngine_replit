@@ -57,7 +57,13 @@ export interface IStorage {
     dedupRate?: number; 
     totalProcessed?: number;
   }>;
-  hydrateFromPinecone(indexName: string, namespace?: string, limit?: number): Promise<{ success: boolean; count: number }>;
+  hydrateFromPinecone(indexName: string, namespace?: string, limit?: number): Promise<{ 
+    success: boolean; 
+    count: number; 
+    duplicateCount?: number; 
+    dedupRate?: number;
+    totalProcessed?: number;
+  }>;
   isPineconeAvailable(): Promise<boolean>;
 }
 
@@ -416,7 +422,13 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async hydrateFromPinecone(indexName: string, namespace: string = 'default', limit: number = 1000): Promise<{ success: boolean; count: number }> {
+  async hydrateFromPinecone(indexName: string, namespace: string = 'default', limit: number = 1000): Promise<{ 
+    success: boolean; 
+    count: number;
+    duplicateCount?: number;
+    dedupRate?: number;
+    totalProcessed?: number;
+  }> {
     try {
       console.log(`Starting hydration from Pinecone index ${indexName}, namespace ${namespace}, limit ${limit}`);
       
