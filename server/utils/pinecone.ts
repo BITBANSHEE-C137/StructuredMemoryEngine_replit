@@ -356,6 +356,7 @@ export async function upsertMemoriesToPinecone(
     return {
       success: true,
       count: newUpsertCount,               // Number of new vectors successfully added
+      upsertedCount: newUpsertCount,       // Alias for count for backwards compatibility
       duplicateCount: dedupCount,          // Number of duplicates detected and skipped
       dedupRate: formattedDedupRate,       // Percentage of duplicates in the original set
       totalProcessed,                      // Total number of memories processed

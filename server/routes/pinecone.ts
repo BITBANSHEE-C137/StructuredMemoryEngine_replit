@@ -136,16 +136,17 @@ router.post('/sync', async (req: Request, res: Response) => {
     const syncResult = await storage.syncMemoriesToPinecone(indexName, namespace);
     log(`Sync completed with result: ${JSON.stringify({
       success: syncResult.success,
-      count: syncResult.count,
+      count: syncResult.upsertedCount !== undefined ? syncResult.upsertedCount : syncResult.count,
       duplicateCount: syncResult.duplicateCount || 0,
       dedupRate: syncResult.dedupRate ? syncResult.dedupRate.toFixed(1) + '%' : '0%',
-      totalProcessed: syncResult.totalProcessed || syncResult.count
+      totalProcessed: syncResult.totalProcessed || syncResult.count,
+      vectorCount: syncResult.vectorCount || 0
     })}`, 'pinecone');
     
     // Return complete response with all deduplication data and metadata
     res.json({
       success: syncResult.success,
-      count: syncResult.count,
+      count: syncResult.upsertedCount !== undefined ? syncResult.upsertedCount : syncResult.count,
       duplicateCount: syncResult.duplicateCount || 0,
       dedupRate: syncResult.dedupRate || 0,
       totalProcessed: syncResult.totalProcessed || syncResult.count,
