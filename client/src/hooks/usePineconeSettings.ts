@@ -40,12 +40,18 @@ export function usePineconeSettings() {
       return response;
     } catch (error) {
       console.error('Error fetching Pinecone settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch Pinecone settings",
-        variant: "destructive"
-      });
-      return null;
+      // Provide a default settings object if we couldn't fetch from the server
+      // This prevents the UI from breaking when Pinecone isn't available yet
+      const defaultSettings = {
+        id: 1,
+        isEnabled: false,
+        vectorDimension: 1536,
+        activeIndexName: null,
+        namespace: 'default',
+        lastSyncTimestamp: null
+      };
+      setSettings(defaultSettings);
+      return defaultSettings;
     } finally {
       setIsLoading(false);
     }
@@ -82,11 +88,12 @@ export function usePineconeSettings() {
     setIsLoading(true);
     try {
       const response = await apiRequest('/api/pinecone/status');
-      setIsAvailable(response.available);
-      if (response.available) {
+      const isAvailable = response?.available || false;
+      setIsAvailable(isAvailable);
+      if (isAvailable) {
         fetchIndexes();
       }
-      return response.available;
+      return isAvailable;
     } catch (error) {
       console.error('Error checking Pinecone availability:', error);
       setIsAvailable(false);

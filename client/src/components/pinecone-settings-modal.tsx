@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Check, AlertCircle } from "lucide-react";
+import { Loader2, Check, AlertCircle, Key } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { usePineconeSettings } from '@/hooks/usePineconeSettings';
+import { useToast } from '@/hooks/use-toast';
 
 interface PineconeSettingsModalProps {
   isOpen: boolean;
@@ -120,25 +121,40 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
         </DialogHeader>
         
         <div className="py-2">
-          <div className="flex items-center space-x-2 mb-4">
-            <span>Status:</span>
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            ) : isAvailable ? (
-              <div className="flex items-center">
-                <Badge variant="outline" className="bg-green-500 text-white mr-2">
-                  <Check className="h-3 w-3 mr-1" /> Connected
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <span>Status:</span>
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              ) : isAvailable ? (
+                <div className="flex items-center">
+                  <Badge variant="outline" className="bg-green-500 text-white mr-2">
+                    <Check className="h-3 w-3 mr-1" /> Connected
+                  </Badge>
+                  {settings?.activeIndexName && (
+                    <span className="text-sm text-muted-foreground">
+                      Active index: {settings.activeIndexName}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <Badge variant="destructive">
+                  <AlertCircle className="h-3 w-3 mr-1" /> Disconnected
                 </Badge>
-                {settings?.activeIndexName && (
-                  <span className="text-sm text-muted-foreground">
-                    Active index: {settings.activeIndexName}
-                  </span>
-                )}
-              </div>
-            ) : (
-              <Badge variant="destructive">
-                <AlertCircle className="h-3 w-3 mr-1" /> Disconnected
-              </Badge>
+              )}
+            </div>
+            
+            {!isAvailable && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="flex items-center"
+                onClick={() => {
+                  alert("To connect to Pinecone, you need to add the PINECONE_API_KEY and PINECONE_ENVIRONMENT environment variables in your project.");
+                }}
+              >
+                <Key className="h-3 w-3 mr-1" /> Add API Key
+              </Button>
             )}
           </div>
           
