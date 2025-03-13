@@ -4,7 +4,6 @@ import { log } from '../vite';
 
 // Initialize Pinecone client
 const pineconeApiKey = process.env.PINECONE_API_KEY;
-const pineconeEnvironment = process.env.PINECONE_ENVIRONMENT;
 let pineconeClient: Pinecone | null = null;
 
 /**
@@ -18,27 +17,19 @@ async function initializePinecone() {
     log(errorMsg, 'pinecone');
     throw new Error(errorMsg);
   }
-  
-  if (!pineconeEnvironment) {
-    const errorMsg = 'PINECONE_ENVIRONMENT is not set. Pinecone integration is disabled.';
-    log(errorMsg, 'pinecone');
-    throw new Error(errorMsg);
-  }
 
   try {
-    log(`Initializing Pinecone client with environment: ${pineconeEnvironment}`, 'pinecone');
     log(`API Key length: ${pineconeApiKey.length} characters`, 'pinecone');
     
-    // Check for newer SDK version compatibility
+    // Initialize Pinecone client with just the API key as per latest SDK documentation
+    // https://docs.pinecone.io/docs/node-client
     log('Creating new Pinecone client instance...', 'pinecone');
     
-    // The newer Pinecone SDK doesn't accept 'environment' directly
-    // We'll just use the API key since Pinecone can determine the proper environment
     pineconeClient = new Pinecone({
-      apiKey: pineconeApiKey,
+      apiKey: pineconeApiKey
     });
     
-    log('Pinecone client initialized with API key', 'pinecone');
+    log('Pinecone client initialized', 'pinecone');
     
     // Verify connection with a simple operation
     log('Testing connection by listing indexes...', 'pinecone');
@@ -68,8 +59,8 @@ export async function getPineconeClient(): Promise<Pinecone> {
  * Check if Pinecone integration is available
  */
 export async function isPineconeAvailable(): Promise<boolean> {
-  if (!pineconeApiKey || !pineconeEnvironment) {
-    log('Pinecone API key or environment is not set', 'pinecone');
+  if (!pineconeApiKey) {
+    log('Pinecone API key is not set', 'pinecone');
     return false;
   }
 
