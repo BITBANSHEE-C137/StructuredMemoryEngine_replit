@@ -1,0 +1,131 @@
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
+import { models } from "@shared/schema";
+import { eq } from "drizzle-orm";
+
+// Create a pg client with default environment variables
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error("DATABASE_URL not found in environment variables");
+}
+
+// Initial database setup
+export const migrationClient = postgres(connectionString, { max: 1 });
+export const db = drizzle(migrationClient);
+
+// Function to run migrations
+export async function runMigrations() {
+  try {
+    console.log("Running migrations...");
+    await migrate(db, { migrationsFolder: "./migrations" });
+    console.log("Migrations completed successfully");
+  } catch (error) {
+    console.error("Migration failed:", error);
+    process.exit(1);
+  }
+}
+
+// Function to seed default models
+export async function seedModels() {
+  try {
+    // Check if we already have models in the database
+    const existingModels = await db.select().from(models);
+    
+    if (existingModels.length > 0) {
+      console.log("Models already seeded, skipping...");
+      return;
+    }
+    
+    console.log("Seeding default models...");
+    
+    // Insert default OpenAI models
+    await db.insert(models).values([
+      {
+        id: "gpt-4o",
+        name: "GPT-4o",
+        provider: "openai",
+        maxTokens: 8192,
+        isEnabled: true,
+      },
+      {
+        id: "gpt-3.5-turbo",
+        name: "GPT-3.5 Turbo",
+        provider: "openai",
+        maxTokens: 4096,
+        isEnabled: true,
+      },
+      {
+        id: "text-embedding-ada-002",
+        name: "Ada 002 (Embeddings)",
+        provider: "openai",
+        maxTokens: 8191,
+        isEnabled: true,
+      },
+    ]);
+    
+    // Insert default Anthropic models
+    await db.insert(models).values([
+      {
+        id: "claude-3-7-sonnet-20250219",
+        name: "Claude 3 Sonnet",
+        provider: "anthropic",
+        maxTokens: 200000,
+        isEnabled: true,
+      },
+      {
+        id: "claude-instant-1.2",
+        name: "Claude Instant",
+        provider: "anthropic",
+        maxTokens: 100000,
+        isEnabled: true,
+      },
+    ]);
+    
+    console.log("Models seeded successfully");
+  } catch (error) {
+    console.error("Error seeding models:", error);
+  }
+}
+
+// Initialize default settings if they don't exist
+export async function initializeSettings() {
+  try {
+    // This will be handled by the storage layer
+    console.log("Settings initialization will be handled by storage layer");
+  } catch (error) {
+    console.error("Error initializing settings:", error);
+  }
+}
+
+// Function to check if pgvector extension is installed
+export async function checkPgVectorExtension() {
+  try {
+    // Execute raw SQL to check if pgvector extension exists
+    const result = await migrationClient`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'vector'
+      ) as has_vector;
+    `;
+    
+    const hasVector = result[0]?.has_vector;
+    
+    if (!hasVector) {
+      console.warn("pgvector extension is not installed in the database. Vector search functionality will not work properly.");
+      console.warn("Please run CREATE EXTENSION vector; in your database to enable vector search.");
+    } else {
+      console.log("pgvector extension is installed and ready.");
+    }
+  } catch (error) {
+    console.error("Error checking pgvector extension:", error);
+  }
+}
+
+// Initialize database (run migrations, seed data, etc.)
+export async function initializeDatabase() {
+  await runMigrations();
+  await checkPgVectorExtension();
+  await seedModels();
+  await initializeSettings();
+}
