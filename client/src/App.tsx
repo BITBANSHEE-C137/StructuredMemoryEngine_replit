@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Switch, Route, useLocation, useRoute } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,17 +14,21 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const [, navigate] = useLocation();
   const [isOnLoginPage] = useRoute("/login");
   
-  // Redirect to login if not authenticated and not already on login page
-  if (!isLoading && !isAuthenticated && !isOnLoginPage) {
-    navigate("/login");
-    return null;
-  }
-  
-  // Redirect to home if authenticated and on login page
-  if (!isLoading && isAuthenticated && isOnLoginPage) {
-    navigate("/");
-    return null;
-  }
+  // Use useEffect for navigation to avoid React warning about setState during render
+  useEffect(() => {
+    // Don't redirect during loading
+    if (isLoading) return;
+    
+    // Redirect to login if not authenticated and not already on login page
+    if (!isAuthenticated && !isOnLoginPage) {
+      navigate("/login");
+    }
+    
+    // Redirect to home if authenticated and on login page
+    if (isAuthenticated && isOnLoginPage) {
+      navigate("/");
+    }
+  }, [isAuthenticated, isLoading, isOnLoginPage, navigate]);
   
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -35,7 +39,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
   
-  return <>{children}</>;
+  // For login page, render when auth is loading or when authenticated is false
+  if (isOnLoginPage) {
+    return isAuthenticated ? null : <>{children}</>;
+  }
+  
+  // For protected pages, render when auth is loading or when authenticated is true
+  return isAuthenticated ? <>{children}</> : null;
 }
 
 function App() {
