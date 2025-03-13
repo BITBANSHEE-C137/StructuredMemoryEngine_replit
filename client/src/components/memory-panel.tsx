@@ -116,12 +116,22 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
         
         {/* Memory Stats */}
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-5 mb-5 border border-primary/10">
-          <h3 className="text-sm font-semibold text-primary mb-4 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-            Memory Stats
-          </h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-sm font-semibold text-primary flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-primary/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Memory Stats
+            </h3>
+            
+            {/* Status indicator */}
+            {currentOperation !== 'none' && (
+              <div className="flex items-center bg-rose-50 text-rose-600 text-xs px-2 py-1 rounded-full border border-rose-200">
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                <span>{currentOperation === 'sync' ? 'Syncing...' : 'Hydrating...'}</span>
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 gap-3 text-xs">
             {/* Local PGVector Stats */}
             <div className="bg-primary/5 p-3 rounded-lg border border-primary/10 col-span-1">
@@ -136,7 +146,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                   <span className="text-lg font-bold">{total}</span> 
                   <span className="text-xs ml-1 text-primary/70">memories</span>
                 </div>
-                <div className="text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded-full">
+                <div className={`text-xs ${loading ? 'text-primary/70 bg-primary/10' : 'text-emerald-600 bg-emerald-100'} px-2 py-1 rounded-full`}>
                   {loading ? 'Updating...' : 'Ready'}
                 </div>
               </div>
@@ -156,8 +166,16 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     <span className="text-lg font-bold">{pineconeStats.vectorCount}</span> 
                     <span className="text-xs ml-1 text-primary/70">vectors</span>
                   </div>
-                  <div className="text-xs text-primary/70 bg-primary/10 px-2 py-1 rounded-full">
-                    {loadingPinecone ? 'Syncing...' : 'Synced'}
+                  <div className={`text-xs ${currentOperation !== 'none' || loadingPinecone 
+                      ? 'text-amber-600 bg-amber-100' 
+                      : 'text-emerald-600 bg-emerald-100'} 
+                    px-2 py-1 rounded-full flex items-center`}>
+                    {currentOperation !== 'none' && <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />}
+                    {currentOperation !== 'none' 
+                      ? 'Processing...' 
+                      : loadingPinecone 
+                        ? 'Syncing...' 
+                        : 'Synced'}
                   </div>
                 </div>
                 
