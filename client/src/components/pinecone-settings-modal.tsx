@@ -8,26 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Check, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { queryClient, apiRequest } from '@/lib/queryClient';
-import { toast } from '@/hooks/use-toast';
-
-interface PineconeIndex {
-  name: string;
-  dimension: number;
-  metric: string;
-  host: string;
-  vectorCount: number;
-  namespaces: { name: string; vectorCount: number }[];
-}
-
-interface PineconeSettings {
-  id: number;
-  isEnabled: boolean;
-  vectorDimension: number;
-  activeIndexName: string | null;
-  namespace: string;
-  lastSyncTimestamp: string | null;
-}
+import { usePineconeSettings } from '@/hooks/usePineconeSettings';
 
 interface PineconeSettingsModalProps {
   isOpen: boolean;
@@ -38,10 +19,21 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
-  const [settings, setSettings] = useState<PineconeSettings | null>(null);
-  const [indexes, setIndexes] = useState<PineconeIndex[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const {
+    settings,
+    indexes,
+    isAvailable,
+    isLoading,
+    fetchSettings,
+    updateSettings,
+    checkAvailability,
+    fetchIndexes,
+    createIndex,
+    deleteIndex,
+    syncToPinecone,
+    hydrateFromPinecone
+  } = usePineconeSettings();
+  
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreatingIndex, setIsCreatingIndex] = useState(false);
   const [selectedTab, setSelectedTab] = useState('settings');
@@ -58,225 +50,50 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchSettings();
-      checkPineconeAvailability();
+      checkAvailability();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchSettings, checkAvailability]);
   
-  const fetchSettings = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiRequest('/api/pinecone/settings');
-      setSettings(response);
-      setSyncNamespace(response.namespace || 'default');
-      setSelectedIndex(response.activeIndexName || '');
-    } catch (error) {
-      console.error('Error fetching Pinecone settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch Pinecone settings",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (settings) {
+      setSyncNamespace(settings.namespace || 'default');
+      setSelectedIndex(settings.activeIndexName || '');
     }
-  };
+  }, [settings]);
   
-  const checkPineconeAvailability = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiRequest('/api/pinecone/status');
-      setIsAvailable(response.available);
-      
-      if (response.available) {
-        fetchIndexes();
-      }
-    } catch (error) {
-      console.error('Error checking Pinecone availability:', error);
-      setIsAvailable(false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const fetchIndexes = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiRequest('/api/pinecone/indexes');
-      setIndexes(response);
-    } catch (error) {
-      console.error('Error fetching Pinecone indexes:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch Pinecone indexes",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const updateSettings = async (newSettings: Partial<PineconeSettings>) => {
-    setIsLoading(true);
-    try {
-      const response = await apiRequest('/api/pinecone/settings', {
-        method: 'PATCH',
-        data: newSettings
-      });
-      setSettings(response);
-      toast({
-        title: "Success",
-        description: "Pinecone settings updated successfully",
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('Error updating Pinecone settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update Pinecone settings",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  const createIndex = async () => {
-    if (!newIndexName) {
-      toast({
-        title: "Error",
-        description: "Index name is required",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+  const handleCreateIndex = async () => {
     setIsCreatingIndex(true);
     try {
-      await apiRequest('/api/pinecone/indexes', {
-        method: 'POST',
-        data: {
-          name: newIndexName,
-          dimension,
-          metric
-        }
-      });
-      
-      toast({
-        title: "Success",
-        description: `Index ${newIndexName} created successfully`,
-        variant: "default"
-      });
-      
-      // Clear the form
+      await createIndex(newIndexName, dimension, metric);
       setNewIndexName('');
-      
-      // Refresh indexes
-      fetchIndexes();
-      
-    } catch (error) {
-      console.error('Error creating Pinecone index:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create Pinecone index",
-        variant: "destructive"
-      });
     } finally {
       setIsCreatingIndex(false);
     }
   };
   
-  const deleteIndex = async (indexName: string) => {
+  const handleDeleteIndex = async (indexName: string) => {
     if (!confirm(`Are you sure you want to delete the index "${indexName}"? This action cannot be undone.`)) {
       return;
     }
     
-    setIsLoading(true);
-    try {
-      await apiRequest(`/api/pinecone/indexes/${indexName}`, {
-        method: 'DELETE'
-      });
-      
-      toast({
-        title: "Success",
-        description: `Index ${indexName} deleted successfully`,
-        variant: "default"
-      });
-      
-      // Refresh indexes
-      fetchIndexes();
-      
-      // Update settings if active index was deleted
-      if (settings?.activeIndexName === indexName) {
-        updateSettings({ activeIndexName: null });
-      }
-      
-    } catch (error) {
-      console.error('Error deleting Pinecone index:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete Pinecone index",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await deleteIndex(indexName);
   };
   
-  const syncToPinecone = async () => {
+  const handleSyncToPinecone = async () => {
     if (!selectedIndex) {
-      toast({
-        title: "Error",
-        description: "Please select an index for syncing",
-        variant: "destructive"
-      });
       return;
     }
     
     setIsSyncing(true);
     try {
-      const result = await apiRequest('/api/pinecone/sync', {
-        method: 'POST',
-        data: {
-          indexName: selectedIndex,
-          namespace: syncNamespace
-        }
-      });
-      
-      toast({
-        title: "Success",
-        description: `Successfully synced ${result.count} memories to Pinecone`,
-        variant: "default"
-      });
-      
-      // Update active index and namespace in settings
-      updateSettings({
-        activeIndexName: selectedIndex,
-        namespace: syncNamespace,
-        isEnabled: true
-      });
-      
-      // Refresh indexes to see updated vector counts
-      fetchIndexes();
-      
-    } catch (error) {
-      console.error('Error syncing to Pinecone:', error);
-      toast({
-        title: "Error",
-        description: "Failed to sync memories to Pinecone",
-        variant: "destructive"
-      });
+      await syncToPinecone(selectedIndex, syncNamespace);
     } finally {
       setIsSyncing(false);
     }
   };
   
-  const hydrateFromPinecone = async () => {
+  const handleHydrateFromPinecone = async () => {
     if (!selectedIndex) {
-      toast({
-        title: "Error",
-        description: "Please select an index for hydration",
-        variant: "destructive"
-      });
       return;
     }
     
@@ -286,38 +103,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     
     setIsSyncing(true);
     try {
-      const result = await apiRequest('/api/pinecone/hydrate', {
-        method: 'POST',
-        data: {
-          indexName: selectedIndex,
-          namespace: syncNamespace,
-          limit: 1000 // Limit to 1000 vectors to prevent overwhelming the system
-        }
-      });
-      
-      toast({
-        title: "Success",
-        description: `Successfully hydrated ${result.count} memories from Pinecone`,
-        variant: "default"
-      });
-      
-      // Update active index and namespace in settings
-      updateSettings({
-        activeIndexName: selectedIndex,
-        namespace: syncNamespace,
-        isEnabled: true
-      });
-      
-      // Refresh cached memories
-      queryClient.invalidateQueries({ queryKey: ['/api/memories'] });
-      
-    } catch (error) {
-      console.error('Error hydrating from Pinecone:', error);
-      toast({
-        title: "Error",
-        description: "Failed to hydrate memories from Pinecone",
-        variant: "destructive"
-      });
+      await hydrateFromPinecone(selectedIndex, syncNamespace, 1000);
     } finally {
       setIsSyncing(false);
     }
@@ -340,7 +126,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             ) : isAvailable ? (
               <div className="flex items-center">
-                <Badge variant="success" className="bg-green-500 text-white mr-2">
+                <Badge variant="outline" className="bg-green-500 text-white mr-2">
                   <Check className="h-3 w-3 mr-1" /> Connected
                 </Badge>
                 {settings?.activeIndexName && (
@@ -350,7 +136,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 )}
               </div>
             ) : (
-              <Badge variant="destructive" className="bg-destructive text-destructive-foreground">
+              <Badge variant="destructive">
                 <AlertCircle className="h-3 w-3 mr-1" /> Disconnected
               </Badge>
             )}
@@ -458,7 +244,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 </div>
                 
                 <Button 
-                  onClick={createIndex}
+                  onClick={handleCreateIndex}
                   disabled={!isAvailable || isCreatingIndex || !newIndexName}
                   className="w-full mt-4"
                 >
@@ -479,34 +265,46 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                     {indexes.map((index) => (
                       <div 
                         key={index.name} 
-                        className="p-3 border rounded-md flex justify-between items-center"
+                        className="p-3 border rounded-md"
                       >
-                        <div>
-                          <div className="font-medium">{index.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {index.dimension}d {index.metric} · {index.vectorCount.toLocaleString()} vectors · {index.namespaces.length} namespace(s)
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{index.name}</h4>
+                            <div className="text-xs text-muted-foreground space-y-1 mt-1">
+                              <p>Dimension: {index.dimension}</p>
+                              <p>Metric: {index.metric}</p>
+                              <p>Total vectors: {index.vectorCount}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {settings?.activeIndexName === index.name && (
+                              <Badge variant="outline" className="mr-2">
+                                Active
+                              </Badge>
+                            )}
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              onClick={() => handleDeleteIndex(index.name)}
+                              disabled={isLoading}
+                            >
+                              Delete
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedIndex(index.name);
-                              setSelectedTab('sync');
-                            }}
-                          >
-                            Use
-                          </Button>
-                          <Button 
-                            variant="destructive" 
-                            size="sm"
-                            onClick={() => deleteIndex(index.name)}
-                            disabled={isLoading}
-                          >
-                            Delete
-                          </Button>
-                        </div>
+                        
+                        {index.namespaces && index.namespaces.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs font-medium mb-1">Namespaces:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {index.namespaces.map(ns => (
+                                <Badge key={ns.name} variant="secondary" className="text-xs">
+                                  {ns.name}: {ns.vectorCount}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -515,74 +313,92 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
             </TabsContent>
             
             <TabsContent value="sync" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="sync-index">Select Index</Label>
-                <Select 
-                  value={selectedIndex} 
-                  onValueChange={setSelectedIndex}
-                  disabled={isSyncing || indexes.length === 0}
-                >
-                  <SelectTrigger id="sync-index">
-                    <SelectValue placeholder="Select index" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {indexes.map((index) => (
-                      <SelectItem key={index.name} value={index.name}>
-                        {index.name} ({index.dimension}d)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="sync-namespace">Namespace</Label>
-                <Input 
-                  id="sync-namespace" 
-                  value={syncNamespace}
-                  onChange={(e) => setSyncNamespace(e.target.value)}
-                  disabled={isSyncing}
-                  placeholder="default"
-                />
-              </div>
-              
-              <div className="space-y-4 mt-6">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <h4 className="font-medium">Sync to Pinecone</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Push current memories to Pinecone for persistent storage.
-                  </p>
-                  <Button 
-                    onClick={syncToPinecone}
-                    disabled={!isAvailable || isSyncing || !selectedIndex}
-                    className="w-full mt-2"
+                  <Label htmlFor="sync-index">Select Index</Label>
+                  <Select 
+                    value={selectedIndex} 
+                    onValueChange={setSelectedIndex}
+                    disabled={isSyncing || indexes.length === 0}
                   >
-                    {isSyncing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Sync to Pinecone
-                  </Button>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select index" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {indexes.map(index => (
+                        <SelectItem key={index.name} value={index.name}>
+                          {index.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div className="space-y-2">
-                  <h4 className="font-medium">Hydrate from Pinecone</h4>
+                  <Label htmlFor="sync-namespace">Namespace</Label>
+                  <Input 
+                    id="sync-namespace" 
+                    value={syncNamespace}
+                    onChange={(e) => setSyncNamespace(e.target.value)}
+                    disabled={isSyncing}
+                    placeholder="default"
+                  />
                   <p className="text-sm text-muted-foreground">
-                    Replace all local memories with data from Pinecone. This will clear existing memories.
+                    Namespaces help organize vectors within an index.
                   </p>
+                </div>
+                
+                <div className="flex flex-col space-y-2">
                   <Button 
-                    onClick={hydrateFromPinecone}
-                    variant="outline"
+                    onClick={handleSyncToPinecone}
                     disabled={!isAvailable || isSyncing || !selectedIndex}
-                    className="w-full mt-2"
+                    className="w-full"
                   >
-                    {isSyncing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Hydrate from Pinecone
+                    {isSyncing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Syncing...
+                      </>
+                    ) : (
+                      <>Sync Local Memories to Pinecone</>
+                    )}
                   </Button>
+                  
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Pushes all local vector memories to the selected Pinecone index.
+                  </p>
+                </div>
+                
+                <div className="flex flex-col space-y-2 mt-2">
+                  <Button 
+                    onClick={handleHydrateFromPinecone}
+                    disabled={!isAvailable || isSyncing || !selectedIndex}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {isSyncing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Hydrating...
+                      </>
+                    ) : (
+                      <>Hydrate from Pinecone</>
+                    )}
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground mt-1 text-amber-500">
+                    Warning: This will replace all local memories with those from Pinecone.
+                  </p>
                 </div>
               </div>
             </TabsContent>
           </Tabs>
         </div>
         
-        <DialogFooter>
+        <DialogFooter className="flex justify-between items-center">
+          <div className="text-sm text-muted-foreground">
+            {settings?.isEnabled ? 'Pinecone integration is enabled' : 'Pinecone integration is disabled'}
+          </div>
           <Button onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
