@@ -576,11 +576,19 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                     </span>
                   </div>
                 )}
-                {settings?.lastSyncTimestamp && (
-                  <div className="text-xs text-muted-foreground pt-2 border-t border-gray-200">
-                    Last synchronized: {new Date(settings.lastSyncTimestamp).toLocaleString()}
+                {/* Data Lock Status Indicator */}
+                <div className="flex items-center justify-between border-t border-gray-200 pt-2 mt-1">
+                  <div className={`flex items-center text-xs ${currentOperation !== 'none' ? 'text-red-500' : 'text-green-500'}`}>
+                    <div className={`w-2 h-2 rounded-full mr-1.5 ${currentOperation !== 'none' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                    <span>{currentOperation !== 'none' ? 'Locked' : 'Unlocked'}</span>
                   </div>
-                )}
+                  
+                  {settings?.lastSyncTimestamp && (
+                    <div className="text-xs text-muted-foreground">
+                      Last sync: {new Date(settings.lastSyncTimestamp).toLocaleString()}
+                    </div>
+                  )}
+                </div>
               </div>
             </TabsContent>
             
