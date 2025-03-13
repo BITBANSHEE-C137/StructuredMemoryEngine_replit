@@ -50,6 +50,10 @@ export function usePineconeSettings() {
   const [operationIndex, setOperationIndex] = useState<string | null>(null);
   const [operationNamespace, setOperationNamespace] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // References to sync and hydrate functions
+  const syncToPineconeRef = useRef<(indexName: string, namespace: string) => Promise<any>>();
+  const hydrateFromPineconeRef = useRef<(indexName: string, namespace: string, limit?: number) => Promise<any>>();
 
   // Declare fetchIndexes reference first
   const fetchIndexesRef = useRef<() => Promise<any>>();

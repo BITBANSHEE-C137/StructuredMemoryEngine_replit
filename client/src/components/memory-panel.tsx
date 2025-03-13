@@ -184,7 +184,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     {pineconeStats.lastSyncDedupRate !== undefined && (
                       <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
                         <span className="text-xs font-bold text-primary">
-                          {(pineconeStats.lastSyncDedupRate * 100).toFixed(1)}%
+                          {parseFloat(pineconeStats.lastSyncDedupRate.toString()).toFixed(1)}%
                         </span>
                         <span className="text-[10px] text-primary/70">Last Sync</span>
                       </div>
@@ -192,7 +192,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     {pineconeStats.lastHydrateDedupRate !== undefined && (
                       <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
                         <span className="text-xs font-bold text-primary">
-                          {(pineconeStats.lastHydrateDedupRate * 100).toFixed(1)}%
+                          {parseFloat(pineconeStats.lastHydrateDedupRate.toString()).toFixed(1)}%
                         </span>
                         <span className="text-[10px] text-primary/70">Last Recall</span>
                       </div>
@@ -200,7 +200,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     {pineconeStats.avgDedupRate !== undefined && (
                       <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
                         <span className="text-xs font-bold text-primary">
-                          {(pineconeStats.avgDedupRate * 100).toFixed(1)}%
+                          {parseFloat(pineconeStats.avgDedupRate.toString()).toFixed(1)}%
                         </span>
                         <span className="text-[10px] text-primary/70">Average</span>
                       </div>
@@ -221,6 +221,51 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     </div>
                   </div>
                 )}
+                
+                {/* Memory operations buttons */}
+                <div className="mt-2 pt-2 border-t border-primary/10">
+                  <div className="text-primary/70 text-xs mb-1.5">Memory Operations:</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full h-8 text-xs"
+                      disabled={currentOperation !== 'none' || !pineconeStats.activeIndex}
+                      onClick={() => {
+                        if (pineconeStats.activeIndex) {
+                          // Use the same function from usePineconeSettings
+                          window.dispatchEvent(new CustomEvent('pinecone-sync-requested', { 
+                            detail: { indexName: pineconeStats.activeIndex, namespace: 'default' } 
+                          }));
+                        }
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                      </svg>
+                      Sync to Pinecone
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="w-full h-8 text-xs"
+                      disabled={currentOperation !== 'none' || !pineconeStats.activeIndex}
+                      onClick={() => {
+                        if (pineconeStats.activeIndex) {
+                          // Use the same function from usePineconeSettings
+                          window.dispatchEvent(new CustomEvent('pinecone-hydrate-requested', { 
+                            detail: { indexName: pineconeStats.activeIndex, namespace: 'default' } 
+                          }));
+                        }
+                      }}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      Recall from Pinecone
+                    </Button>
+                  </div>
+                </div>
                 
                 {/* Operation status indicator */}
                 {currentOperation !== 'none' && (
