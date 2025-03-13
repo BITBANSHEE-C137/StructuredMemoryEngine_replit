@@ -6,8 +6,8 @@ import { APP_NAME } from '@/lib/constants';
 export default function Login() {
   // Function to handle login with Replit Auth
   const handleLogin = () => {
-    // Replit Auth uses the /login endpoint to authenticate users
-    window.location.href = '/auth/login';
+    // Replit Auth uses the /api/auth/login endpoint to authenticate users
+    window.location.href = '/api/auth/login';
   };
 
   return (

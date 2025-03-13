@@ -3,8 +3,40 @@ import { ChatInterface } from '@/components/chat-interface';
 import { MemoryPanel } from '@/components/memory-panel';
 import { SettingsModal } from '@/components/settings-modal';
 import { useChatMessages, useSettings, useModels, useApiStatus, useMobile } from '@/lib/hooks';
-import { DEFAULT_SETTINGS } from '@/lib/constants';
+import { DEFAULT_SETTINGS, API_ROUTES } from '@/lib/constants';
 import { RelevantMemory, Settings } from '@/lib/types';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+
+// User menu with logout button
+function UserMenuWithLogout() {
+  const { user } = useAuth();
+  
+  return (
+    <div className="flex items-center space-x-2">
+      {user?.profileImage && (
+        <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/30">
+          <img src={user.profileImage} alt={user.name || 'User'} className="w-full h-full object-cover" />
+        </div>
+      )}
+      
+      <div className="flex flex-col">
+        <span className="text-sm font-medium text-white">
+          {user?.name || 'User'}
+        </span>
+      </div>
+      
+      <Button 
+        variant="outline" 
+        size="sm"
+        className="ml-2 bg-white/10 text-white hover:bg-white/20 border-white/20"
+        onClick={() => window.location.href = API_ROUTES.AUTH.LOGOUT}
+      >
+        Logout
+      </Button>
+    </div>
+  );
+}
 
 export default function Home() {
   const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(true);
@@ -181,6 +213,9 @@ export default function Home() {
                 </span>
               </span>
             </div>
+            
+            <UserMenuWithLogout />
+            
             <button 
               onClick={() => setIsSettingsModalOpen(true)}
               className="flex items-center text-white p-2 rounded-full bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 transition-all transform hover:scale-105 active:scale-95 shadow-app-sm backdrop-blur-sm border border-white/20"
