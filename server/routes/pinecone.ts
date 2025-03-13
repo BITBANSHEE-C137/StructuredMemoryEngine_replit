@@ -5,7 +5,7 @@ import {
   createPineconeIndexIfNotExists, 
   deletePineconeIndex,
   wipePineconeIndex,
-  fetchAllVectorsFromIndex,
+  fetchVectorsFromPinecone,
   getPineconeClient
 } from '../utils/pinecone';
 import { log } from '../vite';
@@ -137,7 +137,7 @@ router.post('/sync', async (req: Request, res: Response) => {
     const syncResult = await storage.syncMemoriesToPinecone(indexName, namespace);
     log(`Sync completed with result: ${JSON.stringify({
       success: syncResult.success,
-      count: syncResult.upsertedCount !== undefined ? syncResult.upsertedCount : syncResult.count,
+      count: syncResult.count,
       duplicateCount: syncResult.duplicateCount || 0,
       dedupRate: syncResult.dedupRate ? syncResult.dedupRate.toFixed(1) + '%' : '0%',
       totalProcessed: syncResult.totalProcessed || syncResult.count,
@@ -147,7 +147,7 @@ router.post('/sync', async (req: Request, res: Response) => {
     // Return complete response with all deduplication data and metadata
     res.json({
       success: syncResult.success,
-      count: syncResult.upsertedCount !== undefined ? syncResult.upsertedCount : syncResult.count,
+      count: syncResult.count,
       duplicateCount: syncResult.duplicateCount || 0,
       dedupRate: syncResult.dedupRate || 0,
       totalProcessed: syncResult.totalProcessed || syncResult.count,
@@ -338,16 +338,15 @@ router.get('/indexes/:name/vectors', async (req: Request, res: Response) => {
       });
     }
     
-    const vectors = await fetchAllVectorsFromIndex(
+    const vectors = await fetchVectorsFromPinecone(
       name, 
       namespace as string, 
       parseInt(limit as string) || 100
     );
     
     // Return the vectors but limit metadata size for response performance
-    const simplifiedVectors = vectors.map(v => ({
+    const simplifiedVectors = vectors.map((v: any) => ({
       id: v.id,
-      score: v.score,
       hasValues: Array.isArray(v.values) && v.values.length > 0,
       valuesDimension: Array.isArray(v.values) ? v.values.length : 0,
       metadata: v.metadata ? {

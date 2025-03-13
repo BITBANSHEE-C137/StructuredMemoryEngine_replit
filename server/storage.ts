@@ -434,7 +434,7 @@ export class DatabaseStorage implements IStorage {
       // Make sure we're passing through exactly what upsertMemoriesToPinecone returns
       return {
         success: result.success,
-        count: result.upsertedCount !== undefined ? result.upsertedCount : result.count,
+        count: result.count,
         duplicateCount: result.duplicateCount,
         dedupRate: result.dedupRate,
         totalProcessed: result.totalProcessed,

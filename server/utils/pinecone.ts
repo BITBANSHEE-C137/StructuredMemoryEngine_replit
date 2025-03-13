@@ -1,6 +1,14 @@
 import { Pinecone } from '@pinecone-database/pinecone';
 import { Memory, memoryIdForUpsert } from '../../shared/schema';
 import { log } from '../vite';
+import { 
+  DEFAULT_NAMESPACE, 
+  DEFAULT_DIMENSION, 
+  DEFAULT_METRIC, 
+  DEFAULT_BATCH_SIZE,
+  DEFAULT_VECTOR_LIMIT,
+  DEFAULT_REGION
+} from './pinecone-settings';
 
 // Initialize Pinecone client
 const pineconeApiKey = process.env.PINECONE_API_KEY;
@@ -144,18 +152,18 @@ export async function listPineconeIndexes(): Promise<PineconeIndexInfo[]> {
 export async function upsertMemoriesToPinecone(
   memories: Memory[], 
   indexName: string,
-  namespace: string = 'default'
+  namespace: string = DEFAULT_NAMESPACE
 ): Promise<{ 
   success: boolean; 
-  count: number;  // Primary count field 
-  upsertedCount: number; // Alias for backward compatibility
-  duplicateCount: number;
-  dedupRate: number;
-  totalProcessed: number;
-  vectorCount: number;
-  indexName: string;
-  namespace: string;
-  timestamp: string;
+  count: number;
+  upsertedCount?: number;
+  duplicateCount?: number;
+  dedupRate?: number;
+  totalProcessed?: number;
+  vectorCount?: number;
+  indexName?: string;
+  namespace?: string;
+  timestamp?: string;
 }> {
   log(`Starting memory sync to Pinecone index ${indexName}, namespace ${namespace}`, 'pinecone');
   log(`Processing ${memories.length} memory items for sync`, 'pinecone');
@@ -202,70 +210,59 @@ export async function upsertMemoriesToPinecone(
     const existingIds = new Set<string>();
     const duplicateContents = new Set<string>();
     
+    // Check for existing vectors to detect duplicates
+    dedupCount = 0;
     try {
       // Fetch existing IDs - using batching to avoid rate limits
-      const fetchBatchSize = 100;
+      const fetchBatchSize = DEFAULT_BATCH_SIZE;
       log(`Checking for duplicates in ${generatedIds.length} vectors`, 'pinecone');
       
-      // Check both blank and specified namespace for duplicates
-      const namespacesToCheck = namespace === "" ? [""] : [namespace, ""];
-      log(`Will check ${namespacesToCheck.length} namespaces for duplicates: [${namespacesToCheck.join(", ")}]`, 'pinecone');
+      // Standardize on default namespace for simplicity
+      const effectiveNamespace = DEFAULT_NAMESPACE;
+      log(`Checking namespace '${effectiveNamespace}' for duplicates`, 'pinecone');
       
-      for (const namespaceToCheck of namespacesToCheck) {
-        log(`Checking namespace '${namespaceToCheck || "blank"}' for duplicates`, 'pinecone');
-        
-        for (let i = 0; i < generatedIds.length; i += fetchBatchSize) {
-          const idBatch = generatedIds.slice(i, i + fetchBatchSize);
+      for (let i = 0; i < generatedIds.length; i += fetchBatchSize) {
+        const idBatch = generatedIds.slice(i, i + fetchBatchSize);
+        try {
+          log(`Checking batch ${Math.floor(i / fetchBatchSize) + 1} of ${Math.ceil(generatedIds.length / fetchBatchSize)} for duplicates in namespace '${effectiveNamespace}'`, 'pinecone');
+          
+          // Try different fetch methods to account for SDK differences
+          let existingVectors;
           try {
-            log(`Checking batch ${Math.floor(i / fetchBatchSize) + 1} of ${Math.ceil(generatedIds.length / fetchBatchSize)} for duplicates in namespace '${namespaceToCheck || "blank"}'`, 'pinecone');
-            
-            // Try different fetch methods to account for SDK differences
-            let existingVectors;
-            try {
-              // Method 1: Try with namespace parameter (newer SDK)
-              existingVectors = await pineconeIndex.fetch({ 
-                ids: idBatch,
-                namespace: namespaceToCheck 
-              });
-            } catch (fetchError) {
-              try {
-                // Method 2: Try older SDK format
-                existingVectors = await pineconeIndex.fetch(idBatch, { namespace: namespaceToCheck });
-              } catch (fetchError2) {
-                // Method 3: Try without namespace (for blank namespace)
-                if (namespaceToCheck === "") {
-                  existingVectors = await pineconeIndex.fetch(idBatch);
-                } else {
-                  throw fetchError2;
-                }
-              }
-            }
-            
-            // Track existing vectors
-            if (existingVectors) {
-              // Handle different SDK response formats
-              const vectors = existingVectors.vectors || existingVectors.records || {};
-              const foundIds = Object.keys(vectors);
-              
-              if (foundIds.length > 0) {
-                log(`Found ${foundIds.length} existing vectors in batch (namespace: '${namespaceToCheck || "blank"}')`, 'pinecone');
-                foundIds.forEach(id => {
-                  existingIds.add(id);
-                  
-                  // Store content snippets for detailed logging
-                  const memory = memoryMap.get(id);
-                  if (memory) {
-                    const contentPreview = memory.content.length > 40 
-                      ? `${memory.content.substring(0, 40)}...` 
-                      : memory.content;
-                    duplicateContents.add(contentPreview);
-                  }
-                });
-              }
-            }
-          } catch (e) {
-            log(`Error in duplicate check batch (continuing): ${e}`, 'pinecone');
+            // Method 1: Try with namespace parameter (newer SDK)
+            existingVectors = await pineconeIndex.fetch({ 
+              ids: idBatch,
+              namespace: effectiveNamespace 
+            });
+          } catch (fetchError) {
+            // If the first approach fails, try without namespace parameter
+            existingVectors = await pineconeIndex.fetch(idBatch);
           }
+          
+          // Track existing vectors
+          if (existingVectors) {
+            // Handle different SDK response formats
+            const vectors = existingVectors.vectors || existingVectors.records || {};
+            const foundIds = Object.keys(vectors);
+            
+            if (foundIds.length > 0) {
+              log(`Found ${foundIds.length} existing vectors in batch (namespace: '${effectiveNamespace}')`, 'pinecone');
+              foundIds.forEach(id => {
+                existingIds.add(id);
+                
+                // Store content snippets for detailed logging
+                const memory = memoryMap.get(id);
+                if (memory) {
+                  const contentPreview = memory.content.length > 40 
+                    ? `${memory.content.substring(0, 40)}...` 
+                    : memory.content;
+                  duplicateContents.add(contentPreview);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          log(`Error in duplicate check batch (continuing): ${e}`, 'pinecone');
         }
       }
       
@@ -293,7 +290,7 @@ export async function upsertMemoriesToPinecone(
     }
     
     // Step 2: Process vectors in batches
-    const batchSize = 100;
+    const batchSize = DEFAULT_BATCH_SIZE;
     let successCount = 0;
     
     for (let i = 0; i < memories.length; i += batchSize) {
@@ -336,24 +333,17 @@ export async function upsertMemoriesToPinecone(
       
       if (records.length > 0) {
         try {
-          // Try multiple upsert methods to support different SDK versions
+          // Try upsert with namespace parameter
           try {
-            // Method 1: Try with namespace parameter
             await pineconeIndex.upsert({ 
               vectors: records,
               namespace 
             });
             log(`Upserted batch with namespace parameter`, 'pinecone');
           } catch (e) {
-            try {
-              // Method 2: Try older SDK format
-              await pineconeIndex.upsert(records, { namespace });
-              log(`Upserted batch with older SDK format`, 'pinecone');
-            } catch (e2) {
-              // Method 3: Try without namespace (newest SDK)
-              await pineconeIndex.upsert(records);
-              log(`Upserted batch without namespace parameter (newest SDK)`, 'pinecone');
-            }
+            // If that fails, try without namespace
+            await pineconeIndex.upsert(records);
+            log(`Upserted batch without namespace parameter`, 'pinecone');
           }
           
           successCount += records.length;
@@ -372,36 +362,14 @@ export async function upsertMemoriesToPinecone(
     log(`Sync complete. Total: ${totalProcessed}, New: ${newUpsertCount}, Duplicates: ${dedupCount}, Dedup rate: ${dedupRate.toFixed(1)}%`, 'pinecone');
     
     // Get initial and final vector counts for accurate reporting
-    let initialVectorCount = 0;
     let currentVectorCount = 0;
     
-    // Verify the vectors were added by checking stats for both blank and specified namespace
+    // Verify the vectors were added by checking stats
     try {
       const stats = await pineconeIndex.describeIndexStats();
-      
-      // Get counts from both blank and specified namespace
-      const blankNamespaceCount = stats.namespaces?.['']?.recordCount || 0;
       const specifiedNamespaceCount = stats.namespaces?.[namespace]?.recordCount || 0;
-      
-      // Log both counts for debugging
-      if (namespace !== '') {
-        log(`Index stats - blank namespace: ${blankNamespaceCount} vectors, ${namespace} namespace: ${specifiedNamespaceCount} vectors`, 'pinecone');
-      }
-      
-      // Use the count from whichever namespace has vectors
-      if (specifiedNamespaceCount > 0) {
-        currentVectorCount = specifiedNamespaceCount;
-        log(`Index now contains ${currentVectorCount} vectors in namespace "${namespace}"`, 'pinecone');
-      } else if (blankNamespaceCount > 0) {
-        currentVectorCount = blankNamespaceCount;
-        log(`Index now contains ${currentVectorCount} vectors in blank namespace (no records in "${namespace}")`, 'pinecone');
-        
-        // Report the blank namespace as the actual used namespace for clarity
-        namespace = '';
-      } else {
-        currentVectorCount = 0;
-        log(`Index contains no vectors in either blank namespace or "${namespace}" namespace`, 'pinecone');
-      }
+      currentVectorCount = specifiedNamespaceCount;
+      log(`Index now contains ${currentVectorCount} vectors in namespace "${namespace}"`, 'pinecone');
     } catch (statsError) {
       log(`Error checking final vector count: ${statsError}`, 'pinecone');
     }
@@ -412,7 +380,6 @@ export async function upsertMemoriesToPinecone(
     return {
       success: true,
       count: newUpsertCount,               // Number of new vectors successfully added
-      upsertedCount: newUpsertCount,       // Alias for count for backwards compatibility
       duplicateCount: dedupCount,          // Number of duplicates detected and skipped
       dedupRate: formattedDedupRate,       // Percentage of duplicates in the original set
       totalProcessed,                      // Total number of memories processed
@@ -434,7 +401,7 @@ export async function queryPineconeMemories(
   embedding: number[],
   indexName: string,
   limit: number = 5,
-  namespace: string = 'default'
+  namespace: string = DEFAULT_NAMESPACE
 ): Promise<PineconeQueryResult[]> {
   try {
     const client = await getPineconeClient();
@@ -443,7 +410,7 @@ export async function queryPineconeMemories(
     // Try both with and without namespace parameter to handle different SDK versions
     let queryResult;
     try {
-      // Method 1: Try with namespace parameter (older SDK)
+      // Method 1: Try with namespace parameter
       queryResult = await pineconeIndex.query({
         vector: embedding,
         topK: limit,
@@ -452,7 +419,7 @@ export async function queryPineconeMemories(
       });
     } catch (e) {
       log(`Namespace parameter not supported, using new SDK method`, 'pinecone');
-      // Method 2: Try without namespace parameter (newer SDK)
+      // Method 2: Try without namespace parameter
       queryResult = await pineconeIndex.query({
         vector: embedding,
         topK: limit,
@@ -492,67 +459,22 @@ export async function queryPineconeMemories(
 }
 
 /**
- * Directly fetch all vectors from a Pinecone index using a specialized approach
- * designed to get all vectors regardless of queryability
- */
-export async function fetchAllVectorsFromIndex(
-  indexName: string,
-  namespace: string = 'default',
-  limit: number = 1000
-): Promise<any[]> {
-  try {
-    log(`Attempting to fetch all vectors from index ${indexName}, namespace ${namespace}`, 'pinecone');
-    
-    const pineconeClient = await getPineconeClient();
-    const pineconeIndex = pineconeClient.Index(indexName);
-    
-    // Try multiple approaches to list all vectors
-    
-    // Create a special vector of all 0.1 that tends to match with everything
-    const dimension = 1536; // Default for OpenAI embeddings
-    const genericVector = Array(dimension).fill(0.1);
-    
-    // Try querying with a very high topK to get most vectors
-    const response = await pineconeIndex.query({
-      vector: genericVector,
-      topK: limit,
-      includeMetadata: true,
-      includeValues: true
-    });
-    
-    log(`Retrieved ${response.matches?.length || 0} vectors directly from index ${indexName}`, 'pinecone');
-    
-    // Return the matches
-    return response.matches || [];
-    
-  } catch (error) {
-    log(`Error fetching all vectors from index ${indexName}: ${error}`, 'pinecone');
-    return [];
-  }
-}
-
-/**
  * Fetch vectors from Pinecone to hydrate local pgvector database
  */
 export async function fetchVectorsFromPinecone(
   indexName: string,
-  namespace: string = 'default',
-  limit: number = 1000
+  namespace: string = DEFAULT_NAMESPACE,
+  limit: number = DEFAULT_VECTOR_LIMIT
 ): Promise<PineconeVector[]> {
   try {
     log(`Fetching vectors from Pinecone index ${indexName}, namespace ${namespace}`, 'pinecone');
     const client = await getPineconeClient();
     const pineconeIndex = client.index(indexName);
     
-    // Force fetch vectors even if stats say there are none
-    // Try different methods to get vectors from index
-    
-    // First, we'll create several different random vectors to try to fetch data
-    // from different regions of the vector space
-    const dimension = 1536; // Use default OpenAI dimension
+    // Create multiple random vectors to increase chances of finding matches
+    const dimension = DEFAULT_DIMENSION;
     log(`Using dimension ${dimension} for vector space search`, 'pinecone');
     
-    // Create multiple random vectors to increase chances of finding matches
     const randomVectors = [
       Array(dimension).fill(0).map(() => Math.random() * 0.01), // Very small random values
       Array(dimension).fill(0).map(() => Math.random()), // Standard random values
@@ -567,7 +489,7 @@ export async function fetchVectorsFromPinecone(
       log(`Trying query with random vector approach #${i+1}`, 'pinecone');
       
       try {
-        // Try with namespace parameter (may fail on newer SDK)
+        // Try with namespace parameter
         const response = await pineconeIndex.query({
           vector: randomVectors[i],
           topK: limit,
@@ -589,7 +511,7 @@ export async function fetchVectorsFromPinecone(
         }
       } catch (e) {
         try {
-          // Try without namespace (for newer SDK)
+          // Try without namespace
           const response = await pineconeIndex.query({
             vector: randomVectors[i],
             topK: limit,
@@ -598,7 +520,7 @@ export async function fetchVectorsFromPinecone(
           });
           
           if (response.matches && response.matches.length > 0) {
-            log(`Found ${response.matches.length} matches with vector approach #${i+1} (no namespace)`, 'pinecone');
+            log(`Found ${response.matches.length} matches with approach #${i+1} (no namespace)`, 'pinecone');
             allMatches = [...allMatches, ...response.matches];
             // Deduplicate based on ID
             const uniqueIds = new Set();
@@ -624,7 +546,7 @@ export async function fetchVectorsFromPinecone(
         const stats = await pineconeIndex.describeIndexStats();
         log(`Index stats (debug): ${JSON.stringify(stats)}`, 'pinecone');
         
-        if (stats.totalRecordCount > 0) {
+        if (stats.totalRecordCount && stats.totalRecordCount > 0) {
           log(`Index reports ${stats.totalRecordCount} total records but query returns none`, 'pinecone');
         }
       } catch (statsError) {
@@ -652,8 +574,8 @@ export async function fetchVectorsFromPinecone(
  */
 export async function createPineconeIndexIfNotExists(
   indexName: string,
-  dimension: number = 1536, // Default for OpenAI embeddings
-  metric: string = 'cosine'
+  dimension: number = DEFAULT_DIMENSION,
+  metric: string = DEFAULT_METRIC
 ): Promise<boolean> {
   try {
     const client = await getPineconeClient();
@@ -689,7 +611,7 @@ export async function createPineconeIndexIfNotExists(
       spec: {
         serverless: {
           cloud: 'aws',
-          region: 'us-east-1'  // Using us-east-1 instead of us-west-2 for free tier compatibility
+          region: DEFAULT_REGION
         }
       }
     });
@@ -753,7 +675,7 @@ export async function deletePineconeIndex(indexName: string): Promise<boolean> {
  */
 export async function wipePineconeIndex(
   indexName: string, 
-  namespace: string = 'default'
+  namespace: string = DEFAULT_NAMESPACE
 ): Promise<boolean> {
   try {
     log(`Starting operation to wipe Pinecone index ${indexName} in namespace ${namespace}`, 'pinecone');
