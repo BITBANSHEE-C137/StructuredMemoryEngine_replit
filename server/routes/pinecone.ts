@@ -115,6 +115,7 @@ router.delete('/indexes/:name', async (req: Request, res: Response) => {
 router.post('/sync', async (req: Request, res: Response) => {
   try {
     const { indexName, namespace = 'default' } = req.body;
+    log(`Received request to sync memories to Pinecone index ${indexName} in namespace ${namespace}`, 'pinecone');
     
     if (!indexName) {
       return res.status(400).json({ error: 'Index name is required' });
@@ -123,6 +124,7 @@ router.post('/sync', async (req: Request, res: Response) => {
     const isPineconeAvailable = await storage.isPineconeAvailable();
     
     if (!isPineconeAvailable) {
+      log(`Cannot sync - Pinecone service is not available`, 'pinecone');
       return res.status(503).json({ 
         error: 'Pinecone service is not available',
         message: 'Check your API key and connection'
@@ -130,7 +132,15 @@ router.post('/sync', async (req: Request, res: Response) => {
     }
     
     // Get enhanced sync result with deduplication information
+    log(`Starting sync process to Pinecone index ${indexName}`, 'pinecone');
     const syncResult = await storage.syncMemoriesToPinecone(indexName, namespace);
+    log(`Sync completed with result: ${JSON.stringify({
+      success: syncResult.success,
+      count: syncResult.count,
+      duplicateCount: syncResult.duplicateCount || 0,
+      dedupRate: syncResult.dedupRate ? syncResult.dedupRate.toFixed(1) + '%' : '0%',
+      totalProcessed: syncResult.totalProcessed || syncResult.count
+    })}`, 'pinecone');
     
     // Return complete response with all deduplication data
     res.json({
@@ -140,6 +150,24 @@ router.post('/sync', async (req: Request, res: Response) => {
       dedupRate: syncResult.dedupRate || 0,
       totalProcessed: syncResult.totalProcessed || syncResult.count
     });
+    
+    // Refresh stats after successful sync to update vector counts
+    try {
+      log(`Fetching updated stats after sync operation`, 'pinecone');
+      const indexes = await listPineconeIndexes();
+      const updatedIndex = indexes.find(idx => idx.name === indexName);
+      if (updatedIndex) {
+        log(`Index ${indexName} now has ${updatedIndex.vectorCount} total vectors`, 'pinecone');
+        if (updatedIndex.namespaces && updatedIndex.namespaces.length > 0) {
+          const namespaceInfo = updatedIndex.namespaces.find(ns => ns.name === namespace);
+          if (namespaceInfo) {
+            log(`Namespace ${namespace} has ${namespaceInfo.vectorCount} vectors`, 'pinecone');
+          }
+        }
+      }
+    } catch (statsError) {
+      log(`Error checking stats after sync: ${statsError}`, 'pinecone');
+    }
   } catch (error) {
     log(`Error syncing memories to Pinecone: ${error}`, 'pinecone');
     res.status(500).json({ error: 'Failed to sync memories to Pinecone' });

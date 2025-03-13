@@ -152,6 +152,9 @@ export async function upsertMemoriesToPinecone(
   dedupRate: number;
   totalProcessed: number;
 }> {
+  log(`Starting memory sync to Pinecone index ${indexName}, namespace ${namespace}`, 'pinecone');
+  log(`Processing ${memories.length} memory items for sync`, 'pinecone');
+  
   try {
     const client = await getPineconeClient();
 
@@ -178,21 +181,23 @@ export async function upsertMemoriesToPinecone(
     
     // Initialize tracking for deduplication stats
     let totalProcessed = memories.length;
-    let newUpsertCount = 0;
     let dedupCount = 0;
     
-    // Check for existing vectors to detect duplicates
-    // We'll use the vector IDs to detect duplicates
+    // Generate consistent memory IDs for deduplication
     const generatedIds = memories.map(memory => memoryIdForUpsert(memory));
+    log(`Generated ${generatedIds.length} memory IDs for deduplication tracking`, 'pinecone');
     
+    // Create a map of vectors to detect duplicates
+    const memoryMap = new Map<string, Memory>();
+    memories.forEach((memory, index) => {
+      memoryMap.set(generatedIds[index], memory);
+    });
+    
+    // Step 1: Check for existing vectors to detect duplicates
+    const existingIds = new Set<string>();
     try {
-      // Fetch existing IDs (if any) - we'll use this for deduplication tracking
-      const existingIds = new Set<string>();
-      
-      // Try to fetch vectors by ID to see which ones already exist
-      // Use batching to handle large numbers of vectors
+      // Fetch existing IDs - using batching to avoid rate limits
       const fetchBatchSize = 100;
-      
       log(`Checking for duplicates in ${generatedIds.length} vectors`, 'pinecone');
       
       for (let i = 0; i < generatedIds.length; i += fetchBatchSize) {
@@ -201,44 +206,41 @@ export async function upsertMemoriesToPinecone(
           log(`Checking batch ${Math.floor(i / fetchBatchSize) + 1} of ${Math.ceil(generatedIds.length / fetchBatchSize)} for duplicates`, 'pinecone');
           const existingVectors = await pineconeIndex.fetch(idBatch);
           
-          // Add existing IDs to our tracking set
-          if (existingVectors && existingVectors.vectors) {
-            const foundIds = Object.keys(existingVectors.vectors);
-            log(`Found ${foundIds.length} existing vectors in batch`, 'pinecone');
+          // Track existing vectors
+          if (existingVectors) {
+            // Handle different SDK response formats
+            const vectors = existingVectors.vectors || existingVectors.records || {};
+            const foundIds = Object.keys(vectors);
             
-            foundIds.forEach(id => {
-              existingIds.add(id);
-            });
-          } else {
-            log(`No existing vectors found in this batch or unexpected response format`, 'pinecone');
+            if (foundIds.length > 0) {
+              log(`Found ${foundIds.length} existing vectors in batch`, 'pinecone');
+              foundIds.forEach(id => existingIds.add(id));
+            }
           }
         } catch (e) {
-          // If fetch fails (some versions of SDK behave differently), we'll just continue
-          // and handle deduplication via upsert
-          log(`Error fetching existing vectors for deduplication check: ${e}`, 'pinecone');
+          log(`Error in duplicate check batch (continuing): ${e}`, 'pinecone');
         }
       }
       
-      // Now we know which vectors already exist
+      // Count duplicates
       dedupCount = existingIds.size;
-      
-      // Log detailed deduplication information
       log(`Found ${dedupCount} duplicate vectors out of ${totalProcessed} total memories`, 'pinecone');
-      if (dedupCount > 0) {
-        log(`Duplicate vector IDs: ${Array.from(existingIds).slice(0, 5).join(', ')}${existingIds.size > 5 ? '...' : ''}`, 'pinecone');
-      }
       
+      if (dedupCount > 0) {
+        const duplicateExamples = Array.from(existingIds).slice(0, 5);
+        log(`Duplicate examples: ${duplicateExamples.join(', ')}${existingIds.size > 5 ? '...' : ''}`, 'pinecone');
+      }
     } catch (e) {
-      // If the above approach fails, we'll fall back to just tracking the count
-      log(`Error checking for duplicates, will proceed with upsert: ${e}`, 'pinecone');
+      log(`Error checking for duplicates (will continue with upsert): ${e}`, 'pinecone');
     }
     
-    // Batch the upserts to avoid rate limits, using batches of 100
+    // Step 2: Process vectors in batches
     const batchSize = 100;
     let successCount = 0;
     
     for (let i = 0; i < memories.length; i += batchSize) {
       const batch = memories.slice(i, i + batchSize);
+      log(`Processing batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(memories.length / batchSize)}`, 'pinecone');
       
       // Create records for upsert
       const records = batch.map(memory => {
@@ -246,7 +248,6 @@ export async function upsertMemoriesToPinecone(
         const values = JSON.parse(memory.embedding);
         
         // Create a unique ID for the vector based on content
-        // This is important for deduplication and updating
         const id = memoryIdForUpsert(memory);
         
         return {
@@ -256,20 +257,19 @@ export async function upsertMemoriesToPinecone(
             id: memory.id,
             content: memory.content,
             type: memory.type,
-            messageId: memory.messageId,
+            messageId: memory.messageId ? memory.messageId.toString() : "null", // Convert to string to avoid null values
             timestamp: memory.timestamp,
-            // Pinecone requires metadata values to be primitive types (string, number, boolean)
-            // or arrays of strings. Convert complex objects to strings.
+            // Pinecone requires metadata values to be primitive types
             relevant_ids: memory.metadata && typeof memory.metadata === 'object' && 
-                           'relevantMemories' in memory.metadata && 
-                           Array.isArray(memory.metadata.relevantMemories) ? 
+                          'relevantMemories' in memory.metadata && 
+                          Array.isArray(memory.metadata.relevantMemories) ? 
               memory.metadata.relevantMemories.map((id: number) => id.toString()) : 
               [],
             memory_timestamp: memory.metadata && typeof memory.metadata === 'object' && 
-                             'timestamp' in memory.metadata ? 
+                              'timestamp' in memory.metadata ? 
               String(memory.metadata.timestamp) : 
               new Date().toISOString(),
-            // Add sync metadata to track the sync session
+            // Add sync metadata
             sync_session: new Date().toISOString(),
             source_db: 'pgvector'
           }
@@ -278,19 +278,28 @@ export async function upsertMemoriesToPinecone(
       
       if (records.length > 0) {
         try {
-          // Upsert records to Pinecone with namespace
-          // Handle both old and new SDK versions
+          // Try multiple upsert methods to support different SDK versions
           try {
-            // Method 1: Try with namespace parameter (older SDK)
-            const upsertOptions = { namespace };
-            await pineconeIndex.upsert(records, upsertOptions);
+            // Method 1: Try with namespace parameter
+            await pineconeIndex.upsert({ 
+              vectors: records,
+              namespace 
+            });
+            log(`Upserted batch with namespace parameter`, 'pinecone');
           } catch (e) {
-            // Method 2: Try without namespace parameter (newer SDK)
-            await pineconeIndex.upsert(records);
-            log(`Upserted using new SDK method without namespace parameter`, 'pinecone');
+            try {
+              // Method 2: Try older SDK format
+              await pineconeIndex.upsert(records, { namespace });
+              log(`Upserted batch with older SDK format`, 'pinecone');
+            } catch (e2) {
+              // Method 3: Try without namespace (newest SDK)
+              await pineconeIndex.upsert(records);
+              log(`Upserted batch without namespace parameter (newest SDK)`, 'pinecone');
+            }
           }
           
           successCount += records.length;
+          log(`Successfully upserted ${successCount} vectors so far`, 'pinecone');
         } catch (err) {
           log(`Error during batch upsert: ${err}`, 'pinecone');
           throw err;
@@ -298,13 +307,21 @@ export async function upsertMemoriesToPinecone(
       }
     }
     
-    // Calculate deduplication rate as a percentage
+    // Calculate metrics
     const dedupRate = totalProcessed > 0 ? (dedupCount / totalProcessed) * 100 : 0;
+    const newUpsertCount = totalProcessed - dedupCount;
     
-    // Actual newly inserted records (not counting overwrites of existing records)
-    newUpsertCount = successCount - dedupCount;
+    log(`Sync complete. Total: ${totalProcessed}, New: ${newUpsertCount}, Duplicates: ${dedupCount}, Dedup rate: ${dedupRate.toFixed(1)}%`, 'pinecone');
     
-    // The success count includes both new and overwritten records
+    // Verify the vectors were added by checking stats
+    try {
+      const stats = await pineconeIndex.describeIndexStats();
+      const currentVectorCount = stats.namespaces?.[namespace]?.recordCount || 0;
+      log(`Index now contains ${currentVectorCount} vectors in namespace ${namespace}`, 'pinecone');
+    } catch (statsError) {
+      log(`Error checking final vector count: ${statsError}`, 'pinecone');
+    }
+    
     return {
       success: true,
       upsertedCount: newUpsertCount,
