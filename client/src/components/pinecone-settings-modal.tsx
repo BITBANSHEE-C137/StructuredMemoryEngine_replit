@@ -216,15 +216,15 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
               <div className="space-y-2 pt-2">
                 <Label htmlFor="active-index">Active Index</Label>
                 <Select 
-                  value={settings?.activeIndexName || ''} 
-                  onValueChange={(value) => updateSettings({ activeIndexName: value || null })}
+                  value={settings?.activeIndexName || "none"} 
+                  onValueChange={(value) => updateSettings({ activeIndexName: value === "none" ? null : value })}
                   disabled={isLoading || !isAvailable || indexes.length === 0}
                 >
                   <SelectTrigger id="active-index">
                     <SelectValue placeholder="Select active index" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {indexes.map(index => (
                       <SelectItem key={index.name} value={index.name}>
                         {index.name}
