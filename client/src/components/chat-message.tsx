@@ -52,10 +52,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         {/* Message content with linkification and formatting */}
         <div className="whitespace-pre-wrap">
           {message.content.split('\n').map((line, i, arr) => (
-            <React.Fragment key={i}>
+            <span key={i}>
               {line}
               {i < arr.length - 1 && <br />}
-            </React.Fragment>
+            </span>
           ))}
         </div>
       </div>

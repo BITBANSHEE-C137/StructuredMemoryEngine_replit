@@ -4,12 +4,13 @@ import { MemoryPanel } from '@/components/memory-panel';
 import { SettingsModal } from '@/components/settings-modal';
 import { useChatMessages, useSettings, useModels, useApiStatus, useMobile } from '@/lib/hooks';
 import { DEFAULT_SETTINGS } from '@/lib/constants';
-import { RelevantMemory } from '@/lib/types';
+import { RelevantMemory, Settings } from '@/lib/types';
 
 export default function Home() {
   const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(true);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [selectedModelId, setSelectedModelId] = useState(DEFAULT_SETTINGS.defaultModelId);
+  const [selectedEmbeddingModelId, setSelectedEmbeddingModelId] = useState(DEFAULT_SETTINGS.defaultEmbeddingModelId);
   const [relevantMemories, setRelevantMemories] = useState<RelevantMemory[]>([]);
   
   const isMobile = useMobile();
@@ -33,10 +34,11 @@ export default function Home() {
     checkApiStatus();
   }, [fetchMessages, fetchSettings, fetchModels, checkApiStatus]);
   
-  // Update selected model when settings are loaded
+  // Update selected models when settings are loaded
   useEffect(() => {
     if (settings) {
       setSelectedModelId(settings.defaultModelId);
+      setSelectedEmbeddingModelId(settings.defaultEmbeddingModelId);
     }
   }, [settings]);
   
@@ -45,7 +47,18 @@ export default function Home() {
     
     // Also update default model in settings
     if (settings) {
-      updateSettings({ ...settings, defaultModelId: modelId });
+      const updatedSettings: Partial<Settings> = { defaultModelId: modelId };
+      updateSettings(updatedSettings);
+    }
+  };
+  
+  const handleEmbeddingModelChange = (modelId: string) => {
+    setSelectedEmbeddingModelId(modelId);
+    
+    // Also update default embedding model in settings
+    if (settings) {
+      const updatedSettings: Partial<Settings> = { defaultEmbeddingModelId: modelId };
+      updateSettings(updatedSettings);
     }
   };
   
@@ -63,7 +76,7 @@ export default function Home() {
     setIsMemoryPanelOpen(!isMemoryPanelOpen);
   };
   
-  const handleSaveSettings = async (updatedSettings: Partial<typeof settings>) => {
+  const handleSaveSettings = async (updatedSettings: Partial<Settings>) => {
     return await updateSettings(updatedSettings);
   };
   
@@ -137,7 +150,9 @@ export default function Home() {
           models={models}
           isLoading={isLoading}
           selectedModelId={selectedModelId}
+          selectedEmbeddingModelId={selectedEmbeddingModelId}
           onModelChange={handleModelChange}
+          onEmbeddingModelChange={handleEmbeddingModelChange}
           onSendMessage={handleSendMessage}
           onToggleMemoryPanel={handleToggleMemoryPanel}
           isMobile={isMobile}
