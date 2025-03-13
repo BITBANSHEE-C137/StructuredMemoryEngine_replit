@@ -325,18 +325,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               
               <div>
                 <label htmlFor="embedding-model" className="text-sm mb-1 block text-primary font-medium">
-                  Embedding Model
+                  Embedding Model (Static Configuration)
                 </label>
-                <select
+                <div
                   id="embedding-model"
-                  value={defaultEmbeddingModelId}
-                  onChange={(e) => setDefaultEmbeddingModelId(e.target.value)}
-                  className="w-full p-2 border border-primary/20 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                  className="w-full p-2 border border-primary/20 bg-neutral/50 rounded text-sm"
                 >
-                  <option value="text-embedding-ada-002">text-embedding-ada-002 (OpenAI)</option>
-                  <option value="text-embedding-3-small">text-embedding-3-small (OpenAI)</option>
-                  <option value="text-embedding-3-large">text-embedding-3-large (OpenAI)</option>
-                </select>
+                  {defaultEmbeddingModelId || 'text-embedding-3-small'} (OpenAI)
+                </div>
                 <p className="text-xs text-primary mt-1">
                   Model used for embedding queries and memories for vector retrieval
                 </p>

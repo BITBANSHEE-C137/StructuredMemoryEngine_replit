@@ -167,15 +167,49 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     <span className="text-xs ml-1 text-primary/70">vectors</span>
                   </div>
                   <div className={`text-xs ${currentOperation !== 'none' || loadingPinecone 
-                      ? 'text-rose-600 bg-rose-100' 
+                      ? 'text-amber-600 bg-amber-100' 
                       : 'text-emerald-600 bg-emerald-100'} 
                     px-2 py-1 rounded-full flex items-center`}>
                     {currentOperation !== 'none' && <Loader2 className="h-2.5 w-2.5 mr-1 animate-spin" />}
                     {currentOperation !== 'none' 
-                      ? 'Locked' 
-                      : loadingPinecone 
-                        ? 'Locking...' 
-                        : 'Unlocked'}
+                      ? `${currentOperation === 'sync' ? 'Syncing' : 'Hydrating'}...` 
+                      : `Ready`}
+                  </div>
+                </div>
+                
+                {/* Deduplication metrics */}
+                <div className="mt-3 pt-2 border-t border-primary/10">
+                  <div className="text-primary/70 text-xs mb-1.5 font-medium">Deduplication Metrics:</div>
+                  <div className="grid grid-cols-3 gap-1 text-xs">
+                    {pineconeStats.lastSyncDedupRate !== undefined && (
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
+                        <span className="text-xs font-bold text-primary">
+                          {(pineconeStats.lastSyncDedupRate * 100).toFixed(1)}%
+                        </span>
+                        <span className="text-[10px] text-primary/70">Last Sync</span>
+                      </div>
+                    )}
+                    {pineconeStats.lastHydrateDedupRate !== undefined && (
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
+                        <span className="text-xs font-bold text-primary">
+                          {(pineconeStats.lastHydrateDedupRate * 100).toFixed(1)}%
+                        </span>
+                        <span className="text-[10px] text-primary/70">Last Recall</span>
+                      </div>
+                    )}
+                    {pineconeStats.avgDedupRate !== undefined && (
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
+                        <span className="text-xs font-bold text-primary">
+                          {(pineconeStats.avgDedupRate * 100).toFixed(1)}%
+                        </span>
+                        <span className="text-[10px] text-primary/70">Average</span>
+                      </div>
+                    )}
+                    {!pineconeStats.lastSyncDedupRate && !pineconeStats.lastHydrateDedupRate && !pineconeStats.avgDedupRate && (
+                      <div className="col-span-3 text-[10px] text-primary/60 text-center py-1">
+                        No deduplication metrics available yet
+                      </div>
+                    )}
                   </div>
                 </div>
                 

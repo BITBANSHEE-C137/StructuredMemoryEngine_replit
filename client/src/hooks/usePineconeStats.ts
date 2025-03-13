@@ -10,6 +10,10 @@ export interface PineconeStats {
     name: string;
     vectorCount: number;
   }>;
+  // Deduplication metrics
+  lastSyncDedupRate?: number;
+  lastHydrateDedupRate?: number;
+  avgDedupRate?: number;
 }
 
 export function usePineconeStats() {
