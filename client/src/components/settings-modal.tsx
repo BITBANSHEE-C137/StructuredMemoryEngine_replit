@@ -128,7 +128,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
           
-          <div className="p-4">
+          <div className="p-4 h-[70vh] overflow-y-auto">
             <h3 className="text-sm font-medium text-primary mb-3">API Configuration</h3>
             
             {/* OpenAI Section */}
