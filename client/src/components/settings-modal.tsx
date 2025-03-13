@@ -227,6 +227,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {/* Memory Settings */}
             <h3 className="text-sm font-medium text-primary mb-3 mt-6">Memory Settings</h3>
+            
+            {/* RAG System Status Indicator */}
+            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg shadow-sm mb-4">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  <h3 className="text-sm font-semibold text-blue-800">RAG System Status</h3>
+                </div>
+                <span className="text-xs font-medium text-white bg-green-600 px-2 py-0.5 rounded-full">Active</span>
+              </div>
+              
+              <div className="mt-2 text-xs text-blue-800 space-y-1">
+                <div className="flex justify-between">
+                  <span>Context retrieval:</span>
+                  <span className="font-medium">{contextSize} memories per query</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Similarity threshold:</span>
+                  <span className="font-medium">{parseFloat(similarityThreshold).toFixed(2)} (min. confidence)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Embedding model:</span>
+                  <span className="font-medium">{settings?.defaultEmbeddingModelId || 'text-embedding-ada-002'}</span>
+                </div>
+              </div>
+              
+              <div className="mt-2 text-[10px] text-blue-700">
+                The system will retrieve previous memories that match your query with at least {(parseFloat(similarityThreshold) * 100).toFixed(0)}% similarity.
+              </div>
+            </div>
+            
             <div className="space-y-4">
               <div>
                 <label htmlFor="context-retrieval" className="flex items-center justify-between text-sm mb-1">
