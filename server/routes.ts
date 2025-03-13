@@ -6,7 +6,9 @@ import openai from "./utils/openai";
 import anthropic from "./utils/anthropic";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { insertMessageSchema, insertSettingsSchema } from "@shared/schema";
+import { insertMessageSchema, insertSettingsSchema, type Model, type Settings } from "@shared/schema";
+import authRouter from "./routes/auth";
+import { authMiddleware, isAuthenticated } from "./middleware/auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize the database
@@ -49,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Get settings
+  // Get settings (public)
   router.get("/settings", async (req, res) => {
     try {
       const settings = await storage.getSettings();
@@ -59,8 +61,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update settings
-  router.post("/settings", async (req, res) => {
+  // Update settings (protected)
+  router.post("/settings", authMiddleware, async (req, res) => {
     try {
       const validatedData = insertSettingsSchema.parse(req.body);
       const settings = await storage.updateSettings(validatedData);
@@ -401,8 +403,8 @@ These settings determine how the system processes your queries and retrieves rel
     }
   });
 
-  // Clear all memories endpoint
-  router.post("/memories/clear", async (req, res) => {
+  // Clear all memories endpoint (protected)
+  router.post("/memories/clear", authMiddleware, async (req, res) => {
     try {
       const result = await storage.clearAllMemories();
       res.json({ 
@@ -416,7 +418,10 @@ These settings determine how the system processes your queries and retrieves rel
     }
   });
 
-  // Register all routes with /api prefix
+  // Register auth router
+  app.use("/api/auth", authRouter);
+  
+  // Register all API routes with /api prefix
   app.use("/api", router);
 
   // Create HTTP server

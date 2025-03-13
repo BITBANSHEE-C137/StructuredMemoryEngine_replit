@@ -1,18 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import { getUserInfo } from '@replit/repl-auth';
 
+// Define the user info type based on what getUserInfo returns
+interface UserInfo {
+  id?: string;
+  name?: string;
+  roles?: string[];
+  bio?: string; 
+  url?: string;
+  profileImage?: string;
+}
+
 // Extend the Express Request type to include a user property
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: string;
-        name: string;
-        roles: string[];
-        bio?: string;
-        url?: string;
-        profileImage?: string;
-      };
+      user?: UserInfo;
     }
   }
 }
