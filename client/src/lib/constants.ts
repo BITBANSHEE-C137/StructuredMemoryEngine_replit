@@ -28,7 +28,12 @@ export const API_ROUTES = {
   SETTINGS: "/api/settings",
   HEALTH: "/api/health",
   CLEAR_MEMORIES: "/api/memories/clear",
-  MEMORIES: "/api/memories"
+  MEMORIES: "/api/memories",
+  AUTH: {
+    LOGIN: "/api/auth/login",
+    LOGOUT: "/api/auth/logout",
+    USER: "/api/auth/user"
+  }
 };
 
 export const ERROR_MESSAGES = {

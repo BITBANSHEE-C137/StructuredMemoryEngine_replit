@@ -2,6 +2,42 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* AppStack-inspired color palette */
+  --app-background: 210 45% 98%;
+  --app-foreground: 222 47% 11%;
+  --app-card: 0 0% 100%;
+  --app-card-foreground: 222 47% 11%;
+  --app-border: 214 32% 91%;
+  
+  --app-primary: 222 47% 31%;
+  --app-primary-foreground: 210 40% 98%;
+  --app-primary-hover: 222 48% 25%;
+  
+  --app-secondary: 210 40% 96.1%;
+  --app-secondary-foreground: 222 47% 11%;
+  
+  --app-success: 142 71% 45%;
+  --app-info: 201 94% 51%;
+  --app-warning: 33 100% 53%;
+  --app-danger: 0 84% 60%;
+  
+  --app-muted: 210 40% 96.1%;
+  --app-muted-foreground: 215 16% 47%;
+  
+  --app-accent: 210 40% 96.1%;
+  --app-accent-foreground: 222 47% 11%;
+  
+  --app-sidebar-border: 214 32% 91%;
+  --app-sidebar-background: 0 0% 100%;
+  --app-sidebar-foreground: 222 47% 11%;
+  
+  --app-tooltip: 222 47% 11%;
+  --app-tooltip-foreground: 210 40% 98%;
+  
+  --app-radius: 0.5rem;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -13,9 +49,50 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    font-variation-settings: "opsz" 32;
   }
 
   #root {
     @apply flex flex-col;
+  }
+
+  /* AppStack-style shadows */
+  .shadow-card {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08);
+  }
+  
+  .shadow-nav {
+    box-shadow: 0 0.1rem 0.2rem rgba(0, 0, 0, 0.05);
+  }
+  
+  /* Card styles */
+  .app-card {
+    @apply bg-white rounded-lg border border-gray-100 shadow-card;
+  }
+  
+  .app-section {
+    @apply py-4 px-6;
+  }
+  
+  .app-header {
+    @apply text-lg font-semibold text-gray-800 mb-4;
+  }
+  
+  /* Button styles */
+  .btn-primary {
+    @apply bg-[hsl(var(--app-primary))] text-white px-4 py-2 rounded-[var(--app-radius)] hover:bg-[hsl(var(--app-primary-hover))] transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-[hsl(var(--app-secondary))] text-[hsl(var(--app-secondary-foreground))] px-4 py-2 rounded-[var(--app-radius)] hover:bg-gray-200 transition-colors;
+  }
+  
+  .btn-success {
+    @apply bg-[hsl(var(--app-success))] text-white px-4 py-2 rounded-[var(--app-radius)] hover:brightness-95 transition-colors;
+  }
+  
+  .btn-danger {
+    @apply bg-[hsl(var(--app-danger))] text-white px-4 py-2 rounded-[var(--app-radius)] hover:brightness-95 transition-colors;
   }
 }
