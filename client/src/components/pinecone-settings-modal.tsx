@@ -127,7 +127,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     }
   };
   
-  // Handler for the new Debug button
+  // Handler for the Debug button
   const handleDebugVectors = async () => {
     if (!selectedIndex) {
       return;
@@ -140,12 +140,31 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       
       // Display the data more accessibly
       if (data?.vectors?.length > 0) {
-        // Open a basic view of the first few vectors in a new window
+        // Prepare enhanced vector information with metadata
         const vectorInfo = data.vectors.map((v: any) => ({
           id: v.id,
           metadata: v.metadata || {},
-          dimension: v.values?.length || 0
+          hasValues: v.hasValues,
+          dimension: v.valuesDimension || 0,
+          score: v.score
         }));
+        
+        // Get metadata fields to create a summary of available metadata
+        const metadataFieldsSet = new Set<string>();
+        data.vectors.forEach((v: any) => {
+          if (v.metadata) {
+            Object.keys(v.metadata).forEach(key => metadataFieldsSet.add(key));
+          }
+        });
+        const metadataFields = Array.from(metadataFieldsSet);
+        
+        // Create a sample table of metadata counts
+        const metadataCounts: Record<string, number> = {};
+        metadataFields.forEach(field => {
+          metadataCounts[field] = data.vectors.filter((v: any) => 
+            v.metadata && v.metadata[field] !== undefined
+          ).length;
+        });
         
         const debugWindow = window.open('', '_blank');
         if (debugWindow) {
@@ -154,21 +173,193 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
               <head>
                 <title>Pinecone Vector Debug - ${selectedIndex}</title>
                 <style>
-                  body { font-family: sans-serif; padding: 20px; }
-                  pre { background: #f5f5f5; padding: 10px; overflow: auto; max-height: 400px; }
+                  body { 
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                    padding: 20px; 
+                    line-height: 1.5;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    color: #333;
+                  }
+                  h2 { border-bottom: 1px solid #eee; padding-bottom: 8px; margin-top: 30px; }
+                  h3 { margin-top: 25px; }
+                  pre { 
+                    background: #f5f5f5; 
+                    padding: 16px; 
+                    border-radius: 8px; 
+                    overflow: auto; 
+                    max-height: 400px;
+                    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+                    font-size: 14px;
+                  }
+                  .stats { 
+                    display: flex; 
+                    gap: 20px; 
+                    flex-wrap: wrap;
+                    margin-bottom: 20px;
+                  }
+                  .stat-box {
+                    background: #f9f9f9;
+                    padding: 15px;
+                    border-radius: 8px;
+                    min-width: 200px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                  }
+                  .stat-value {
+                    font-size: 24px;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                  }
+                  .stat-label {
+                    font-size: 14px;
+                    color: #666;
+                  }
+                  table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                  }
+                  th, td {
+                    border: 1px solid #ddd;
+                    padding: 8px 12px;
+                    text-align: left;
+                  }
+                  th {
+                    background-color: #f2f2f2;
+                  }
+                  tr:nth-child(even) {
+                    background-color: #f9f9f9;
+                  }
+                  .actions {
+                    margin-top: 20px;
+                    display: flex;
+                    gap: 10px;
+                  }
+                  button {
+                    padding: 8px 16px;
+                    background: #4a5568;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                  }
+                  button:hover {
+                    background: #2d3748;
+                  }
+                  .badge {
+                    display: inline-block;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: bold;
+                  }
+                  .badge-green {
+                    background: #d1fae5;
+                    color: #047857;
+                  }
+                  .badge-blue {
+                    background: #dbeafe;
+                    color: #1e40af;
+                  }
                 </style>
               </head>
               <body>
-                <h2>Pinecone Vector Debug - ${selectedIndex}</h2>
-                <p>Namespace: ${syncNamespace}</p>
-                <p>Total vectors: ${data.vectors.length}</p>
-                <h3>Vector Preview:</h3>
+                <h1>Pinecone Vector Debug</h1>
+                <div class="stats">
+                  <div class="stat-box">
+                    <div class="stat-value">${selectedIndex}</div>
+                    <div class="stat-label">Index Name</div>
+                  </div>
+                  <div class="stat-box">
+                    <div class="stat-value">${syncNamespace}</div>
+                    <div class="stat-label">Namespace</div>
+                  </div>
+                  <div class="stat-box">
+                    <div class="stat-value">${data.count || data.vectors.length}</div>
+                    <div class="stat-label">Vectors Retrieved</div>
+                  </div>
+                  <div class="stat-box">
+                    <div class="stat-value">${data.vectors[0]?.valuesDimension || 'Unknown'}</div>
+                    <div class="stat-label">Vector Dimension</div>
+                  </div>
+                </div>
+                
+                <h2>Metadata Analysis</h2>
+                <p>Overview of metadata fields present in vectors:</p>
+                <table>
+                  <tr>
+                    <th>Field Name</th>
+                    <th>Count</th>
+                    <th>Coverage</th>
+                  </tr>
+                  ${metadataFields.map(field => `
+                    <tr>
+                      <td>${field}</td>
+                      <td>${metadataCounts[field]}</td>
+                      <td>${Math.round((metadataCounts[field] / data.vectors.length) * 100)}%</td>
+                    </tr>
+                  `).join('')}
+                </table>
+                
+                <h2>Vector Preview</h2>
+                <p>Showing ${data.vectors.length} vectors from index <strong>${selectedIndex}</strong>:</p>
                 <pre>${JSON.stringify(vectorInfo, null, 2)}</pre>
+                
+                <h2>Raw Sample</h2>
+                <p>Complete raw data for the first vector (includes full metadata):</p>
+                <pre>${JSON.stringify(data.rawSample, null, 2)}</pre>
+                
+                <div class="actions">
+                  <button onclick="window.print()">Print/Save as PDF</button>
+                  <button onclick="navigator.clipboard.writeText(JSON.stringify(${JSON.stringify(data)}, null, 2))">
+                    Copy All Data to Clipboard
+                  </button>
+                </div>
+              </body>
+            </html>
+          `);
+        }
+      } else {
+        // No vectors found
+        const debugWindow = window.open('', '_blank');
+        if (debugWindow) {
+          debugWindow.document.write(`
+            <html>
+              <head>
+                <title>Pinecone Vector Debug - ${selectedIndex}</title>
+                <style>
+                  body { 
+                    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                    padding: 20px; 
+                    line-height: 1.5;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    color: #333;
+                  }
+                  .empty-state {
+                    text-align: center;
+                    padding: 40px;
+                    background: #f9f9f9;
+                    border-radius: 8px;
+                    margin-top: 30px;
+                  }
+                  h2 { color: #4a5568; }
+                </style>
+              </head>
+              <body>
+                <h1>Pinecone Vector Debug</h1>
+                <div class="empty-state">
+                  <h2>No vectors found</h2>
+                  <p>The index "${selectedIndex}" with namespace "${syncNamespace}" appears to be empty.</p>
+                  <p>You may need to sync memories to this index first.</p>
+                </div>
               </body>
             </html>
           `);
         }
       }
+    } catch (error) {
+      console.error('Error in vector debugging:', error);
     } finally {
       setIsSyncing(false);
     }
