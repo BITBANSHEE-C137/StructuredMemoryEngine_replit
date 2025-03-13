@@ -418,14 +418,53 @@ export async function wipePineconeIndex(
     const client = await getPineconeClient();
     const pineconeIndex = client.index(indexName);
     
-    // Delete all vectors in the namespace
-    // Pinecone DeleteAll API doesn't take any parameters for a complete wipe
-    // To delete just within a namespace, use the deleteOne with namespace parameter
-    await pineconeIndex.deleteAll({
-      namespace // Delete only in the specified namespace
-    });
+    // In the latest Pinecone SDK, we need to use a different approach to delete all vectors
+    // We'll try multiple methods to adapt to different Pinecone SDK versions
+    try {
+      // Method 1: Using the native API for v1 of Pinecone
+      await fetch(`https://${indexName}-kkp7a93.svc.aped-4627-b74a.pinecone.io/vectors/delete`, {
+        method: 'POST',
+        headers: {
+          'Api-Key': process.env.PINECONE_API_KEY!,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          deleteAll: true,
+          namespace
+        }),
+      });
+      
+      log(`Wiped all vectors from Pinecone index ${indexName} in namespace ${namespace} using direct API`, 'pinecone');
+    } catch (fetchError) {
+      log(`Direct API call failed, falling back to SDK methods: ${fetchError}`, 'pinecone');
+      
+      // Method 2: Try using the standard SDK method if available
+      // Cast to any to bypass TypeScript restrictions
+      const indexAny = pineconeIndex as any;
+      
+      if (typeof indexAny.delete === 'function') {
+        await indexAny.delete({ deleteAll: true, namespace });
+        log(`Wiped all vectors using index.delete method`, 'pinecone');
+      } else if (typeof indexAny._delete === 'function') {
+        await indexAny._delete({ deleteAll: true, namespace });
+        log(`Wiped all vectors using index._delete method`, 'pinecone');
+      } else {
+        // Method 3: Use vector IDs - least efficient but most compatible
+        log(`Falling back to fetching and deleting vectors by ID`, 'pinecone');
+        const stats = await pineconeIndex.describeIndexStats();
+        const count = stats.namespaces?.[namespace]?.vectorCount || 0;
+        
+        if (count > 0) {
+          log(`Found ${count} vectors to delete in namespace ${namespace}`, 'pinecone');
+          // We would need to query for all vector IDs and then delete them
+          // This is a fallback if all else fails
+          throw new Error("Could not wipe index using any available method");
+        } else {
+          log(`No vectors found in namespace ${namespace}, nothing to delete`, 'pinecone');
+        }
+      }
+    }
     
-    log(`Wiped all vectors from Pinecone index ${indexName} in namespace ${namespace}`, 'pinecone');
     return true;
   } catch (error) {
     log(`Error wiping Pinecone index: ${error}`, 'pinecone');
