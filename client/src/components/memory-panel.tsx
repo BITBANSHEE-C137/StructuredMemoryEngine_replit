@@ -184,7 +184,10 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                 
                 {/* Deduplication metrics */}
                 <div className="mt-3 pt-2 border-t border-primary/10">
-                  <div className="text-primary/70 text-xs mb-1.5 font-medium">Deduplication Metrics:</div>
+                  <div className="text-primary/70 text-xs mb-1.5 font-medium flex items-center">
+                    Duplicate Detection Rate:
+                    <span className="ml-1 text-[10px] bg-primary/10 px-1 py-0.5 rounded" title="Percentage of records that were identified as duplicates during sync/recall operations">?</span>
+                  </div>
                   <div className="grid grid-cols-3 gap-1 text-xs">
                     {pineconeStats.lastSyncDedupRate !== undefined && (
                       <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
@@ -212,7 +215,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     )}
                     {!pineconeStats.lastSyncDedupRate && !pineconeStats.lastHydrateDedupRate && !pineconeStats.avgDedupRate && (
                       <div className="col-span-3 text-[10px] text-primary/60 text-center py-1">
-                        No deduplication metrics available yet
+                        0% of entries were duplicates in last operation
                       </div>
                     )}
                   </div>
