@@ -44,25 +44,68 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         </div>
       
         <div className="flex-1 min-w-0">
-          {/* Relevant memories section for assistant responses */}
-          {!isUser && relevantMemories && relevantMemories.length > 0 && (
+          {/* Enhanced Relevant memories section for assistant responses */}
+          {!isUser && relevantMemories && (
             <div className="mb-3 p-3 bg-primary/5 rounded-xl border border-primary/10 text-xs">
-              <div className="font-medium text-primary/80 mb-2 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                Retrieved Memories:
+              <div className="font-medium flex items-center justify-between mb-1">
+                <div className="flex items-center text-primary/80">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  RAG Context ({relevantMemories.length} memories)
+                </div>
+                <div className="text-[10px] bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+                  {relevantMemories.length > 0 ? "Context used" : "No relevant context"}
+                </div>
               </div>
-              <div className="space-y-1.5">
-                {relevantMemories.map((memory) => (
-                  <div key={memory.id} className="pl-2 border-l-2 border-primary/20">
-                    <span className="text-primary/70 font-medium mr-1">{(memory.similarity * 100).toFixed(0)}%</span>
-                    {memory.content.length > 100 
-                      ? `${memory.content.substring(0, 100)}...` 
-                      : memory.content}
+              
+              {relevantMemories.length > 0 ? (
+                <>
+                  <div className="text-[10px] text-primary/60 mb-2">
+                    Showing memory content with similarity scores
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-2">
+                    {relevantMemories.map((memory) => (
+                      <div key={memory.id} 
+                        className={`p-2 rounded border ${
+                          memory.similarity > 0.85 
+                            ? "border-green-200 bg-green-50" 
+                            : memory.similarity > 0.75 
+                              ? "border-blue-200 bg-blue-50" 
+                              : "border-gray-200 bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-primary/90">Memory #{memory.id}</span>
+                          <div className="flex items-center">
+                            <span 
+                              className={`inline-block w-16 text-center text-[10px] font-medium py-0.5 px-1.5 rounded-full ${
+                                memory.similarity > 0.85 
+                                  ? "bg-green-200 text-green-800" 
+                                  : memory.similarity > 0.75 
+                                    ? "bg-blue-200 text-blue-800" 
+                                    : "bg-gray-200 text-gray-800"
+                              }`}
+                            >
+                              {(memory.similarity * 100).toFixed(1)}% match
+                            </span>
+                          </div>
+                        </div>
+                        <div className="pl-2 border-l-2 border-primary/20 text-primary/80">
+                          {memory.content.length > 100 
+                            ? `${memory.content.substring(0, 100)}...` 
+                            : memory.content}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-2 text-primary/60">
+                  No relevant memories found for this query.
+                  <div className="text-[10px] mt-1">Response was generated without context from memory</div>
+                </div>
+              )}
             </div>
           )}
         
