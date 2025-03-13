@@ -165,24 +165,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                   </div>
                 )}
                 
-                {/* Only show namespaces section if there are namespaces other than default */}
-                {pineconeStats.namespaces.length > 0 && 
-                 pineconeStats.namespaces.some(ns => ns.name !== 'default') && (
-                  <div className="mt-2 border-t border-primary/10 pt-2">
-                    <div className="text-xs text-primary/70 mb-1">Custom Namespaces:</div>
-                    <div className="text-xs space-y-1">
-                      {pineconeStats.namespaces
-                        .filter(ns => ns.name !== 'default')
-                        .map(ns => (
-                          <div key={ns.name} className="flex justify-between">
-                            <span className="text-primary/80">{ns.name}</span>
-                            <span className="text-primary font-medium">{ns.vectorCount}</span>
-                          </div>
-                        ))
-                      }
-                    </div>
-                  </div>
-                )}
+                {/* Namespaces information has been simplified to avoid redundancy */}
               </div>
             )}
           </div>
