@@ -33,6 +33,7 @@ export interface IStorage {
   getModels(): Promise<Model[]>;
   getEnabledModels(): Promise<Model[]>;
   getModelById(id: string): Promise<Model | undefined>;
+  createModel(model: { id: string; name: string; provider: 'openai' | 'anthropic'; maxTokens: number; isEnabled: boolean }): Promise<Model>;
   updateModel(id: string, data: Partial<Omit<Model, "id">>): Promise<Model>;
 }
 

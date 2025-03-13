@@ -83,8 +83,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get enabled models
   router.get("/models/enabled", async (req, res) => {
     try {
-      const models = await storage.getEnabledModels();
-      res.json(models);
+      // Get models from database
+      const dbModels = await storage.getEnabledModels();
+      
+      // Also get models directly from APIs for the most up-to-date list
+      let openaiModels: string[] = [];
+      let anthropicModels: string[] = [];
+      
+      try {
+        openaiModels = await openai.getAvailableModels();
+        console.log("Available OpenAI models:", openaiModels);
+      } catch (error) {
+        console.error("Error fetching OpenAI models:", error);
+      }
+      
+      try {
+        anthropicModels = await anthropic.getAvailableModels();
+        console.log("Available Anthropic models:", anthropicModels);
+      } catch (error) {
+        console.error("Error fetching Anthropic models:", error);
+      }
+      
+      // If we have API models, update our database stored models
+      if (openaiModels.length > 0 || anthropicModels.length > 0) {
+        // Find models that exist in APIs but not in our DB
+        const existingModelIds = dbModels.map(m => m.id);
+        
+        // For OpenAI, add any new models to DB
+        for (const modelId of openaiModels) {
+          if (!existingModelIds.includes(modelId)) {
+            try {
+              await storage.createModel({
+                id: modelId,
+                name: modelId.replace("gpt-", "GPT-").replace(/-/g, " "),
+                provider: "openai",
+                maxTokens: modelId.includes("32k") ? 32000 : 8000,
+                isEnabled: true
+              });
+              console.log(`Added new OpenAI model: ${modelId}`);
+            } catch (error) {
+              console.error(`Error adding model ${modelId}:`, error);
+            }
+          }
+        }
+        
+        // For Anthropic, add any new models to DB
+        for (const modelId of anthropicModels) {
+          if (!existingModelIds.includes(modelId)) {
+            try {
+              await storage.createModel({
+                id: modelId,
+                name: modelId.replace("claude-", "Claude ").replace(/-/g, " "),
+                provider: "anthropic",
+                maxTokens: 100000,
+                isEnabled: true
+              });
+              console.log(`Added new Anthropic model: ${modelId}`);
+            } catch (error) {
+              console.error(`Error adding model ${modelId}:`, error);
+            }
+          }
+        }
+        
+        // Get updated models after adding any new ones
+        const updatedModels = await storage.getEnabledModels();
+        return res.json(updatedModels);
+      }
+      
+      // If we couldn't get any models from APIs, return models from DB
+      res.json(dbModels);
     } catch (err) {
       handleError(err, res);
     }
