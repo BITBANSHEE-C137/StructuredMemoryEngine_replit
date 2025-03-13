@@ -30,11 +30,18 @@ interface WipeResult {
   message: string;
 }
 
+// Define the operation types for locking
+type OperationType = 'sync' | 'hydrate' | 'none';
+
 export function usePineconeSettings() {
   const [settings, setSettings] = useState<PineconeSettings | null>(null);
   const [indexes, setIndexes] = useState<PineconeIndex[]>([]);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Track the current operation type and its target index
+  const [currentOperation, setCurrentOperation] = useState<OperationType>('none');
+  const [operationIndex, setOperationIndex] = useState<string | null>(null);
+  const [operationNamespace, setOperationNamespace] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Declare fetchIndexes reference first
@@ -207,7 +214,12 @@ export function usePineconeSettings() {
   }, [fetchIndexes, settings, updateSettings, toast]);
 
   const syncToPinecone = useCallback(async (indexName: string, namespace: string = 'default') => {
+    // Set operation lock
+    setCurrentOperation('sync');
+    setOperationIndex(indexName);
+    setOperationNamespace(namespace);
     setIsLoading(true);
+    
     try {
       const result = await apiRequest('/api/pinecone/sync', {
         method: 'POST',
@@ -240,12 +252,21 @@ export function usePineconeSettings() {
       });
       return null;
     } finally {
+      // Release operation lock
+      setCurrentOperation('none');
+      setOperationIndex(null);
+      setOperationNamespace(null);
       setIsLoading(false);
     }
   }, [fetchIndexes, updateSettings, toast]);
 
   const hydrateFromPinecone = useCallback(async (indexName: string, namespace: string = 'default', limit: number = 1000) => {
+    // Set operation lock
+    setCurrentOperation('hydrate');
+    setOperationIndex(indexName);
+    setOperationNamespace(namespace);
     setIsLoading(true);
+    
     try {
       const result = await apiRequest('/api/pinecone/hydrate', {
         method: 'POST',
@@ -278,6 +299,10 @@ export function usePineconeSettings() {
       });
       return null;
     } finally {
+      // Release operation lock
+      setCurrentOperation('none');
+      setOperationIndex(null);
+      setOperationNamespace(null);
       setIsLoading(false);
     }
   }, [updateSettings, toast]);
@@ -339,6 +364,11 @@ export function usePineconeSettings() {
     }
   }, [toast]);
 
+  // Utility function to determine if index settings can be changed
+  const canChangeIndexSettings = useCallback(() => {
+    return currentOperation === 'none';
+  }, [currentOperation]);
+
   return {
     settings,
     indexes,
@@ -353,6 +383,11 @@ export function usePineconeSettings() {
     wipeIndex,
     syncToPinecone,
     hydrateFromPinecone,
-    fetchVectorsFromIndex
+    fetchVectorsFromIndex,
+    // Expose operation state
+    currentOperation,
+    operationIndex,
+    operationNamespace,
+    canChangeIndexSettings
   };
 }

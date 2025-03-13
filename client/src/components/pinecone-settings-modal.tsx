@@ -35,7 +35,12 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     wipeIndex,
     syncToPinecone,
     hydrateFromPinecone,
-    fetchVectorsFromIndex
+    fetchVectorsFromIndex,
+    // Operation lock states
+    currentOperation,
+    operationIndex,
+    operationNamespace,
+    canChangeIndexSettings
   } = usePineconeSettings();
   
   // Add Pinecone stats hook for real-time stats refresh
@@ -516,7 +521,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                 <Select 
                   value={settings?.activeIndexName || "none"} 
                   onValueChange={(value) => updateSettings({ activeIndexName: value === "none" ? null : value })}
-                  disabled={isLoading || !isAvailable || indexes.length === 0}
+                  disabled={isLoading || !isAvailable || indexes.length === 0 || !canChangeIndexSettings()}
                 >
                   <SelectTrigger id="active-index">
                     <SelectValue placeholder="Select active index" />
@@ -549,6 +554,16 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                     <span className="text-muted-foreground">Active index:</span> {stats.activeIndex || 'None'}
                   </div>
                 </div>
+                {currentOperation !== 'none' && (
+                  <div className="text-xs flex items-center pt-2 border-t border-gray-200 text-amber-600">
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    <span>
+                      {currentOperation === 'sync' ? 'Syncing to' : 'Hydrating from'} 
+                      {operationIndex && ` "${operationIndex}"`}
+                      {operationNamespace && ` (namespace: ${operationNamespace})`}...
+                    </span>
+                  </div>
+                )}
                 {settings?.lastSyncTimestamp && (
                   <div className="text-xs text-muted-foreground pt-2 border-t border-gray-200">
                     Last synchronized: {new Date(settings.lastSyncTimestamp).toLocaleString()}
