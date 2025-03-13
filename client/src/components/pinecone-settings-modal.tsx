@@ -45,7 +45,9 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
   // Add Pinecone stats hook for real-time stats refresh
   const { stats, refetch: refreshStats, isLoading: isStatsLoading } = usePineconeStats();
   
+  // Separate state variables for different operations
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(false);
   const [isCreatingIndex, setIsCreatingIndex] = useState(false);
   
   // Track last operation results for deduplication metrics display
@@ -195,7 +197,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       return;
     }
     
-    setIsSyncing(true);
+    setIsHydrating(true);
     try {
       const result = await hydrateFromPinecone(selectedIndex, syncNamespace, 1000);
       console.log('Hydrate result:', result);
@@ -219,7 +221,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     } catch (error) {
       console.error('Error hydrating from Pinecone:', error);
     } finally {
-      setIsSyncing(false);
+      setIsHydrating(false);
     }
   };
   
