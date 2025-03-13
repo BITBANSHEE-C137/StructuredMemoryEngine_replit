@@ -32,7 +32,7 @@ export interface IStorage {
   // Memory operations
   createMemory(memory: InsertMemory): Promise<Memory>;
   getMemoryById(id: number): Promise<Memory | undefined>;
-  queryMemoriesByEmbedding(embedding: string, limit?: number): Promise<(Memory & { similarity: number })[]>;
+  queryMemoriesByEmbedding(embedding: string, limit?: number, similarityThreshold?: number): Promise<(Memory & { similarity: number })[]>;
   clearAllMemories(): Promise<{ count: number }>; // Method to clear all memories
   getMemories(page?: number, pageSize?: number): Promise<{ memories: Memory[], total: number }>; // Method to get paginated memories
   
@@ -197,16 +197,18 @@ export class DatabaseStorage implements IStorage {
     return memory;
   }
 
-  async queryMemoriesByEmbedding(embedding: string, limit: number = 5): Promise<(Memory & { similarity: number })[]> {
+  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.5): Promise<(Memory & { similarity: number })[]> {
     try {
-      console.log("Input embedding format:", embedding.substring(0, 50) + "...");
+      console.log(`Querying memories with similarityThreshold: ${similarityThreshold}`);
       
       // Ensure embedding is cast as vector and using the cosine distance operator (<->)
+      // Added filtering by similarity threshold
       const result = await db.execute(sql`
         SELECT m.*, 
                1 - (m.embedding <-> ${embedding}::vector) as similarity
         FROM memories m
         WHERE m.embedding IS NOT NULL
+        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${similarityThreshold}
         ORDER BY m.embedding <-> ${embedding}::vector
         LIMIT ${limit}
       `);
