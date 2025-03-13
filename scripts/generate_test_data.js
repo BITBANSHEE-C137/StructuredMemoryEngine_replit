@@ -18,8 +18,14 @@
 
 import pg from 'pg';
 import crypto from 'crypto';
+import OpenAI from 'openai';
 
 const { Client } = pg;
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Database configuration - reads from environment variables
 const dbConfig = {
@@ -226,6 +232,30 @@ function generateMemoryId(content, type, messageId) {
   return hash.digest('hex');
 }
 
+// Generate embeddings using OpenAI API
+async function generateEmbedding(text) {
+  try {
+    console.log(`Generating embedding for text: "${text.substring(0, 50)}..."`);
+    
+    const response = await openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input: text,
+    });
+    
+    // Return the embedding as a properly formatted vector string for pgvector
+    // Format: [1.2, 3.4, 5.6, ...]
+    const embeddingArray = response.data[0].embedding;
+    console.log(`Successfully generated embedding with dimension: ${embeddingArray.length}`);
+    
+    return `[${embeddingArray.join(',')}]`;
+  } catch (error) {
+    console.error("Error generating embedding:", error);
+    console.log("Falling back to random embedding for testing");
+    // Fallback to a small random embedding for testing if OpenAI API fails
+    return JSON.stringify(Array(1536).fill(0).map(() => (Math.random() - 0.5) * 0.01));
+  }
+}
+
 // Main function to generate and insert test data
 async function generateAndInsertTestData() {
   const TOTAL_CONVERSATIONS = 10; // Reduced for fast execution
@@ -284,14 +314,17 @@ async function generateAndInsertTestData() {
       );
       const userMessageId = userMessageResult.rows[0].id;
       
-      // Insert user memory
+      // Insert user memory with OpenAI embedding
       const userMemoryId = generateMemoryId(conversation.prompt, 'prompt', userMessageId);
+      // Generate embedding for user prompt using OpenAI API
+      const userEmbedding = await generateEmbedding(conversation.prompt);
+      
       await client.query(
         `INSERT INTO memories (content, embedding, type, message_id, timestamp, metadata) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           conversation.prompt,
-          JSON.stringify(Array(1536).fill(0).map(() => (Math.random() - 0.5) * 0.01)), // Proper dimension random embedding
+          userEmbedding,
           'prompt',
           userMessageId,
           new Date(),
@@ -312,14 +345,17 @@ async function generateAndInsertTestData() {
       );
       const assistantMessageId = assistantMessageResult.rows[0].id;
       
-      // Insert assistant memory
+      // Insert assistant memory with OpenAI embedding
       const assistantMemoryId = generateMemoryId(conversation.response, 'response', assistantMessageId);
+      // Generate embedding for assistant response using OpenAI API
+      const assistantEmbedding = await generateEmbedding(conversation.response);
+      
       await client.query(
         `INSERT INTO memories (content, embedding, type, message_id, timestamp, metadata) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [
           conversation.response,
-          JSON.stringify(Array(1536).fill(0).map(() => (Math.random() - 0.5) * 0.01)), // Proper dimension random embedding
+          assistantEmbedding,
           'response',
           assistantMessageId,
           new Date(),
