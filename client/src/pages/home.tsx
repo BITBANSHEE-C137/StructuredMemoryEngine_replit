@@ -133,8 +133,13 @@ export default function Home() {
   const handleSendMessage = async (content: string, modelId: string) => {
     const context = await sendMessage(content, modelId);
     
+    // Store the relevant memories for display in the Memory Panel
+    // The ChatInterface component will handle displaying them inline with messages
     if (context && context.relevantMemories) {
       setRelevantMemories(context.relevantMemories);
+      console.log('Got relevant memories in Home component:', context.relevantMemories.length);
+    } else {
+      console.log('No relevant memories returned from server');
     }
     
     return context;

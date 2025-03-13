@@ -71,17 +71,20 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     
     // Store relevant memories for this message
     if (context && context.relevantMemories) {
-      // Find the message ID of the latest assistant message
-      // Since we're reversing messages in display, we don't need to reverse here
-      const latestAssistantMessage = messages
-        .find(msg => msg.role === 'assistant');
-      
-      if (latestAssistantMessage) {
-        setRelevantMemoriesMap(prev => ({
-          ...prev,
-          [latestAssistantMessage.id]: context.relevantMemories
-        }));
-      }
+      // We need to wait for the messages to update with the new assistant response
+      setTimeout(() => {
+        // Find the latest assistant message (should be the last one)
+        const latestAssistantMessage = [...messages].reverse()
+          .find(msg => msg.role === 'assistant');
+        
+        if (latestAssistantMessage) {
+          console.log('Setting relevant memories for message ID:', latestAssistantMessage.id);
+          setRelevantMemoriesMap(prev => ({
+            ...prev,
+            [latestAssistantMessage.id]: context.relevantMemories
+          }));
+        }
+      }, 100); // Small delay to ensure messages are updated
     }
   };
   
