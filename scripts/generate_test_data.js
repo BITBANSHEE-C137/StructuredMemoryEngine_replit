@@ -228,7 +228,7 @@ function generateMemoryId(content, type, messageId) {
 
 // Main function to generate and insert test data
 async function generateAndInsertTestData() {
-  const TOTAL_CONVERSATIONS = 200;
+  const TOTAL_CONVERSATIONS = 10; // Reduced for fast execution
   const DUPLICATION_RATE = 0.13; // 13% duplication
   
   // Connect to the database
