@@ -45,8 +45,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
     setLoading(true);
     try {
       const response = await apiRequest(
-        'GET',
-        `${API_ROUTES.MEMORIES}?page=${pageNum}&pageSize=${pageSizeNum}`
+        `${API_ROUTES.MEMORIES}?page=${pageNum}&pageSize=${pageSizeNum}`,
+        { method: 'GET' }
       );
       
       const data = await response.json();
