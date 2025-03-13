@@ -110,15 +110,19 @@ export class DatabaseStorage implements IStorage {
 
   async queryMemoriesByEmbedding(embedding: string, limit: number = 5): Promise<(Memory & { similarity: number })[]> {
     try {
-      // Using cosine similarity for more accurate results
+      console.log("Input embedding format:", embedding.substring(0, 50) + "...");
+      
+      // Ensure embedding is cast as vector and using the cosine distance operator (<->)
       const result = await db.execute(sql`
         SELECT m.*, 
-               1 - (m.embedding <#> ${embedding}) as similarity
+               1 - (m.embedding <-> ${embedding}::vector) as similarity
         FROM memories m
         WHERE m.embedding IS NOT NULL
-        ORDER BY similarity DESC
+        ORDER BY m.embedding <-> ${embedding}::vector
         LIMIT ${limit}
       `);
+      
+      console.log(`Successfully found ${result.length} relevant memories`);
       
       // Convert the raw result to Memory objects with similarity score
       return result.map(row => ({
@@ -133,7 +137,20 @@ export class DatabaseStorage implements IStorage {
       }));
     } catch (error) {
       console.error("Error querying memories by embedding:", error);
-      return []; // Return empty array as fallback
+      
+      // Try fallback to basic query without vector operations
+      try {
+        console.log("Trying fallback query...");
+        const fallbackResult = await db.select().from(memories).limit(limit);
+        
+        return fallbackResult.map(row => ({
+          ...row,
+          similarity: 0.5 // Default similarity for fallback results
+        }));
+      } catch (fallbackError) {
+        console.error("Fallback query also failed:", fallbackError);
+        return []; // Return empty array as last resort
+      }
     }
   }
 

@@ -190,6 +190,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current settings
       const settings = await storage.getSettings();
       
+      // Check for system-related meta-queries
+      const isSystemQuery = await checkForSystemQuery(content, model, settings);
+      if (isSystemQuery) {
+        const { response, customContext } = isSystemQuery;
+        
+        // Store user message
+        const userMessage = await storage.createMessage({
+          content,
+          role: "user",
+          modelId
+        });
+        
+        // Store assistant message with the system response
+        const assistantMessage = await storage.createMessage({
+          content: response,
+          role: "assistant",
+          modelId
+        });
+        
+        // Return the system response
+        return res.json({
+          message: assistantMessage,
+          context: {
+            relevantMemories: customContext || []
+          }
+        });
+      }
+      
+      // Normal RAG processing flow for non-system queries
       // 1. Store user message
       const userMessage = await storage.createMessage({
         content,
@@ -225,6 +254,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .map((memory, i) => `[Memory ${i + 1}] ${memory.content}`)
             .join("\n\n");
       }
+      
+      // Add special system context to help guide the model
+      context += `\n\nIMPORTANT SYSTEM NOTES:
+1. You are the Structured Memory Engine, a RAG-based AI assistant that uses vector similarity to find relevant memories.
+2. The current model you're using is: ${model.name} (${model.provider})
+3. You have access to ${contextSize} relevant memories for each query.
+4. If asked about your configuration or settings, you can directly answer with this information.
+5. For queries like "summarize recent chats" or "what model is this?", you can access this system information to answer.`;
       
       // 6. Generate response based on provider
       let response = '';
@@ -273,6 +310,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       handleError(err, res);
     }
   });
+  
+  // Helper function to check for system-related meta-queries and handle them directly
+  async function checkForSystemQuery(content: string, model: Model, settings: Settings): Promise<{ response: string, customContext?: any[] } | false> {
+    const lowercaseContent = content.toLowerCase().trim();
+    
+    // Check for queries about the current model
+    if (
+      lowercaseContent.includes("which model") ||
+      lowercaseContent.includes("what model") ||
+      lowercaseContent.includes("model are you") ||
+      lowercaseContent.includes("model version") ||
+      lowercaseContent.includes("model type") ||
+      lowercaseContent.includes("are you gpt") ||
+      lowercaseContent.includes("are you claude")
+    ) {
+      return {
+        response: `You're interacting with the Structured Memory Engine using the ${model.name} model from ${model.provider}. This model can handle up to ${model.maxTokens} tokens of context. The engine is configured to use ${settings.contextSize} relevant memories for each query with a similarity threshold of ${settings.similarityThreshold}.`
+      };
+    }
+    
+    // Check for queries about recent conversations
+    if (
+      lowercaseContent.includes("summarize recent chats") ||
+      lowercaseContent.includes("summarize conversations") ||
+      lowercaseContent.includes("recent messages") ||
+      lowercaseContent.includes("chat history") ||
+      lowercaseContent.includes("previous messages") ||
+      lowercaseContent.includes("last 24 hours")
+    ) {
+      try {
+        // Get the most recent messages (up to 30)
+        const recentMessages = await storage.getMessages(30);
+        
+        // Format them for the response
+        const formattedMessages = recentMessages
+          .map(msg => `[${new Date(msg.timestamp).toLocaleString()}] ${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`)
+          .join('\n\n');
+        
+        return {
+          response: `Here's a summary of recent conversations:\n\n${formattedMessages}`,
+          customContext: recentMessages.map(m => ({ 
+            id: m.id,
+            content: m.content,
+            similarity: 1.0
+          }))
+        };
+      } catch (error) {
+        console.error("Error retrieving recent messages:", error);
+        return {
+          response: "I tried to retrieve your recent conversation history, but encountered an error. Could you please try a different query?"
+        };
+      }
+    }
+    
+    // Check for queries about system settings
+    if (
+      lowercaseContent.includes("system settings") ||
+      lowercaseContent.includes("current settings") ||
+      lowercaseContent.includes("memory settings") ||
+      lowercaseContent.includes("how are you configured") ||
+      lowercaseContent.includes("what are your settings")
+    ) {
+      return {
+        response: `The Structured Memory Engine is currently configured with the following settings:
+        
+- Default Model: ${settings.defaultModelId}
+- Default Embedding Model: ${settings.defaultEmbeddingModelId}
+- Context Size: ${settings.contextSize} memories per query
+- Similarity Threshold: ${settings.similarityThreshold}
+- Auto-Clear Memories: ${settings.autoClearMemories ? 'Enabled' : 'Disabled'}
+
+These settings determine how the system processes your queries and retrieves relevant context from past conversations.`
+      };
+    }
+    
+    // Not a system query
+    return false;
+  }
 
   // Register all routes with /api prefix
   app.use("/api", router);
