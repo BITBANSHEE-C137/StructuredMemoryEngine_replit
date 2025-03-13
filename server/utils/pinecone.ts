@@ -31,13 +31,14 @@ async function initializePinecone() {
     
     // Check for newer SDK version compatibility
     log('Creating new Pinecone client instance...', 'pinecone');
+    
+    // The newer Pinecone SDK doesn't accept 'environment' directly
+    // We'll just use the API key since Pinecone can determine the proper environment
     pineconeClient = new Pinecone({
-      apiKey: pineconeApiKey, 
-      // Note: The Pinecone SDK no longer accepts 'environment' as a direct parameter
-      // in newer versions. We'll log this info for debugging purposes.
+      apiKey: pineconeApiKey,
     });
     
-    log(`Using controllerHostUrl: ${pineconeEnvironment}`, 'pinecone');
+    log('Pinecone client initialized with API key', 'pinecone');
     
     // Verify connection with a simple operation
     log('Testing connection by listing indexes...', 'pinecone');

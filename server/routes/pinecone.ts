@@ -164,15 +164,16 @@ router.get('/status', async (_req: Request, res: Response) => {
   try {
     log('Checking Pinecone availability...', 'pinecone');
     log(`PINECONE_API_KEY exists: ${!!process.env.PINECONE_API_KEY}`, 'pinecone');
-    log(`PINECONE_ENVIRONMENT: ${process.env.PINECONE_ENVIRONMENT}`, 'pinecone');
+    log(`PINECONE_ENVIRONMENT exists: ${!!process.env.PINECONE_ENVIRONMENT}`, 'pinecone');
     
     const isAvailable = await storage.isPineconeAvailable();
     log(`Pinecone availability result: ${isAvailable}`, 'pinecone');
     
+    // Don't expose the actual environment string in the response for security
     res.json({ 
       available: isAvailable,
-      environment: process.env.PINECONE_ENVIRONMENT,
-      apiKeyExists: !!process.env.PINECONE_API_KEY
+      status: isAvailable ? 'connected' : 'disconnected',
+      configured: !!process.env.PINECONE_API_KEY && !!process.env.PINECONE_ENVIRONMENT
     });
   } catch (error) {
     log(`Error checking Pinecone status: ${error}`, 'pinecone');
