@@ -35,6 +35,9 @@ export function useChatMessages() {
       const response = await fetch(API_ROUTES.MESSAGES);
       if (!response.ok) throw new Error("Failed to fetch messages");
       const data = await response.json();
+      // Messages come in reverse chronological order from the server (newest first)
+      // but we need to display them in chronological order (oldest first)
+      // No need to use reverse() as the server already returns them in the correct order from DB
       setMessages(data);
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -61,6 +64,7 @@ export function useChatMessages() {
       modelId
     };
     
+    // Add the temporary message at the end (chronological order)
     setMessages(prev => [...prev, tempUserMessage]);
     
     try {
@@ -86,7 +90,8 @@ export function useChatMessages() {
           modelId
         };
         
-        // Add both real messages in correct order
+        // Add both real messages in correct order (chronological)
+        // The user message followed by the assistant response
         return [...filtered, userMessage, response.message];
       });
       

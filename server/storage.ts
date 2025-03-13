@@ -80,7 +80,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMessages(limit: number = 100): Promise<Message[]> {
-    return await db.select().from(messages).orderBy(desc(messages.timestamp)).limit(limit);
+    // Return messages in chronological order (oldest first)
+    // This way, they can be rendered in the UI in the same order
+    return await db.select()
+      .from(messages)
+      .orderBy(asc(messages.timestamp))
+      .limit(limit);
   }
 
   async getMessageById(id: number): Promise<Message | undefined> {
