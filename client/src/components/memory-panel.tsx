@@ -165,6 +165,11 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                   <div className="text-primary font-medium">
                     <span className="text-lg font-bold">{pineconeStats.vectorCount}</span> 
                     <span className="text-xs ml-1 text-primary/70">vectors</span>
+                    {pineconeStats.vectorCount > 0 && (
+                      <div className="text-[10px] text-primary/60 mt-1">
+                        Each vector expands to multiple memories
+                      </div>
+                    )}
                   </div>
                   <div className={`text-xs ${currentOperation !== 'none' || loadingPinecone 
                       ? 'text-amber-600 bg-amber-100' 
