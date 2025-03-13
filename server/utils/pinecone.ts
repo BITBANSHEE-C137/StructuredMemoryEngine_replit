@@ -657,17 +657,18 @@ export async function deletePineconeIndex(indexName: string): Promise<boolean> {
 
 /**
  * Wipe all vectors from a Pinecone index or namespace
+ * Uses multiple strategies to ensure compatibility with different SDK versions
  */
 export async function wipePineconeIndex(
   indexName: string, 
   namespace: string = 'default'
 ): Promise<boolean> {
   try {
-    log(`Attempting to wipe Pinecone index ${indexName} in namespace ${namespace}`, 'pinecone');
+    log(`Starting operation to wipe Pinecone index ${indexName} in namespace ${namespace}`, 'pinecone');
     const client = await getPineconeClient();
     const pineconeIndex = client.index(indexName);
     
-    // Get index information to find the correct host
+    // Get index information to find the correct host for direct API calls if needed
     let host = '';
     try {
       // First try to get the indexes list to find our index's host
@@ -684,10 +685,17 @@ export async function wipePineconeIndex(
     
     // Check index stats first to see if there are any vectors
     let initialStats;
+    let initialCount = 0;
     try {
       initialStats = await pineconeIndex.describeIndexStats();
-      const initialCount = initialStats.namespaces?.[namespace]?.recordCount || 0;
-      log(`Initial vector count in namespace ${namespace}: ${initialCount}`, 'pinecone');
+      initialCount = initialStats.namespaces?.[namespace]?.recordCount || 0;
+      log(`Current vector count in namespace ${namespace}: ${initialCount}`, 'pinecone');
+      
+      // If there are no vectors, we're already done
+      if (initialCount === 0) {
+        log(`Namespace ${namespace} is already empty, no action needed`, 'pinecone');
+        return true;
+      }
     } catch (statsError) {
       log(`Failed to get initial index stats: ${statsError}`, 'pinecone');
     }
@@ -756,6 +764,25 @@ export async function wipePineconeIndex(
         }
       } catch (nsError) {
         log(`Namespace deletion failed: ${nsError}`, 'pinecone');
+      }
+    }
+    
+    // Method 4: Try to delete vectors by filter if other methods fail
+    if (!success) {
+      try {
+        log(`Strategy 4: Attempting to delete vectors by filter matching all`, 'pinecone');
+        
+        await pineconeIndex.delete({
+          filter: {
+            // An empty filter should match all vectors
+          },
+          namespace
+        });
+        
+        log(`Successfully issued delete by filter for all vectors`, 'pinecone');
+        success = true;
+      } catch (filterError) {
+        log(`Filter deletion failed: ${filterError}`, 'pinecone');
       }
     }
     
