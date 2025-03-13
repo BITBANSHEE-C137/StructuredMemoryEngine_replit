@@ -653,7 +653,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                           )}
                           {lastHydrateResult.dedupRate !== undefined && (
                             <div className="col-span-2">
-                              <span className="text-muted-foreground">Deduplication Rate:</span> {(lastHydrateResult.dedupRate * 100).toFixed(1)}%
+                              <span className="text-muted-foreground">Deduplication Rate:</span> {lastHydrateResult.dedupRate.toFixed(1)}%
                             </div>
                           )}
                           {lastHydrateResult.timestamp && (
@@ -915,7 +915,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                           <div>
                             <span className="text-muted-foreground">Dedup Rate:</span>
                             <span className="ml-1 font-medium">
-                              {(lastSyncResults.dedupRate * 100).toFixed(1)}%
+                              {lastSyncResults.dedupRate.toFixed(1)}%
                             </span>
                           </div>
                         )}
