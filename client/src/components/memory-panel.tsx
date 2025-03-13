@@ -185,28 +185,31 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                 {/* Deduplication metrics */}
                 <div className="mt-3 pt-2 border-t border-primary/10">
                   <div className="text-primary/70 text-xs mb-1.5 font-medium flex items-center">
-                    Duplicate Detection Rate:
-                    <span className="ml-1 text-[10px] bg-primary/10 px-1 py-0.5 rounded" title="Percentage of records that were identified as duplicates during sync/recall operations">?</span>
+                    Duplicate Detection Rates:
+                    <span className="ml-1 text-[10px] bg-primary/10 px-1 py-0.5 rounded" title="Percentage of records that were identified as duplicates during sync/recall operations. Shown separately for each operation type.">?</span>
                   </div>
                   <div className="grid grid-cols-3 gap-1 text-xs">
                     {pineconeStats.lastSyncDedupRate !== undefined && (
-                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center"
+                           title="Percentage of duplicates detected during the most recent SYNC operation (sending local memories to Pinecone)">
                         <span className="text-xs font-bold text-primary">
                           {Number.isFinite(pineconeStats.lastSyncDedupRate) ? parseFloat(pineconeStats.lastSyncDedupRate.toString()).toFixed(1) : "0.0"}%
                         </span>
-                        <span className="text-[10px] text-primary/70">Last Sync</span>
+                        <span className="text-[10px] text-primary/70">Sync →</span>
                       </div>
                     )}
                     {pineconeStats.lastHydrateDedupRate !== undefined && (
-                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center"
+                           title="Percentage of duplicates detected during the most recent RECALL operation (retrieving memories from Pinecone)">
                         <span className="text-xs font-bold text-primary">
                           {Number.isFinite(pineconeStats.lastHydrateDedupRate) ? parseFloat(pineconeStats.lastHydrateDedupRate.toString()).toFixed(1) : "0.0"}%
                         </span>
-                        <span className="text-[10px] text-primary/70">Last Recall</span>
+                        <span className="text-[10px] text-primary/70">← Recall</span>
                       </div>
                     )}
                     {pineconeStats.avgDedupRate !== undefined && (
-                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center">
+                      <div className="bg-primary/5 rounded px-2 py-1 flex flex-col items-center"
+                           title="Average deduplication rate across both operations">
                         <span className="text-xs font-bold text-primary">
                           {Number.isFinite(pineconeStats.avgDedupRate) ? parseFloat(pineconeStats.avgDedupRate.toString()).toFixed(1) : "0.0"}%
                         </span>
@@ -215,7 +218,9 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                     )}
                     {!pineconeStats.lastSyncDedupRate && !pineconeStats.lastHydrateDedupRate && !pineconeStats.avgDedupRate && (
                       <div className="col-span-3 text-[10px] text-primary/60 text-center py-1">
-                        0% of entries were duplicates in last operation
+                        No deduplication metrics available yet.
+                        <br />
+                        <span className="text-[9px]">Run SYNC or RECALL operations to generate data</span>
                       </div>
                     )}
                   </div>

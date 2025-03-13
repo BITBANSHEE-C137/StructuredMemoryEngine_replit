@@ -33,13 +33,23 @@ export function usePineconeStats() {
     return refetch();
   };
 
+  // Create an object with fallback values if data is not available
+  // Ensure deduplication metrics are properly initialized
+  const defaultStats: PineconeStats = {
+    enabled: false,
+    vectorCount: 0,
+    activeIndex: null,
+    namespaces: [],
+    // Initialize deduplication metrics to undefined
+    // so the UI can distinguish between "no data" (undefined) 
+    // and "0% deduplication" (0)
+    lastSyncDedupRate: undefined,
+    lastHydrateDedupRate: undefined,
+    avgDedupRate: undefined
+  };
+
   return {
-    stats: data || {
-      enabled: false,
-      vectorCount: 0,
-      activeIndex: null,
-      namespaces: [],
-    },
+    stats: data || defaultStats,
     isLoading,
     error,
     refetch: refreshStats,
