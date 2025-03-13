@@ -216,8 +216,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <div className="space-y-4">
             <div>
               <label htmlFor="context-retrieval" className="flex items-center justify-between text-sm mb-1">
-                <span>Context Window Size</span>
-                <span className="text-secondary font-medium" id="context-value">{contextSize}</span>
+                <span className="text-primary font-medium">Context Window Size</span>
+                <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium" id="context-value">{contextSize}</span>
               </label>
               <input 
                 id="context-retrieval" 
@@ -226,9 +226,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 max="10" 
                 value={contextSize}
                 onChange={(e) => setContextSize(parseInt(e.target.value))}
-                className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer" 
+                className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-primary border border-primary/20" 
+                style={{ 
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
+                }}
               />
-              <div className="flex justify-between text-xs text-primary-light mt-1">
+              <div className="flex justify-between text-xs text-primary mt-1">
                 <span>Fewer, More Relevant</span>
                 <span>More, Less Relevant</span>
               </div>
@@ -236,8 +240,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             <div>
               <label htmlFor="similarity-threshold" className="flex items-center justify-between text-sm mb-1">
-                <span>Similarity Threshold</span>
-                <span className="text-secondary font-medium" id="similarity-value">{similarityThreshold}</span>
+                <span className="text-primary font-medium">Similarity Threshold</span>
+                <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium" id="similarity-value">{similarityThreshold}</span>
               </label>
               <input 
                 id="similarity-threshold" 
@@ -247,23 +251,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 step="0.01" 
                 value={parseFloat(similarityThreshold)}
                 onChange={(e) => setSimilarityThreshold(e.target.value)}
-                className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer" 
+                className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-primary border border-primary/20" 
+                style={{ 
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
+                }}
               />
-              <div className="flex justify-between text-xs text-primary-light mt-1">
+              <div className="flex justify-between text-xs text-primary mt-1">
                 <span>Lower Precision</span>
                 <span>Higher Precision</span>
               </div>
             </div>
             
             <div>
-              <label htmlFor="default-model" className="text-sm mb-1 block">
+              <label htmlFor="default-model" className="text-sm mb-1 block text-primary font-medium">
                 Default Chat Model
               </label>
               <select
                 id="default-model"
                 value={defaultModelId}
                 onChange={(e) => setDefaultModelId(e.target.value)}
-                className="w-full p-2 border border-neutral-dark rounded text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                className="w-full p-2 border border-primary/20 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               >
                 {models.length > 0 ? (
                   // Group models by provider
@@ -296,26 +304,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </>
                 )}
               </select>
-              <p className="text-xs text-primary-light mt-1">
+              <p className="text-xs text-primary mt-1">
                 Default model used for chat responses
               </p>
             </div>
             
             <div>
-              <label htmlFor="embedding-model" className="text-sm mb-1 block">
+              <label htmlFor="embedding-model" className="text-sm mb-1 block text-primary font-medium">
                 Embedding Model
               </label>
               <select
                 id="embedding-model"
                 value={defaultEmbeddingModelId}
                 onChange={(e) => setDefaultEmbeddingModelId(e.target.value)}
-                className="w-full p-2 border border-neutral-dark rounded text-sm focus:outline-none focus:ring-2 focus:ring-secondary"
+                className="w-full p-2 border border-primary/20 rounded text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
               >
                 <option value="text-embedding-ada-002">text-embedding-ada-002 (OpenAI)</option>
                 <option value="text-embedding-3-small">text-embedding-3-small (OpenAI)</option>
                 <option value="text-embedding-3-large">text-embedding-3-large (OpenAI)</option>
               </select>
-              <p className="text-xs text-primary-light mt-1">
+              <p className="text-xs text-primary mt-1">
                 Model used for embedding queries and memories for vector retrieval
               </p>
             </div>
