@@ -407,6 +407,32 @@ export async function deletePineconeIndex(indexName: string): Promise<boolean> {
   }
 }
 
+/**
+ * Wipe all vectors from a Pinecone index or namespace
+ */
+export async function wipePineconeIndex(
+  indexName: string, 
+  namespace: string = 'default'
+): Promise<boolean> {
+  try {
+    const client = await getPineconeClient();
+    const pineconeIndex = client.index(indexName);
+    
+    // Delete all vectors in the namespace
+    // Pinecone DeleteAll API doesn't take any parameters for a complete wipe
+    // To delete just within a namespace, use the deleteOne with namespace parameter
+    await pineconeIndex.deleteAll({
+      namespace // Delete only in the specified namespace
+    });
+    
+    log(`Wiped all vectors from Pinecone index ${indexName} in namespace ${namespace}`, 'pinecone');
+    return true;
+  } catch (error) {
+    log(`Error wiping Pinecone index: ${error}`, 'pinecone');
+    throw error;
+  }
+}
+
 // Types for Pinecone integration
 export interface PineconeIndexInfo {
   name: string;

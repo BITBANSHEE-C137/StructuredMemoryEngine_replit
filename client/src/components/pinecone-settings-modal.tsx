@@ -31,6 +31,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     fetchIndexes,
     createIndex,
     deleteIndex,
+    wipeIndex,
     syncToPinecone,
     hydrateFromPinecone
   } = usePineconeSettings();
@@ -85,6 +86,14 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
     }
     
     await deleteIndex(indexName);
+  };
+  
+  const handleWipeIndex = async (indexName: string, namespace: string = 'default') => {
+    if (!confirm(`Are you sure you want to wipe all vectors from index "${indexName}"? This will clear all data but keep the index.`)) {
+      return;
+    }
+    
+    await wipeIndex(indexName, namespace);
   };
   
   const handleSyncToPinecone = async () => {

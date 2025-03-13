@@ -25,6 +25,11 @@ interface SyncResult {
   count: number;
 }
 
+interface WipeResult {
+  success: boolean;
+  message: string;
+}
+
 export function usePineconeSettings() {
   const [settings, setSettings] = useState<PineconeSettings | null>(null);
   const [indexes, setIndexes] = useState<PineconeIndex[]>([]);
@@ -277,6 +282,37 @@ export function usePineconeSettings() {
     }
   }, [updateSettings, toast]);
 
+  const wipeIndex = useCallback(async (indexName: string, namespace: string = 'default') => {
+    setIsLoading(true);
+    try {
+      const result = await apiRequest(`/api/pinecone/indexes/${indexName}/wipe`, {
+        method: 'POST',
+        data: { namespace }
+      });
+      
+      toast({
+        title: "Success",
+        description: `Index ${indexName} wiped successfully`,
+        variant: "default"
+      });
+      
+      // Refresh indexes to see updated vector counts
+      fetchIndexes();
+      
+      return result;
+    } catch (error) {
+      console.error('Error wiping Pinecone index:', error);
+      toast({
+        title: "Error",
+        description: "Failed to wipe Pinecone index",
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [fetchIndexes, toast]);
+
   return {
     settings,
     indexes,
@@ -288,6 +324,7 @@ export function usePineconeSettings() {
     fetchIndexes,
     createIndex,
     deleteIndex,
+    wipeIndex,
     syncToPinecone,
     hydrateFromPinecone
   };

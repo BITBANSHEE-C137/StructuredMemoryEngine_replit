@@ -1,6 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { storage } from '../storage';
-import { listPineconeIndexes, createPineconeIndexIfNotExists, deletePineconeIndex } from '../utils/pinecone';
+import { 
+  listPineconeIndexes, 
+  createPineconeIndexIfNotExists, 
+  deletePineconeIndex,
+  wipePineconeIndex 
+} from '../utils/pinecone';
 import { log } from '../vite';
 
 const router = Router();
@@ -156,6 +161,34 @@ router.post('/hydrate', async (req: Request, res: Response) => {
   } catch (error) {
     log(`Error hydrating from Pinecone: ${error}`, 'pinecone');
     res.status(500).json({ error: 'Failed to hydrate from Pinecone' });
+  }
+});
+
+// Wipe all vectors from an index
+router.post('/indexes/:name/wipe', async (req: Request, res: Response) => {
+  try {
+    const { name } = req.params;
+    const { namespace = 'default' } = req.body;
+    
+    const isPineconeAvailable = await storage.isPineconeAvailable();
+    
+    if (!isPineconeAvailable) {
+      return res.status(503).json({ 
+        error: 'Pinecone service is not available',
+        message: 'Check your API key and connection'
+      });
+    }
+    
+    const result = await wipePineconeIndex(name, namespace);
+    
+    if (result) {
+      res.json({ success: true, message: `Index ${name} wiped successfully in namespace ${namespace}` });
+    } else {
+      res.status(500).json({ error: `Failed to wipe index ${name}` });
+    }
+  } catch (error) {
+    log(`Error wiping Pinecone index: ${error}`, 'pinecone');
+    res.status(500).json({ error: 'Failed to wipe Pinecone index' });
   }
 });
 
