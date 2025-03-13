@@ -83,11 +83,19 @@ export async function listPineconeIndexes(): Promise<PineconeIndexInfo[]> {
     const client = await getPineconeClient();
     const indexList = await client.listIndexes();
     
+    // In the latest Pinecone SDK, the response is an object with indexes property
+    log(`Received index list from Pinecone: ${JSON.stringify(indexList)}`, 'pinecone');
+    
     // Convert Pinecone index list to array for processing
     const indexes: PineconeIndexInfo[] = [];
     
-    for (const index of indexList) {
+    // Check if indexList is iterable or has an indexes property
+    const indexesToProcess = Array.isArray(indexList) ? indexList : 
+                            (indexList?.indexes || []);
+    
+    for (const index of indexesToProcess) {
       try {
+        log(`Processing index: ${JSON.stringify(index)}`, 'pinecone');
         const pineconeIndex = client.index(index.name);
         const stats = await pineconeIndex.describeIndexStats();
         
@@ -98,20 +106,21 @@ export async function listPineconeIndexes(): Promise<PineconeIndexInfo[]> {
         
         indexes.push({
           name: index.name,
-          dimension: index.dimension,
-          metric: index.metric,
+          dimension: index.dimension || 0,
+          metric: index.metric || 'cosine',
           host: index.host || '',
           spec: index.spec || {},
           status: index.status || {},
-          vectorCount: stats.totalRecordCount,
+          vectorCount: stats.totalRecordCount || 0,
           namespaces
         });
       } catch (error) {
+        log(`Error getting stats for index ${index.name}: ${error}`, 'pinecone');
         // If we can't get stats for an index, add with basic info
         indexes.push({
           name: index.name,
-          dimension: index.dimension,
-          metric: index.metric,
+          dimension: index.dimension || 0,
+          metric: index.metric || 'cosine',
           host: index.host || '',
           spec: index.spec || {},
           status: index.status || {},
@@ -139,11 +148,15 @@ export async function upsertMemoriesToPinecone(
   try {
     const client = await getPineconeClient();
 
-    // Check if index exists
+    // Check if index exists - handle new SDK response format
     const indexList = await client.listIndexes();
-    let indexExists = false;
     
-    for (const index of indexList) {
+    // In latest SDK, indexList might be an object with indexes property
+    const indexesToProcess = Array.isArray(indexList) ? indexList : 
+                            (indexList?.indexes || []);
+    
+    let indexExists = false;
+    for (const index of indexesToProcess) {
       if (index.name === indexName) {
         indexExists = true;
         break;
@@ -187,9 +200,15 @@ export async function upsertMemoriesToPinecone(
       });
       
       if (records.length > 0) {
-        // Upsert records to Pinecone with namespace
-        await pineconeIndex.upsert(records, { namespace });
-        successCount += records.length;
+        try {
+          // Upsert records to Pinecone with namespace
+          const upsertOptions = { namespace };
+          await pineconeIndex.upsert(records, upsertOptions);
+          successCount += records.length;
+        } catch (err) {
+          log(`Error during batch upsert: ${err}`, 'pinecone');
+          throw err;
+        }
       }
     }
     
@@ -299,11 +318,16 @@ export async function createPineconeIndexIfNotExists(
   try {
     const client = await getPineconeClient();
     
-    // Check if index already exists
+    // Check if index already exists - handle new SDK response format
     const indexList = await client.listIndexes();
-    let indexExists = false;
+    log(`Index list for creation check: ${JSON.stringify(indexList)}`, 'pinecone');
     
-    for (const index of indexList) {
+    // In latest SDK, indexList might be an object with indexes property
+    const indexesToProcess = Array.isArray(indexList) ? indexList : 
+                            (indexList?.indexes || []);
+    
+    let indexExists = false;
+    for (const index of indexesToProcess) {
       if (index.name === indexName) {
         indexExists = true;
         break;
@@ -314,6 +338,8 @@ export async function createPineconeIndexIfNotExists(
       log(`Index ${indexName} already exists. Skipping creation.`, 'pinecone');
       return true;
     }
+    
+    log(`Creating new index: ${indexName} with dimension ${dimension}`, 'pinecone');
     
     // Create index with required spec
     await client.createIndex({
@@ -338,9 +364,13 @@ export async function createPineconeIndexIfNotExists(
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
       
       const currentIndexList = await client.listIndexes();
-      let currentIndex = null;
       
-      for (const idx of currentIndexList) {
+      // Handle new SDK response format
+      const currentIndexesToProcess = Array.isArray(currentIndexList) ? currentIndexList : 
+                                     (currentIndexList?.indexes || []);
+      
+      let currentIndex = null;
+      for (const idx of currentIndexesToProcess) {
         if (idx.name === indexName) {
           currentIndex = idx;
           break;
