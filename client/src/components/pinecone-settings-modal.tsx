@@ -114,7 +114,7 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
       return;
     }
     
-    if (!confirm("This will clear all existing memories in the database and replace them with memories from Pinecone. Are you sure you want to continue?")) {
+    if (!confirm("This will retrieve memories from Pinecone and merge them with your local database. Existing memories will be preserved. Continue?")) {
       return;
     }
     
@@ -454,8 +454,8 @@ export const PineconeSettingsModal: React.FC<PineconeSettingsModalProps> = ({
                     )}
                   </Button>
                   
-                  <p className="text-xs text-muted-foreground mt-1 text-amber-500">
-                    Warning: This will replace all local memories with those from Pinecone.
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Retrieves and merges memories from Pinecone with your local database.
                   </p>
                 </div>
               </div>

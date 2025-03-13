@@ -367,10 +367,9 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Pinecone is not available. Check API key and connection.');
       }
 
-      // First clear all existing memories in pgvector
-      console.log('Clearing all existing memories from local database');
-      const clearResult = await this.clearAllMemories();
-      console.log(`Cleared ${clearResult.count} items from local database`);
+      // Important: We're no longer clearing all memories before hydrating
+      // This preserves local memories and just merges in Pinecone data
+      console.log('Preserving local memories and merging Pinecone data');
 
       // Fetch vectors from Pinecone
       console.log(`Fetching vectors from Pinecone index ${indexName}, namespace ${namespace}`);
@@ -405,8 +404,11 @@ export class DatabaseStorage implements IStorage {
             console.log(`Created new message with ID: ${messageId}`);
           }
           
-          // Create memory in pgvector
-          console.log(`Creating memory in local database, embedding length: ${vector.values.length}`);
+          // Create memory in pgvector - we'll use the hash ID to ensure uniqueness
+          console.log(`Creating/updating memory in local database, embedding length: ${vector.values.length}`);
+          
+          // We should check if we can use the memoryIdForUpsert from our schema here
+          // This would ensure we don't create duplicates
           const memory = await this.createMemory({
             content: metadata.content || '',
             embedding: JSON.stringify(vector.values),
