@@ -5,7 +5,8 @@ import {
   createPineconeIndexIfNotExists, 
   deletePineconeIndex,
   wipePineconeIndex,
-  fetchAllVectorsFromIndex
+  fetchAllVectorsFromIndex,
+  getPineconeClient
 } from '../utils/pinecone';
 import { log } from '../vite';
 
@@ -219,7 +220,7 @@ router.post('/hydrate', async (req: Request, res: Response) => {
 router.post('/indexes/:name/wipe', async (req: Request, res: Response) => {
   try {
     const { name } = req.params;
-    const { namespace = 'default' } = req.body;
+    let { namespace = 'default' } = req.body;
     
     const isPineconeAvailable = await storage.isPineconeAvailable();
     
@@ -230,10 +231,42 @@ router.post('/indexes/:name/wipe', async (req: Request, res: Response) => {
       });
     }
     
+    // First get current stats to find where vectors actually exist
+    try {
+      log(`Checking existing namespaces for index ${name}`, 'pinecone');
+      const client = await getPineconeClient();
+      const pineconeIndex = client.index(name);
+      const stats = await pineconeIndex.describeIndexStats();
+      
+      // Check if we have empty namespaces from blank to default
+      if (namespace === 'default' && (!stats.namespaces?.default || stats.namespaces.default.recordCount === 0)) {
+        // Check if there are vectors in the blank namespace
+        if (stats.namespaces?.[''] && stats.namespaces[''].recordCount > 0) {
+          log(`No vectors in namespace 'default' but found ${stats.namespaces[''].recordCount} vectors in blank namespace`, 'pinecone');
+          namespace = ''; // Switch to blank namespace
+        }
+      }
+      
+      log(`Using namespace '${namespace}' for wipe operation`, 'pinecone');
+    } catch (statsError) {
+      log(`Error checking namespaces: ${statsError}. Will continue with requested namespace.`, 'pinecone');
+    }
+    
+    // Now wipe the appropriate namespace
     const result = await wipePineconeIndex(name, namespace);
     
     if (result) {
-      res.json({ success: true, message: `Index ${name} wiped successfully in namespace ${namespace}` });
+      // If we wiped the blank namespace, also attempt to wipe default as a precaution
+      if (namespace === '' && namespace !== 'default') {
+        try {
+          await wipePineconeIndex(name, 'default');
+        } catch (secondWipeError) {
+          // Ignore errors from second wipe attempt
+        }
+      }
+      
+      const displayNamespace = namespace === '' ? 'blank namespace' : `namespace '${namespace}'`;
+      res.json({ success: true, message: `Index ${name} wiped successfully in ${displayNamespace}` });
     } else {
       res.status(500).json({ error: `Failed to wipe index ${name}` });
     }
