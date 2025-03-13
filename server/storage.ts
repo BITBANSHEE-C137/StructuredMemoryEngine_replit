@@ -3,10 +3,19 @@ import {
   messages, type Message, type InsertMessage,
   memories, type Memory, type InsertMemory,
   settings, type Settings, type InsertSettings,
-  models, type Model
-} from "@shared/schema";
+  models, type Model,
+  pineconeSettings, type PineconeSettings, type InsertPineconeSettings,
+  memoryIdForUpsert
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, or, asc } from "drizzle-orm";
+import { 
+  getPineconeClient, 
+  isPineconeAvailable as checkPineconeAvailable,
+  upsertMemoriesToPinecone,
+  fetchVectorsFromPinecone,
+  listPineconeIndexes
+} from "./utils/pinecone";
 
 // Define the storage interface
 export interface IStorage {
@@ -37,6 +46,13 @@ export interface IStorage {
   getModelById(id: string): Promise<Model | undefined>;
   createModel(model: { id: string; name: string; provider: 'openai' | 'anthropic'; maxTokens: number; isEnabled: boolean }): Promise<Model>;
   updateModel(id: string, data: Partial<Omit<Model, "id">>): Promise<Model>;
+  
+  // Pinecone operations
+  getPineconeSettings(): Promise<PineconeSettings>;
+  updatePineconeSettings(settings: Partial<InsertPineconeSettings>): Promise<PineconeSettings>;
+  syncMemoriesToPinecone(indexName: string, namespace?: string): Promise<{ success: boolean; count: number }>;
+  hydrateFromPinecone(indexName: string, namespace?: string, limit?: number): Promise<{ success: boolean; count: number }>;
+  isPineconeAvailable(): Promise<boolean>;
 }
 
 // Implement the database storage
@@ -157,7 +173,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   // Method to clear all memories and messages
-  async clearAllMemories(): Promise<{ count: number, messagesCount: number }> {
+  async clearAllMemories(): Promise<{ count: number }> {
     try {
       // First delete all memories from the database
       const memoriesResult = await db.delete(memories);
@@ -166,9 +182,10 @@ export class DatabaseStorage implements IStorage {
       const messagesResult = await db.delete(messages);
       
       // Return the count of deleted items
+      const totalDeleted = Number(memoriesResult.length) + Number(messagesResult.length);
+      
       return { 
-        count: Number(memoriesResult.length), 
-        messagesCount: Number(messagesResult.length) 
+        count: totalDeleted
       };
     } catch (error) {
       console.error("Error clearing memories and messages:", error);
@@ -260,6 +277,150 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updated;
+  }
+
+  // Pinecone operations
+  async getPineconeSettings(): Promise<PineconeSettings> {
+    // Get the first pinecone settings record or create default if none exists
+    const existingSettings = await db.select().from(pineconeSettings).limit(1);
+    
+    if (existingSettings.length > 0) {
+      return existingSettings[0];
+    } else {
+      // Create default pinecone settings
+      const [newSettings] = await db.insert(pineconeSettings).values({
+        isEnabled: false,
+        vectorDimension: 1536,
+        namespace: 'default'
+      }).returning();
+      
+      return newSettings;
+    }
+  }
+
+  async updatePineconeSettings(updatedSettings: Partial<InsertPineconeSettings>): Promise<PineconeSettings> {
+    const currentSettings = await this.getPineconeSettings();
+    
+    // Update settings with the new values
+    const [updated] = await db.update(pineconeSettings)
+      .set({
+        ...updatedSettings,
+        lastSyncTimestamp: updatedSettings.lastSyncTimestamp || new Date()
+      })
+      .where(eq(pineconeSettings.id, currentSettings.id))
+      .returning();
+    
+    return updated;
+  }
+
+  async syncMemoriesToPinecone(indexName: string, namespace: string = 'default'): Promise<{ success: boolean; count: number }> {
+    try {
+      // Check if Pinecone is available
+      const isPineconeActive = await this.isPineconeAvailable();
+      if (!isPineconeActive) {
+        throw new Error('Pinecone is not available. Check API key and connection.');
+      }
+
+      // Get all memories from pgvector
+      const { memories: pgvectorMemories } = await this.getMemories(1, 1000); // Get first 1000 memories
+      
+      if (pgvectorMemories.length === 0) {
+        return { success: true, count: 0 };
+      }
+
+      // Sync memories to Pinecone
+      const result = await upsertMemoriesToPinecone(pgvectorMemories, indexName, namespace);
+      
+      // Update the last sync timestamp
+      await this.updatePineconeSettings({
+        activeIndexName: indexName,
+        namespace,
+        isEnabled: true,
+        lastSyncTimestamp: new Date()
+      });
+      
+      return { 
+        success: result.success, 
+        count: result.upsertedCount 
+      };
+    } catch (error) {
+      console.error("Error syncing memories to Pinecone:", error);
+      throw error;
+    }
+  }
+
+  async hydrateFromPinecone(indexName: string, namespace: string = 'default', limit: number = 1000): Promise<{ success: boolean; count: number }> {
+    try {
+      // Check if Pinecone is available
+      const isPineconeActive = await this.isPineconeAvailable();
+      if (!isPineconeActive) {
+        throw new Error('Pinecone is not available. Check API key and connection.');
+      }
+
+      // First clear all existing memories in pgvector
+      await this.clearAllMemories();
+
+      // Fetch vectors from Pinecone
+      const pineconeVectors = await fetchVectorsFromPinecone(indexName, namespace, limit);
+      
+      if (pineconeVectors.length === 0) {
+        return { success: true, count: 0 };
+      }
+
+      // Insert each memory into pgvector
+      let successCount = 0;
+      
+      for (const vector of pineconeVectors) {
+        try {
+          const metadata = vector.metadata || {};
+          
+          // Create message if needed for the memory
+          let messageId = metadata.messageId;
+          if (metadata.content && !messageId) {
+            const message = await this.createMessage({
+              content: metadata.content,
+              role: metadata.type === 'prompt' ? 'user' : 'assistant',
+              modelId: metadata.modelId || 'unknown'
+            });
+            messageId = message.id;
+          }
+          
+          // Create memory in pgvector
+          await this.createMemory({
+            content: metadata.content || '',
+            embedding: JSON.stringify(vector.values),
+            type: metadata.type || 'prompt',
+            messageId: messageId,
+            metadata: metadata.metadata || {}
+          });
+          
+          successCount++;
+        } catch (err) {
+          console.error(`Error hydrating memory from Pinecone:`, err);
+          // Continue with next vector even if one fails
+        }
+      }
+      
+      // Update the pinecone settings
+      await this.updatePineconeSettings({
+        activeIndexName: indexName,
+        namespace,
+        isEnabled: true,
+        lastSyncTimestamp: new Date()
+      });
+      
+      return { 
+        success: true, 
+        count: successCount 
+      };
+    } catch (error) {
+      console.error("Error hydrating from Pinecone:", error);
+      throw error;
+    }
+  }
+
+  async isPineconeAvailable(): Promise<boolean> {
+    return await checkPineconeAvailable();
   }
 }
 

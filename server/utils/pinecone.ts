@@ -1,9 +1,4 @@
-import {
-  Pinecone,
-  RecordMetadata,
-  PineconeRecord,
-  ScoredPineconeRecord
-} from '@pinecone-database/pinecone';
+import { Pinecone } from '@pinecone-database/pinecone';
 import { Memory, memoryIdForUpsert } from '../../shared/schema';
 import { log } from '../vite';
 
@@ -68,43 +63,45 @@ export async function listPineconeIndexes(): Promise<PineconeIndexInfo[]> {
     const client = await getPineconeClient();
     const indexList = await client.listIndexes();
     
-    // Convert IndexList to array of indexes
-    const indexes = Array.from(indexList);
+    // Convert Pinecone index list to array for processing
+    const indexes: PineconeIndexInfo[] = [];
     
-    const indexInfoPromises = indexes.map(async (index: any) => {
+    for (const index of indexList) {
       try {
         const pineconeIndex = client.index(index.name);
         const stats = await pineconeIndex.describeIndexStats();
         
-        return {
+        const namespaces = Object.entries(stats.namespaces || {}).map(([name, data]) => ({
+          name,
+          vectorCount: data.recordCount
+        }));
+        
+        indexes.push({
           name: index.name,
           dimension: index.dimension,
           metric: index.metric,
-          host: index.host,
-          spec: index.spec,
-          status: index.status,
-          vectorCount: stats.totalRecordCount || 0,
-          namespaces: Object.entries(stats.namespaces || {}).map(([name, data]) => ({
-            name,
-            vectorCount: data.recordCount
-          }))
-        };
+          host: index.host || '',
+          spec: index.spec || {},
+          status: index.status || {},
+          vectorCount: stats.totalRecordCount,
+          namespaces
+        });
       } catch (error) {
-        // If we can't get stats for an index, return basic info
-        return {
+        // If we can't get stats for an index, add with basic info
+        indexes.push({
           name: index.name,
           dimension: index.dimension,
           metric: index.metric,
-          host: index.host,
-          spec: index.spec,
-          status: index.status,
+          host: index.host || '',
+          spec: index.spec || {},
+          status: index.status || {},
           vectorCount: 0,
           namespaces: []
-        };
+        });
       }
-    });
+    }
     
-    return await Promise.all(indexInfoPromises);
+    return indexes;
   } catch (error) {
     log(`Error listing Pinecone indexes: ${error}`, 'pinecone');
     throw error;
@@ -123,8 +120,15 @@ export async function upsertMemoriesToPinecone(
     const client = await getPineconeClient();
 
     // Check if index exists
-    const indexes = await client.listIndexes();
-    const indexExists = indexes.some(idx => idx.name === indexName);
+    const indexList = await client.listIndexes();
+    let indexExists = false;
+    
+    for (const index of indexList) {
+      if (index.name === indexName) {
+        indexExists = true;
+        break;
+      }
+    }
 
     if (!indexExists) {
       throw new Error(`Index ${indexName} does not exist in Pinecone.`);
@@ -139,7 +143,8 @@ export async function upsertMemoriesToPinecone(
     for (let i = 0; i < memories.length; i += batchSize) {
       const batch = memories.slice(i, i + batchSize);
       
-      const vectors = batch.map(memory => {
+      // Create records for upsert
+      const records = batch.map(memory => {
         // Parse the embedding string into a float array
         const values = JSON.parse(memory.embedding);
         
@@ -156,17 +161,15 @@ export async function upsertMemoriesToPinecone(
             type: memory.type,
             messageId: memory.messageId,
             timestamp: memory.timestamp,
-            ...memory.metadata
+            metadata: memory.metadata || {}
           }
         };
       });
       
-      if (vectors.length > 0) {
-        await pineconeIndex.upsert({
-          vectors,
-          namespace
-        });
-        successCount += vectors.length;
+      if (records.length > 0) {
+        // Upsert records to Pinecone with namespace
+        await pineconeIndex.upsert(records, { namespace });
+        successCount += records.length;
       }
     }
     
@@ -200,15 +203,18 @@ export async function queryPineconeMemories(
       namespace
     });
     
-    return queryResult.matches.map(match => ({
-      id: match.metadata?.id || 0,
-      content: match.metadata?.content || '',
-      type: match.metadata?.type || 'prompt',
-      messageId: match.metadata?.messageId || 0,
-      timestamp: match.metadata?.timestamp || new Date().toISOString(),
-      similarity: match.score || 0,
-      metadata: { ...match.metadata }
-    }));
+    return queryResult.matches.map(match => {
+      const metadata = match.metadata || {};
+      return {
+        id: Number(metadata.id) || 0,
+        content: String(metadata.content) || '',
+        type: String(metadata.type) || 'prompt',
+        messageId: Number(metadata.messageId) || 0,
+        timestamp: String(metadata.timestamp) || new Date().toISOString(),
+        similarity: match.score || 0,
+        metadata: metadata.metadata || {}
+      };
+    });
   } catch (error) {
     log(`Error querying Pinecone: ${error}`, 'pinecone');
     throw error;
@@ -231,7 +237,7 @@ export async function fetchVectorsFromPinecone(
     const stats = await pineconeIndex.describeIndexStats();
     const namespaceStats = stats.namespaces?.[namespace];
     
-    if (!namespaceStats || namespaceStats.vectorCount === 0) {
+    if (!namespaceStats || namespaceStats.recordCount === 0) {
       return [];
     }
     
@@ -244,7 +250,7 @@ export async function fetchVectorsFromPinecone(
     const dummyVector = Array(stats.dimension).fill(0.0001);
     const queryResponse = await pineconeIndex.query({
       vector: dummyVector,
-      topK: Math.min(limit, namespaceStats.vectorCount),
+      topK: Math.min(limit, namespaceStats.recordCount),
       includeMetadata: true,
       includeValues: true,
       namespace
@@ -274,19 +280,32 @@ export async function createPineconeIndexIfNotExists(
     const client = await getPineconeClient();
     
     // Check if index already exists
-    const indexes = await client.listIndexes();
-    const indexExists = indexes.some(idx => idx.name === indexName);
+    const indexList = await client.listIndexes();
+    let indexExists = false;
+    
+    for (const index of indexList) {
+      if (index.name === indexName) {
+        indexExists = true;
+        break;
+      }
+    }
     
     if (indexExists) {
       log(`Index ${indexName} already exists. Skipping creation.`, 'pinecone');
       return true;
     }
     
-    // Create index
+    // Create index with required spec
     await client.createIndex({
       name: indexName,
       dimension,
       metric: metric as any,
+      spec: {
+        serverless: {
+          cloud: 'aws',
+          region: 'us-west-2'
+        }
+      }
     });
     
     log(`Created Pinecone index: ${indexName}`, 'pinecone');
@@ -298,10 +317,17 @@ export async function createPineconeIndexIfNotExists(
     while (!isReady && attempts < 10) {
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
       
-      const indexList = await client.listIndexes();
-      const index = indexList.find(idx => idx.name === indexName);
+      const currentIndexList = await client.listIndexes();
+      let currentIndex = null;
       
-      if (index && index.status?.ready) {
+      for (const idx of currentIndexList) {
+        if (idx.name === indexName) {
+          currentIndex = idx;
+          break;
+        }
+      }
+      
+      if (currentIndex && currentIndex.status?.ready) {
         isReady = true;
         log(`Pinecone index ${indexName} is ready`, 'pinecone');
       }
