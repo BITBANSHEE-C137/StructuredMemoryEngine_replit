@@ -34,7 +34,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { textareaRef, adjustHeight } = useAutosizeTextarea();
   
-  // Scroll to bottom when messages change, but preserve header visibility
+  // Scroll to bottom when messages change or component mounts
   useEffect(() => {
     if (messagesEndRef.current) {
       const chatContainer = document.querySelector('.chat-messages');
@@ -43,6 +43,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
     }
   }, [messages]);
+  
+  // Auto-scroll to input on initial load
+  useEffect(() => {
+    // Scroll to input area when component mounts
+    const messageInput = document.querySelector('.message-input-area');
+    if (messageInput) {
+      messageInput.scrollIntoView({ behavior: 'auto' });
+    }
+  }, []);
   
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,8 +72,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     // Store relevant memories for this message
     if (context && context.relevantMemories) {
       // Find the message ID of the latest assistant message
-      const latestAssistantMessage = [...messages]
-        .reverse()
+      // Since we're reversing messages in display, we don't need to reverse here
+      const latestAssistantMessage = messages
         .find(msg => msg.role === 'assistant');
       
       if (latestAssistantMessage) {
@@ -81,8 +90,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const anthropicModels = models.filter(model => model.provider === 'anthropic');
   
   // Display system message + all messages or just messages if there are any
+  // If we have messages, we reverse them to get oldest at top and newest at bottom
   const displayMessages = messages.length > 0 
-    ? messages 
+    ? [...messages].reverse() 
     : [DEFAULT_SYSTEM_MESSAGE];
   
   return (
@@ -188,7 +198,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
         
         {/* Message Input Area - Fixed at bottom */}
-        <div className="border-t border-primary/10 p-4 bg-gradient-to-b from-white to-primary/5 sticky bottom-0 z-10">
+        <div className="message-input-area border-t border-primary/10 p-4 bg-gradient-to-b from-white to-primary/5 sticky bottom-0 z-10">
           <form onSubmit={handleSubmit} className="flex items-center space-x-3 max-w-4xl mx-auto">
             <div className="relative flex-1">
               <textarea
