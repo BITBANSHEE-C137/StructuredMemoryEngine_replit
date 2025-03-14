@@ -69,6 +69,11 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     // Send message and get context
     const context = await onSendMessage(trimmedInput, selectedModelId);
     
+    // Return focus to the textarea after sending message
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
+    
     // Store relevant memories for this message
     if (context && context.relevantMemories) {
       // We need to wait for the messages to update with the new assistant response
