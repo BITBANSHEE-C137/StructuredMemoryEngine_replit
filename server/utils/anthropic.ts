@@ -1,5 +1,4 @@
 import Anthropic from '@anthropic-ai/sdk';
-import ragPrompts from './rag-prompts';
 
 // the newest Anthropic model is "claude-3-7-sonnet-20250219" which was released February 24, 2025
 // Initialize Anthropic client with API key from environment variables
@@ -11,17 +10,13 @@ const anthropic = new Anthropic({
 export async function generateResponse(
   prompt: string, 
   context: string,
-  model: string = "claude-3-7-sonnet-20250219",
-  isPineconeAvailable: boolean = false,
-  useCase: 'general' | 'aviation' | 'jarvis' | 'personal_assistant' | 'legal' | 'customer_support' = 'jarvis'
+  model: string = "claude-3-7-sonnet-20250219"
 ): Promise<string> {
   try {
-    // Create a system message with context using the tiered RAG prompts
-    const systemMessage = ragPrompts.generateSpecializedRagPrompt(
-      useCase,
-      context,
-      isPineconeAvailable
-    );
+    // Create a system message with context
+    const systemMessage = context 
+      ? `You are an AI assistant with access to relevant context. Use this context to inform your responses:\n\n${context}`
+      : "You are a helpful assistant called the Structured Memory Engine that uses RAG (Retrieval Augmented Generation) to access relevant memories from previous conversations.";
     
     const message = await anthropic.messages.create({
       model: model,
@@ -32,13 +27,8 @@ export async function generateResponse(
       ],
     });
     
-    // Handle different types of content blocks
-    if (message.content && message.content.length > 0 && 'text' in message.content[0]) {
-      return message.content[0].text;
-    }
-    
-    return "No response generated";
-  } catch (error: any) { // Use 'any' type for error to avoid TS issues
+    return message.content[0].text;
+  } catch (error) {
     console.error("Error generating response from Anthropic:", error);
     throw new Error(`Failed to generate response from Anthropic: ${error.message}`);
   }
@@ -54,7 +44,7 @@ export async function validateApiKey(): Promise<boolean> {
       messages: [{ role: 'user', content: 'Hello' }],
     });
     return true;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error validating Anthropic API key:", error);
     return false;
   }

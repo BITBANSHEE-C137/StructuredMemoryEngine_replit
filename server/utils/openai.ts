@@ -1,5 +1,4 @@
 import OpenAI from "openai";
-import ragPrompts from "./rag-prompts";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 // Initialize OpenAI client with API key from environment variables
@@ -19,10 +18,9 @@ export async function generateEmbedding(text: string, embeddingModel: string = "
     // Format: [1.2, 3.4, 5.6, ...]
     const embeddingArray = response.data[0].embedding;
     return `[${embeddingArray.join(',')}]`;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error generating embedding:", error);
-    const errorMessage = error.message || "Unknown error";
-    throw new Error(`Failed to generate embedding from OpenAI: ${errorMessage}`);
+    throw new Error("Failed to generate embedding from OpenAI");
   }
 }
 
@@ -30,17 +28,13 @@ export async function generateEmbedding(text: string, embeddingModel: string = "
 export async function generateResponse(
   prompt: string, 
   context: string, 
-  model: string = "gpt-4o",
-  isPineconeAvailable: boolean = false,
-  useCase: 'general' | 'aviation' | 'jarvis' | 'personal_assistant' | 'legal' | 'customer_support' = 'jarvis'
+  model: string = "gpt-4o"
 ): Promise<string> {
   try {
-    // Create a system message with context using the tiered RAG prompts
-    const systemMessage = ragPrompts.generateSpecializedRagPrompt(
-      useCase,
-      context,
-      isPineconeAvailable
-    );
+    // Create a system message with context
+    const systemMessage = context 
+      ? `You are an AI assistant with access to relevant context. Use this context to inform your responses:\n\n${context}`
+      : "You are a helpful assistant called the Structured Memory Engine that uses RAG (Retrieval Augmented Generation) to access relevant memories from previous conversations.";
     
     const response = await openai.chat.completions.create({
       model: model,
@@ -53,10 +47,9 @@ export async function generateResponse(
     });
     
     return response.choices[0].message.content || "No response generated";
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error generating response from OpenAI:", error);
-    const errorMessage = error.message || "Unknown error";
-    throw new Error(`Failed to generate response from OpenAI: ${errorMessage}`);
+    throw new Error(`Failed to generate response from OpenAI: ${error.message}`);
   }
 }
 
@@ -66,7 +59,7 @@ export async function validateApiKey(): Promise<boolean> {
     // Make a simple request to validate the API key
     await openai.models.list();
     return true;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error validating OpenAI API key:", error);
     return false;
   }
@@ -90,7 +83,7 @@ export async function getAvailableModels(): Promise<string[]> {
       .map(model => model.id);
     
     return chatModels;
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching OpenAI models:", error);
     return [];
   }

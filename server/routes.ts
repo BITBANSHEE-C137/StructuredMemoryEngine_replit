@@ -258,8 +258,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse the similarity threshold as a float (it's stored as a string in the DB)
       console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}"`);
       
-      // Get the current setting value and parse it more carefully - don't set any default
-      let similarityThreshold;
+      // Get the current setting value and parse it more carefully
+      let similarityThreshold = 0.75; // Default fallback value
       
       try {
         if (settings.similarityThreshold) {
@@ -275,9 +275,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Check for NaN and apply limits
           if (isNaN(similarityThreshold)) {
-            // If parsing fails, use the raw value directly without modification
-            console.warn('Invalid similarity threshold value in settings - keeping original setting');
-            similarityThreshold = settings.similarityThreshold ? parseFloat(settings.similarityThreshold.toString()) : 0.75;
+            console.warn('Invalid similarity threshold value - using default 0.75');
+            similarityThreshold = 0.75;
           }
         }
       } catch (error) {
@@ -285,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure the threshold is a valid value between 0 and 1
-      similarityThreshold = Math.max(0, Math.min(1, similarityThreshold || 0.75));
+      similarityThreshold = Math.max(0, Math.min(1, similarityThreshold));
       
       console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       
@@ -305,36 +304,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .join("\n\n");
       }
       
-      // Add metadata about the current query and model
-      context += `\n\nMETADATA:
-- Current model: ${model.name} (${model.provider})
-- Max context size: ${contextSize} relevant memories
-- Current time: ${new Date().toISOString()}`;
+      // Add special system context to help guide the model
+      context += `\n\nIMPORTANT SYSTEM NOTES:
+1. You are the Structured Memory Engine, a RAG-based AI assistant that uses vector similarity to find relevant memories.
+2. The current model you're using is: ${model.name} (${model.provider})
+3. You have access to ${contextSize} relevant memories for each query.
+4. If asked about your configuration or settings, you can directly answer with this information.
+5. For queries like "summarize recent chats" or "what model is this?", you can access this system information to answer.`;
       
-      // 6. Check if Pinecone is available for long-term memory
-      const isPineconeAvailable = await storage.isPineconeAvailable();
-      
-      // 7. Generate response based on provider with tiered RAG approach
+      // 6. Generate response based on provider
       let response = '';
-      // Use 'jarvis' as the default useCase to match the Iron Man Jarvis concept
-      const useCase = 'jarvis';
-      
       if (model.provider === 'openai') {
-        response = await openai.generateResponse(
-          content, 
-          context, 
-          modelId, 
-          isPineconeAvailable, 
-          useCase
-        );
+        response = await openai.generateResponse(content, context, modelId);
       } else if (model.provider === 'anthropic') {
-        response = await anthropic.generateResponse(
-          content, 
-          context, 
-          modelId, 
-          isPineconeAvailable, 
-          useCase
-        );
+        response = await anthropic.generateResponse(content, context, modelId);
       } else {
         return res.status(400).json({ error: "Unsupported model provider" });
       }
@@ -381,11 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   async function checkForSystemQuery(content: string, model: Model, settings: Settings): Promise<{ response: string, customContext?: any[] } | false> {
     const lowercaseContent = content.toLowerCase().trim();
     
-    // Check if Pinecone is available
-    const isPineconeAvailable = await storage.isPineconeAvailable();
-    const pineconeStatus = isPineconeAvailable ? "active and available" : "not configured";
-    
-    // Check for queries about the current model or identity
+    // Check for queries about the current model
     if (
       lowercaseContent.includes("which model") ||
       lowercaseContent.includes("what model") ||
@@ -393,19 +372,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lowercaseContent.includes("model version") ||
       lowercaseContent.includes("model type") ||
       lowercaseContent.includes("are you gpt") ||
-      lowercaseContent.includes("are you claude") ||
-      lowercaseContent.includes("who are you") ||
-      lowercaseContent.includes("what are you") ||
-      lowercaseContent.includes("your name")
+      lowercaseContent.includes("are you claude")
     ) {
       return {
-        response: `I'm an AI assistant powered by the ${model.name} model from ${model.provider}, with a maximum context capacity of ${model.maxTokens} tokens.
-
-My memory system uses a tiered approach to manage information:
-- Primary memory (PGVector): Contains ${settings.contextSize} most relevant memories per query with a similarity threshold of ${settings.similarityThreshold}
-- Long-term archives (Pinecone): ${pineconeStatus} for historical knowledge that requires explicit retrieval
-
-When I don't have information in my primary memory, I'll let you know that you can ask me to search my long-term archives. This gives you control over when and how I access historical data. Is there anything specific about my capabilities you'd like to know?`
+        response: `You're interacting with the Structured Memory Engine using the ${model.name} model from ${model.provider}. This model can handle up to ${model.maxTokens} tokens of context. The engine is configured to use ${settings.contextSize} relevant memories for each query with a similarity threshold of ${settings.similarityThreshold}.`
       };
     }
     
@@ -416,8 +386,7 @@ When I don't have information in my primary memory, I'll let you know that you c
       lowercaseContent.includes("recent messages") ||
       lowercaseContent.includes("chat history") ||
       lowercaseContent.includes("previous messages") ||
-      lowercaseContent.includes("last 24 hours") ||
-      lowercaseContent.includes("what did we talk about")
+      lowercaseContent.includes("last 24 hours")
     ) {
       try {
         // Get the most recent messages (up to 30)
@@ -425,11 +394,11 @@ When I don't have information in my primary memory, I'll let you know that you c
         
         // Format them for the response
         const formattedMessages = recentMessages
-          .map(msg => `[${new Date(msg.timestamp).toLocaleString()}] ${msg.role === 'user' ? 'You' : 'Assistant'}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`)
+          .map(msg => `[${new Date(msg.timestamp).toLocaleString()}] ${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`)
           .join('\n\n');
         
         return {
-          response: `Here's a summary of our recent conversations:\n\n${formattedMessages}\n\nIs there a specific part of our conversation you'd like me to elaborate on?`,
+          response: `Here's a summary of recent conversations:\n\n${formattedMessages}`,
           customContext: recentMessages.map(m => ({ 
             id: m.id,
             content: m.content,
@@ -439,7 +408,7 @@ When I don't have information in my primary memory, I'll let you know that you c
       } catch (error) {
         console.error("Error retrieving recent messages:", error);
         return {
-          response: "I attempted to retrieve our conversation history, but encountered a system error. Perhaps we could try a different query?"
+          response: "I tried to retrieve your recent conversation history, but encountered an error. Could you please try a different query?"
         };
       }
     }
@@ -450,59 +419,17 @@ When I don't have information in my primary memory, I'll let you know that you c
       lowercaseContent.includes("current settings") ||
       lowercaseContent.includes("memory settings") ||
       lowercaseContent.includes("how are you configured") ||
-      lowercaseContent.includes("what are your settings") ||
-      lowercaseContent.includes("configuration") ||
-      lowercaseContent.includes("diagnostic")
+      lowercaseContent.includes("what are your settings")
     ) {
-      // Get pinecone stats if available
-      let pineconeInfo = "";
-      if (isPineconeAvailable) {
-        try {
-          const pineconeSettings = await storage.getPineconeSettings();
-          pineconeInfo = `
-- Long-term Archives (Pinecone): Enabled
-- Active Index: ${pineconeSettings.activeIndexName || "None"}
-- Namespace: ${pineconeSettings.namespace || "default"}
-- Last Sync: ${pineconeSettings.lastSyncTimestamp ? new Date(pineconeSettings.lastSyncTimestamp).toLocaleString() : "Never"}`;
-        } catch (error) {
-          console.error("Error fetching Pinecone settings:", error);
-          pineconeInfo = "\n- Long-term Archives (Pinecone): Error retrieving settings";
-        }
-      } else {
-        pineconeInfo = "\n- Long-term Archives (Pinecone): Not configured";
-      }
-      
       return {
-        response: `System diagnostics information:
+        response: `The Structured Memory Engine is currently configured with the following settings:
         
-- Primary AI: ${model.name} (${model.provider})
 - Default Model: ${settings.defaultModelId}
-- Embedding Model: ${settings.defaultEmbeddingModelId}
-- Primary Memory Size: ${settings.contextSize} memories per query
-- Memory Similarity Threshold: ${settings.similarityThreshold}${pineconeInfo}
+- Default Embedding Model: ${settings.defaultEmbeddingModelId}
+- Context Size: ${settings.contextSize} memories per query
+- Similarity Threshold: ${settings.similarityThreshold}
 
-All systems are operational. Memory functions can be managed through the settings panel if adjustments are needed.`
-      };
-    }
-    
-    // Check for Pinecone recall queries
-    if (
-      (lowercaseContent.includes("recall") || 
-       lowercaseContent.includes("search long term") || 
-       lowercaseContent.includes("search pinecone") || 
-       lowercaseContent.includes("check long term") ||
-       lowercaseContent.includes("retrieve from pinecone") ||
-       lowercaseContent.includes("check pinecone") ||
-       lowercaseContent.includes("search archive") ||
-       lowercaseContent.includes("search your memory") ||
-       lowercaseContent.includes("look in your archives") ||
-       lowercaseContent.includes("check your long term memory") ||
-       lowercaseContent.includes("yes, search") && content.length < 20
-      ) && isPineconeAvailable
-    ) {
-      // More conversational response for when the user requests a long-term memory search
-      return {
-        response: `I'll search my long-term memory archives for that information. To help me find the most relevant details, could you provide any specific keywords, dates, or topics related to what you're looking for?`
+These settings determine how the system processes your queries and retrieves relevant context from past conversations. You can manually clear all memories through the settings menu.`
       };
     }
     
