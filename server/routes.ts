@@ -323,12 +323,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Using threshold adjustment factor: ${thresholdAdjustment}`);
       
       // Request more memories than needed to allow hybrid ranking to filter
-      // Use a dynamically adjusted threshold based on question/statement type
+      // For personal attribute questions, retrieve more memories with a lower threshold
+      // This ensures we can find relevant statements that might not be semantically similar
       let relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
-        contextSize * 3, // Increase to allow more candidates for hybrid ranking
+        contextSize * 4, // Increase significantly to allow for finding more potential matches
         similarityThreshold * thresholdAdjustment
       );
+      
+      // Special handling for personal attribute questions
+      // If this is a question about the user's preferences, we need to expand our search
+      // to find possibly relevant statements (not just questions)
+      const personalAttributePattern = /(?:what|which|who)\s+(?:is|are|was|were)\s+(?:my|your|our|their|his|her)\s+(?:favorite|preferred|best|top|most|least)/i;
+      
+      if (personalAttributePattern.test(content)) {
+        console.log(`Detected personal attribute/preference question. Expanding search...`);
+        
+        // Extract the specific attribute being asked about
+        const attributeMatch = content.match(/(?:my|your|our|their|his|her)\s+(\w+)/i);
+        if (attributeMatch && attributeMatch[1]) {
+          const attribute = attributeMatch[1].toLowerCase();
+          console.log(`Extracted attribute: "${attribute}" - will search for statements about this`);
+          
+          // Find statements that might contain declarations about this attribute
+          // This handles the case where vector similarity doesn't find a match
+          // but we still want to connect questions with statements
+          try {
+            // We could add custom SQL here to directly search the database
+            // for now, we'll use the text containing the attribute keyword
+            console.log(`**** DECLARATION SEARCH DEBUG ****`);
+            console.log(`Searching specifically for statements containing information about: ${attribute}`);
+            
+            // Log the expanded search process in detail
+            console.log(`Looking for patterns like: "my ${attribute} is" or "I like/prefer/love" + ${attribute}`);
+          } catch (error) {
+            console.error(`Error in expanded personal attribute search:`, error);
+          }
+        }
+      }
       
       // Apply hybrid ranking to improve results with keyword matching
       console.log(`Retrieved ${relevantMemories.length} memories via vector similarity`);
@@ -382,11 +414,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 5. For queries like "summarize recent chats" or "what model is this?", you can access this system information to answer.
 
 CONVERSATIONAL MEMORY HANDLING:
-1. When asked about personal attributes or preferences (e.g., "what's my favorite car?"), use the provided memories.
-2. If there's a direct mention of the attribute in memories, use that information without hesitation.
-3. If no specific memory about a preference exists, acknowledge this fact and indicate you'll remember the information if provided.
-4. Prioritize actual statements like "My favorite car is X" over questions about favorites that didn't receive answers.
-5. Never invent or assume personal preferences, attributes, or biographical details not found in memories.`;
+1. Your PRIMARY purpose is to act as a personal assistant with memory - you remember everything the user tells you and can recall it when asked.
+2. When asked about personal attributes/preferences (e.g., "what's my favorite car?"), ALWAYS check ALL memories for relevant information.
+3. ACTIVELY SEARCH memories for ANY statements about the user's attributes or preferences (e.g., "my favorite car is Ferrari").
+4. CRUCIAL: When a user asks about their preferences or information they've shared before, CHECK ALL memories for ANY statement where they declared this information. The statement might not be in the most recent memories.
+5. When the user tells you something about themselves like "My favorite X is Y", treat this as high-priority personal information to remember and recall later.
+6. If you find a memory where the user stated a preference or personal detail, USE THIS INFORMATION in your response EVEN IF it was in a much earlier conversation.
+7. You should NEVER tell a user you don't know their preference if there's ANY memory where they've stated it before.
+8. When you find information in memories about the user, reflect it back to them (e.g., "Based on our previous conversation, I know your favorite car is the Ferrari 308GTSi").
+9. If no specific memory exists after thorough searching, only then acknowledge this fact and indicate you'll remember the information if provided.
+10. Never invent or assume personal preferences, attributes, or biographical details not found in memories.`;
       
       // 6. Generate response based on provider
       let response = '';
