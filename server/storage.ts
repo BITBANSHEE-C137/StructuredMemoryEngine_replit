@@ -338,12 +338,12 @@ export class DatabaseStorage implements IStorage {
     if (existingSettings.length > 0) {
       return existingSettings[0];
     } else {
-      // Create default settings
+      // Create default settings with newer embedding model
       const [newSettings] = await db.insert(settings).values({
         contextSize: 5,
         similarityThreshold: "0.75",
         defaultModelId: "gpt-3.5-turbo",
-        defaultEmbeddingModelId: "text-embedding-ada-002"
+        defaultEmbeddingModelId: "text-embedding-3-small"
       }).returning();
       
       return newSettings;
