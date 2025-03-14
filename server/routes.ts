@@ -265,11 +265,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (settings.similarityThreshold) {
           const rawValue = settings.similarityThreshold.toString().trim();
           
-          // Handle percentage format (e.g. "75%")
+          // Handle percentage format (e.g. "85%")
           if (rawValue.includes('%')) {
             similarityThreshold = parseFloat(rawValue) / 100;
           } else {
-            // Handle decimal format (e.g. "0.75")
+            // Handle decimal format (e.g. "0.85")
             similarityThreshold = parseFloat(rawValue);
           }
           
@@ -285,6 +285,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Ensure the threshold is a valid value between 0 and 1
       similarityThreshold = Math.max(0, Math.min(1, similarityThreshold));
+      
+      console.log(`Parsed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
+      if (similarityThreshold !== parseFloat(settings.similarityThreshold)) {
+        console.log(`Note: Parsed value differs from raw settings value - this is the issue we're fixing`);
+      }
       
       console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       

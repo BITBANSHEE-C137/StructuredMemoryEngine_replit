@@ -216,7 +216,7 @@ export class DatabaseStorage implements IStorage {
         LIMIT ${limit}
       `);
       
-      console.log(`Successfully found ${result.length} relevant memories with similarity >= ${threshold}`);
+      console.log(`Successfully found ${result.length} relevant memories with similarity >= ${threshold} (raw threshold = ${similarityThreshold})`);
       
       // Convert the raw result to Memory objects with similarity score
       return result.map(row => ({

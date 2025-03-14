@@ -247,7 +247,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span>Similarity threshold:</span>
-                  <span className="font-medium">{parseFloat(similarityThreshold).toFixed(2)} (min. confidence)</span>
+                  <span className="font-medium">{parseFloat(similarityThreshold).toFixed(2)} ({(parseFloat(similarityThreshold) * 100).toFixed(0)}% min. confidence)</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Embedding model:</span>
@@ -288,7 +288,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div>
                 <label htmlFor="similarity-threshold" className="flex items-center justify-between text-sm mb-1">
                   <span className="text-primary font-medium">Similarity Threshold</span>
-                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium" id="similarity-value">{similarityThreshold}</span>
+                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium" id="similarity-value">{parseFloat(similarityThreshold).toFixed(2)} ({(parseFloat(similarityThreshold) * 100).toFixed(0)}%)</span>
                 </label>
                 <input 
                   id="similarity-threshold" 
