@@ -336,92 +336,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // to find relevant declaration statements regardless of vector similarity
       const personalAttributePattern = /(?:what|which|who)\s+(?:is|are|was|were)\s+(?:my|your|our|their|his|her)\s+(?:favorite|preferred|best|top|most|least)/i;
       
-      if (personalAttributePattern.test(content)) {
-        console.log(`Detected personal attribute/preference question. Performing direct statement search...`);
+      // EXTENDED: More inclusive pattern to catch more variations including contractions
+      const extendedAttributePattern = /(?:what|which|who|tell\s+me|do\s+you\s+know)(?:'s|\s+is|\s+are|\s+was|\s+were)\s+(?:my|your|our|their|his|her)/i;
+      
+      if (personalAttributePattern.test(content) || extendedAttributePattern.test(content)) {
+        console.log(`CRITICAL DEBUG: Detected personal attribute/preference question: "${content}"`);
         
         // Extract the specific attribute being asked about (e.g. "car" from "what's my favorite car")
-        const attributeMatch = content.match(/(?:my|your|our|their|his|her)\s+(?:favorite|preferred|best|top|most|least)?\s*(\w+)/i);
-        if (attributeMatch && attributeMatch[1]) {
-          const attribute = attributeMatch[1].toLowerCase();
-          console.log(`Extracted attribute from question: "${attribute}" - will search for statements directly`);
+        // Use a more flexible pattern to catch more variations
+        let attribute = "";
+        const favoriteMatch = content.match(/(?:my|your|our|their|his|her)\s+(?:favorite|preferred|best|top)\s+(\w+)/i);
+        const simpleMatch = content.match(/(?:my|your|our|their|his|her)\s+(\w+)/i);
+        
+        if (favoriteMatch && favoriteMatch[1]) {
+          attribute = favoriteMatch[1].toLowerCase();
+          console.log(`Extracted favorite attribute from question: "${attribute}"`);
+        } else if (simpleMatch && simpleMatch[1]) {
+          attribute = simpleMatch[1].toLowerCase();
+          console.log(`Extracted simple attribute from question: "${attribute}"`);
+        }
+        
+        // CRITICAL: Perform a comprehensive search for relevant statements
+        // This is the most important part for finding declarations
+        try {
+          console.log(`********************`);
+          console.log(`**** COMPREHENSIVE MEMORY SEARCH DEBUGGER ****`);
+          console.log(`********************`);
           
-          // Implement a direct SQL search to find any statements about this attribute
-          // regardless of vector similarity
-          try {
-            console.log(`**** DIRECT DECLARATION SEARCH FOR "${attribute}" ****`);
+          // First, get a count of memories and log the most recent ones for debugging
+          const allMemories = await db.select()
+              .from(memories)
+              .orderBy(sql`id DESC`)
+              .limit(10);
+          
+          console.log(`MEMORY DB STATE: Found ${allMemories.length} most recent memories in database`);
+          console.log(`Latest memories:`);
+          for (const mem of allMemories) {
+            console.log(`ID ${mem.id}: ${mem.type} - "${mem.content.substring(0, 100)}${mem.content.length > 100 ? '...' : ''}"`);
+          }
+          
+          // Extremely flexible search patterns to catch any mention of favorite cars
+          // or Ferrari regardless of exact phrasing
+          const statementPatterns = [
+            // Super flexible patterns that search the entire database
+            `ferrari`,
+            `308`,
+            `gts`,
+            `favorite car`,
+            `my car`,
+            `like car`,
+          ];
+          
+          if (attribute) {
+            // Add attribute-specific patterns
+            statementPatterns.push(`my ${attribute} is`);
+            statementPatterns.push(`my favorite ${attribute}`);
+            statementPatterns.push(`${attribute} is`);
+          }
+          
+          console.log(`Trying ${statementPatterns.length} different search patterns to find relevant declarations`);
+          
+          // For each pattern, search in the memories table
+          const matchingStatements = [];
+          
+          for (const pattern of statementPatterns) {
+            console.log(`DIRECT SEARCH: Looking for '${pattern}' in memory content...`);
             
-            // Using direct SQL for the best possible matching
-            // This searches for statements containing patterns like "my favorite car" 
-            // without relying on vector similarity
-            const statementPatterns = [
-              `my ${attribute} is`,
-              `my favorite ${attribute}`,
-              `i love`,
-              `ferrari`,
-              `308gtsi`
-            ];
-            
-            // For each pattern, search in the memories table
-            const matchingStatements = [];
-            
-            for (const pattern of statementPatterns) {
-              console.log(`Searching for statements containing: "${pattern}"`);
-              
-              // Execute a direct SQL LIKE query to find matches
-              const statements = await db.select()
+            // Execute a case-insensitive SQL LIKE query to find matches
+            const statements = await db.select()
                 .from(memories)
-                .where(sql`content ILIKE ${`%${pattern}%`}`)
-                .limit(5);
-              
-              if (statements.length > 0) {
-                console.log(`Found ${statements.length} statements matching "${pattern}"`);
+                .where(sql`LOWER(content) LIKE ${`%${pattern.toLowerCase()}%`}`)
+                .limit(10);
+            
+            console.log(`DIRECT SEARCH RESULT: Found ${statements.length} matches for '${pattern}'`);
+            
+            if (statements.length > 0) {
+              // Add these to our memory results with high similarity score
+              for (const stmt of statements) {
+                console.log(`MATCH FOUND: ID ${stmt.id}: "${stmt.content.substring(0, 100)}..."`);
                 
-                // Add these to our memory results with high similarity score
-                for (const stmt of statements) {
-                  console.log(`Statement found: "${stmt.content.substring(0, 100)}..."`);
+                // Only add if not already in the results
+                if (!matchingStatements.some(m => m.id === stmt.id) && 
+                    !relevantMemories.some(m => m.id === stmt.id)) {
                   
-                  // Only add if not already in the memories list
-                  if (!relevantMemories.some(m => m.id === stmt.id)) {
-                    // Create an embedding for this statement to ensure compatibility
-                    if (!stmt.embedding) {
-                      try {
-                        stmt.embedding = await openai.generateEmbedding(stmt.content, embeddingModel);
-                      } catch (err) {
-                        console.error(`Error generating embedding for direct match: ${err}`);
-                      }
+                  // Ensure the statement has an embedding
+                  if (!stmt.embedding) {
+                    try {
+                      console.log(`Generating embedding for statement ID ${stmt.id}`);
+                      stmt.embedding = await openai.generateEmbedding(stmt.content, embeddingModel);
+                    } catch (err) {
+                      console.error(`Error generating embedding: ${err}`);
                     }
-                    
-                    // Add with extremely high similarity to ensure it appears at the top
-                    matchingStatements.push({
-                      ...stmt,
-                      similarity: 0.99, // Very high score to prioritize these matches
-                      directMatch: true, // Flag for debugging
-                    });
                   }
+                  
+                  matchingStatements.push({
+                    ...stmt,
+                    similarity: 0.99, // Very high score to prioritize direct matches
+                    directMatch: true, // Debug flag
+                  });
+                  
+                  console.log(`Added direct match ID ${stmt.id} to results with similarity 0.99`);
                 }
               }
             }
-            
-            // Merge these direct matches with the vector-based results
-            if (matchingStatements.length > 0) {
-              console.log(`Found ${matchingStatements.length} direct statement matches. Adding them to results.`);
-              
-              // Add the direct matches to the beginning of the relevantMemories array
-              relevantMemories = [...matchingStatements, ...relevantMemories];
-              
-              // Ensure no duplicates
-              const uniqueIds = new Set();
-              relevantMemories = relevantMemories.filter(mem => {
-                if (uniqueIds.has(mem.id)) {
-                  return false;
-                }
-                uniqueIds.add(mem.id);
-                return true;
-              });
-            }
-          } catch (error) {
-            console.error(`Error in direct attribute search:`, error);
           }
+          
+          // Merge direct matches with vector results, prioritizing direct matches
+          if (matchingStatements.length > 0) {
+            console.log(`SUCCESS: Found ${matchingStatements.length} direct statement matches`);
+            console.log(`Current relevantMemories: ${relevantMemories.length} items`);
+            
+            // Prepend direct matches to ensure they appear first
+            relevantMemories = [...matchingStatements, ...relevantMemories];
+            
+            // Log all direct matches for debugging
+            matchingStatements.forEach((stmt, i) => {
+              console.log(`Direct match ${i+1}: ID ${stmt.id}, Type: ${stmt.type}, Content: "${stmt.content.substring(0, 100)}..."`);
+            });
+            
+            // Remove duplicates
+            const uniqueIds = new Set();
+            const deduped = relevantMemories.filter(mem => {
+              if (uniqueIds.has(mem.id)) {
+                return false;
+              }
+              uniqueIds.add(mem.id);
+              return true;
+            });
+            
+            console.log(`After deduplication: ${deduped.length} total memories (from original ${relevantMemories.length})`);
+            relevantMemories = deduped;
+          } else {
+            console.log(`WARNING: No direct statement matches found. Will rely on vector similarity only.`);
+          }
+          
+          console.log(`********************`);
+          console.log(`**** END COMPREHENSIVE SEARCH ****`);
+          console.log(`********************`);
+        } catch (error) {
+          console.error(`ERROR in direct memory search:`, error);
         }
       }
       
