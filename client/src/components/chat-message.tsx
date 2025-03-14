@@ -98,7 +98,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                               <span className={`w-1.5 h-1.5 rounded-full ${thresholdDetails.isQuestion ? 'bg-blue-500' : 'bg-purple-500'}`}></span>
                               {thresholdDetails.isQuestion ? 'Question' : 'Statement'} Mode
                             </span>
-                            <div className="flex gap-1">
+                            <div className="grid grid-cols-3 gap-1 text-center">
                               <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
                                 Base: {(thresholdDetails.baseThreshold * 100).toFixed(1)}%
                               </span>

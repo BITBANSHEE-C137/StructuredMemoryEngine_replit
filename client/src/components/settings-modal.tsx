@@ -5,6 +5,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useChatMessages } from '@/lib/hooks';
 import { PineconeSettingsModal } from './pinecone-settings-modal';
+import { RAGStatusPanel } from './rag-status-panel';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -238,36 +239,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {/* RAG System Status Indicator */}
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg shadow-sm mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <h3 className="text-sm font-semibold text-blue-800">RAG System Status</h3>
-                </div>
-                <span className="text-xs font-medium text-white bg-green-600 px-2 py-0.5 rounded-full">Active</span>
-              </div>
-              
-              <div className="flex gap-2 flex-wrap">
-                <div className="bg-white/50 border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
-                  <span className="text-xs text-blue-800">Context Size</span>
-                  <span className="text-sm font-medium text-blue-900">{contextSize}</span>
-                </div>
-                
-                <div className="bg-white/50 border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
-                  <span className="text-xs text-blue-800">Threshold</span>
-                  <span className="text-sm font-medium text-blue-900">{parseFloat(similarityThreshold).toFixed(2)}</span>
-                </div>
-                
-                <div className="bg-white/50 border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
-                  <span className="text-xs text-blue-800">Model</span>
-                  <span className="text-sm font-medium text-blue-900 truncate max-w-full">
-                    {settings?.defaultEmbeddingModelId?.includes('embedding') 
-                      ? settings?.defaultEmbeddingModelId.replace('text-embedding-', '')
-                      : 'text-embedding-3-small'}
-                  </span>
-                </div>
-              </div>
+              <RAGStatusPanel 
+                contextSize={contextSize}
+                similarityThreshold={similarityThreshold}
+                questionThresholdFactor={questionThresholdFactor}
+                statementThresholdFactor={statementThresholdFactor}
+                embeddingModel={settings?.defaultEmbeddingModelId || 'text-embedding-3-small'}
+                compact={true}
+              />
             </div>
             
             <div className="space-y-4">
