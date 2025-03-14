@@ -19,9 +19,10 @@ export async function generateEmbedding(text: string, embeddingModel: string = "
     // Format: [1.2, 3.4, 5.6, ...]
     const embeddingArray = response.data[0].embedding;
     return `[${embeddingArray.join(',')}]`;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating embedding:", error);
-    throw new Error("Failed to generate embedding from OpenAI");
+    const errorMessage = error.message || "Unknown error";
+    throw new Error(`Failed to generate embedding from OpenAI: ${errorMessage}`);
   }
 }
 
@@ -52,9 +53,10 @@ export async function generateResponse(
     });
     
     return response.choices[0].message.content || "No response generated";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating response from OpenAI:", error);
-    throw new Error(`Failed to generate response from OpenAI: ${error.message}`);
+    const errorMessage = error.message || "Unknown error";
+    throw new Error(`Failed to generate response from OpenAI: ${errorMessage}`);
   }
 }
 
@@ -64,7 +66,7 @@ export async function validateApiKey(): Promise<boolean> {
     // Make a simple request to validate the API key
     await openai.models.list();
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error validating OpenAI API key:", error);
     return false;
   }
