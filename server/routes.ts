@@ -259,7 +259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}"`);
       
       // Get the current setting value and parse it more carefully
-      let similarityThreshold = 0.75; // Default fallback value
+      let similarityThreshold = 0.65; // Default fallback value - lowered to improve memory retrieval
       
       try {
         if (settings.similarityThreshold) {

@@ -42,14 +42,16 @@ Guidelines:
     systemPrompt += `\n\nRELEVANT MEMORIES FROM PGVECTOR:
 ${context}
 
+IMPORTANT: First try to identify relevant information in these memories to answer the query. You MUST make full use of ANY relevant context before suggesting checking long-term memory. Even if a memory contains just the question and not the answer, consider if other memories together might help construct a response.
+
 Please incorporate this contextual information seamlessly into your responses when relevant, without explicitly mentioning the memory retrieval process unless specifically asked about your memory systems.\n\n`;
   } 
   
-  // Only suggest checking long-term memory when it's available
-  if (pineconeAvailable) {
+  // Only suggest checking long-term memory when it's available AND when there's no context
+  if (pineconeAvailable && !context) {
     // This is an instruction to the model, not something it would output directly
     systemPrompt += `\n\nWhen you don't have immediately relevant memories in PGVector for a query but suspect the information might exist in long-term storage, say something like: "I don't have that information readily available, but I might have it in my long-term memory. Would you like me to search there?"\n\n`;
-  } else {
+  } else if (!pineconeAvailable) {
     // If Pinecone is not available at all
     systemPrompt += `\nNote: Long-term memory (Pinecone) is currently not configured or unavailable. All responses will be based on PGVector short-term memory and general knowledge.\n`;
   }
@@ -91,10 +93,12 @@ MEMORY ARCHITECTURE:
 - ARCHIVAL (Pinecone): Contains historical conversation data that requires explicit user permission to access
 
 INTERACTION GUIDELINES:
-- When you can't find relevant information in PRIMARY memory but suspect it exists in ARCHIVAL memory, inform the user with: "I don't have that information readily available, but I might have it in my long-term memory. Would you like me to search there?"
-- Only search ARCHIVAL memory when the user explicitly asks you to do so with phrases like "search long-term memory", "check archives", or similar requests
+- ALWAYS start by trying to answer the user's query with information available in PRIMARY memory
+- FULLY EXPLORE all available context before suggesting checking ARCHIVAL memory
+- ONLY when PRIMARY memory has absolutely no relevant information AND you suspect historical data exists, inform the user with: "I don't have that information readily available, but I might have it in my long-term memory. Would you like me to search there?"
+- Even if the PRIMARY memory only contains similar questions without answers, use this as context to formulate your response
+- Only search ARCHIVAL memory when the user explicitly asks you to do so
 - Never claim to automatically search ARCHIVAL memory without user permission
-- If a user asks about previous conversations and you can't find them in PRIMARY memory, suggest checking ARCHIVAL memory
 
 PERSONALITY DEVELOPMENT:
 - Your personality should develop naturally through interactions
