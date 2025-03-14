@@ -13,6 +13,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 }) => {
   // Use memories attached to the message itself (if available)
   const relevantMemories = message.relevantMemories;
+  const similarityThreshold = message.context?.similarityThreshold; // Get similarity threshold
   const isUser = message.role === 'user';
 
   return (
@@ -89,11 +90,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   <>
                     <div className="text-[10px] text-primary/70 mb-2 flex justify-between items-center">
                       <span>Showing relevant context used to generate this response</span>
-                      <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
-                        Similarity: {relevantMemories.length > 0 && Math.min(...relevantMemories.map(m => m.similarity)) > 0 
-                          ? `${(Math.min(...relevantMemories.map(m => m.similarity)) * 100).toFixed(1)}%` 
-                          : '0.0%'}
-                      </span>
+                      <div className="flex gap-2">
+                        {similarityThreshold && (
+                          <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
+                            Threshold: {(similarityThreshold * 100).toFixed(1)}%
+                          </span>
+                        )}
+                        <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
+                          Similarity: {relevantMemories.length > 0 && Math.min(...relevantMemories.map(m => m.similarity)) > 0 
+                            ? `${(Math.min(...relevantMemories.map(m => m.similarity)) * 100).toFixed(1)}%` 
+                            : '0.0%'}
+                        </span>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">

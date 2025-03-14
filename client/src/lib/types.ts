@@ -8,6 +8,11 @@ export interface Message {
   modelId: string;
   // Add optional property for relevant memories
   relevantMemories?: RelevantMemory[];
+  // Add optional context property for additional data like similarity threshold
+  context?: {
+    similarityThreshold?: number;
+    [key: string]: any;
+  };
 }
 
 export interface Memory {
@@ -29,6 +34,7 @@ export interface ChatResponse {
       content: string;
       similarity: number;
     }[];
+    similarityThreshold?: number; // Added similarity threshold used for query
   };
 }
 
