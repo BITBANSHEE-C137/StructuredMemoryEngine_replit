@@ -277,60 +277,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             
             <div className="space-y-4">
-              <div>
-                <label htmlFor="context-retrieval" className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-primary font-medium">Context Window Size</span>
-                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium" id="context-value">{contextSize}</span>
-                </label>
-                <input 
-                  id="context-retrieval" 
-                  type="range" 
-                  min="1" 
-                  max="10" 
-                  value={contextSize}
-                  onChange={(e) => setContextSize(parseInt(e.target.value))}
-                  className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-primary border border-primary/20" 
-                  style={{ 
-                    WebkitAppearance: 'none',
-                    appearance: 'none',
-                  }}
-                />
-                <div className="flex justify-between text-xs text-primary mt-1">
-                  <span>Fewer, More Relevant</span>
-                  <span>More, Less Relevant</span>
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="similarity-threshold" className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-primary font-medium">Similarity Threshold</span>
-                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium" id="similarity-value">{parseFloat(similarityThreshold).toFixed(2)} ({(parseFloat(similarityThreshold) * 100).toFixed(0)}%)</span>
-                </label>
-                <input 
-                  id="similarity-threshold" 
-                  type="range" 
-                  min="0" 
-                  max="1" 
-                  step="0.01" 
-                  value={parseFloat(similarityThreshold)}
-                  onChange={(e) => setSimilarityThreshold(e.target.value)}
-                  className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-primary border border-primary/20" 
-                  style={{ 
-                    WebkitAppearance: 'none',
-                    appearance: 'none',
-                  }}
-                />
-                <div className="flex justify-between text-xs text-primary mt-1">
-                  <span>Lower Precision</span>
-                  <span>Higher Precision</span>
-                </div>
-              </div>
-              
-              {/* Dynamic Threshold Factors - New Section */}
+              {/* Retrieval Settings - Combined */}
               <div className="mt-4 p-3 bg-purple-50 border border-purple-100 rounded-lg">
-                <h4 className="text-sm font-semibold text-purple-800 mb-2">Dynamic Threshold Adjustment</h4>
+                <h4 className="text-sm font-semibold text-purple-800 mb-2">Memory Retrieval Settings</h4>
+                
+                {/* Context Size */}
+                <div className="mb-4">
+                  <label htmlFor="context-retrieval" className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-purple-800 font-medium">Context Window Size</span>
+                    <span className="text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md font-medium">
+                      {contextSize} memories
+                    </span>
+                  </label>
+                  <input 
+                    id="context-retrieval" 
+                    type="range" 
+                    min="1" 
+                    max="10" 
+                    value={contextSize}
+                    onChange={(e) => setContextSize(parseInt(e.target.value))}
+                    className="w-full h-2 bg-purple-100 rounded-lg appearance-none cursor-pointer accent-purple-600 border border-purple-300" 
+                    style={{ 
+                      WebkitAppearance: 'none',
+                      appearance: 'none',
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-purple-700 mt-1">
+                    <span>Fewer, Higher Quality</span>
+                    <span>More, Lower Quality</span>
+                  </div>
+                </div>
+                
+                {/* Base Threshold */}
+                <div className="mb-4">
+                  <label htmlFor="similarity-threshold" className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-purple-800 font-medium">Base Similarity Threshold</span>
+                    <span className="text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md font-medium">
+                      {parseFloat(similarityThreshold).toFixed(2)} ({(parseFloat(similarityThreshold) * 100).toFixed(0)}%)
+                    </span>
+                  </label>
+                  <input 
+                    id="similarity-threshold" 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.01" 
+                    value={parseFloat(similarityThreshold)}
+                    onChange={(e) => setSimilarityThreshold(e.target.value)}
+                    className="w-full h-2 bg-purple-100 rounded-lg appearance-none cursor-pointer accent-purple-600 border border-purple-300" 
+                    style={{ 
+                      WebkitAppearance: 'none',
+                      appearance: 'none',
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-purple-700 mt-1">
+                    <span>Lower Precision (More Results)</span>
+                    <span>Higher Precision (Fewer Results)</span>
+                  </div>
+                </div>
+                
                 <p className="text-xs text-purple-700 mb-3">
-                  Fine-tune the similarity threshold based on query type. Values below 1.0 make the threshold lower (more results), values above 1.0 make it higher (fewer results).
+                  Fine-tune how the threshold adjusts based on query type. Values below 1.0 make the threshold more forgiving, values above 1.0 make it stricter.
                 </p>
                 
                 {/* Question Factor */}
@@ -338,7 +345,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <label htmlFor="question-factor" className="flex items-center justify-between text-sm mb-1">
                     <span className="text-purple-800 font-medium">Question Threshold Factor</span>
                     <span className="text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md font-medium">
-                      {parseFloat(questionThresholdFactor).toFixed(2)}
+                      {parseFloat(questionThresholdFactor).toFixed(2)}×
                     </span>
                   </label>
                   <input 
@@ -356,8 +363,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     }}
                   />
                   <div className="flex justify-between text-xs text-purple-700 mt-1">
-                    <span>More Results</span>
-                    <span>Fewer Results</span>
+                    <span>More Results for Questions</span>
+                    <span>Fewer Results for Questions</span>
                   </div>
                 </div>
                 
@@ -366,7 +373,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <label htmlFor="statement-factor" className="flex items-center justify-between text-sm mb-1">
                     <span className="text-purple-800 font-medium">Statement Threshold Factor</span>
                     <span className="text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md font-medium">
-                      {parseFloat(statementThresholdFactor).toFixed(2)}
+                      {parseFloat(statementThresholdFactor).toFixed(2)}×
                     </span>
                   </label>
                   <input 
@@ -384,9 +391,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     }}
                   />
                   <div className="flex justify-between text-xs text-purple-700 mt-1">
-                    <span>More Results</span>
-                    <span>Fewer Results</span>
+                    <span>More Results for Statements</span>
+                    <span>Fewer Results for Statements</span>
                   </div>
+                </div>
+                
+                <div className="mt-3 text-[10px] text-purple-700 p-2 bg-purple-100 rounded">
+                  Effective thresholds: Questions = {(parseFloat(similarityThreshold) * parseFloat(questionThresholdFactor)).toFixed(2)} ({(parseFloat(similarityThreshold) * parseFloat(questionThresholdFactor) * 100).toFixed(0)}%), 
+                  Statements = {(parseFloat(similarityThreshold) * parseFloat(statementThresholdFactor)).toFixed(2)} ({(parseFloat(similarityThreshold) * parseFloat(statementThresholdFactor) * 100).toFixed(0)}%)
                 </div>
               </div>
               
