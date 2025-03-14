@@ -9,6 +9,9 @@ import {
   getPineconeClient
 } from '../utils/pinecone';
 import { log } from '../vite';
+import { memories } from '../../shared/schema';
+import { db } from '../db';
+import { sql } from 'drizzle-orm';
 
 const router = Router();
 
