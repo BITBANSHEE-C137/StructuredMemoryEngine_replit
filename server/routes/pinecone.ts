@@ -185,11 +185,24 @@ router.post('/hydrate', async (req: Request, res: Response) => {
   try {
     const { indexName, namespace = 'default', limit = 1000 } = req.body;
     
+    log(`=== HYDRATION DEBUG ===`, 'pinecone');
+    log(`Request to hydrate from Pinecone: index=${indexName}, namespace=${namespace}, limit=${limit}`, 'pinecone');
+    
     if (!indexName) {
+      log(`Error: Index name is required`, 'pinecone');
       return res.status(400).json({ error: 'Index name is required' });
     }
     
+    // Check database state before hydration
+    try {
+      const [{ count: preCount }] = await db.select({ count: sql`count(*)` }).from(memories);
+      log(`Pre-hydration memory count: ${preCount}`, 'pinecone');
+    } catch (countErr) {
+      log(`Error checking pre-hydration count: ${countErr}`, 'pinecone');
+    }
+    
     const isPineconeAvailable = await storage.isPineconeAvailable();
+    log(`Pinecone availability check: ${isPineconeAvailable}`, 'pinecone');
     
     if (!isPineconeAvailable) {
       return res.status(503).json({ 
@@ -198,7 +211,23 @@ router.post('/hydrate', async (req: Request, res: Response) => {
       });
     }
     
+    log(`Starting hydration process...`, 'pinecone');
     const result = await storage.hydrateFromPinecone(indexName, namespace, limit);
+    
+    // Check database state after hydration
+    try {
+      const [{ count: postCount }] = await db.select({ count: sql`count(*)` }).from(memories);
+      log(`Post-hydration memory count: ${postCount}`, 'pinecone');
+      
+      if (postCount !== Number(result.count)) {
+        log(`WARNING: Memory count discrepancy! DB shows ${postCount} but result says ${result.count}`, 'pinecone');
+        
+        // Force update the count in the result to match reality
+        result.count = postCount;
+      }
+    } catch (countErr) {
+      log(`Error checking post-hydration count: ${countErr}`, 'pinecone');
+    }
     
     log(`Hydration completed with result: ${JSON.stringify({
       success: result.success,
@@ -208,6 +237,7 @@ router.post('/hydrate', async (req: Request, res: Response) => {
       totalProcessed: result.totalProcessed || result.count,
       vectorCount: result.vectorCount || 0
     })}`, 'pinecone');
+    log(`=== END HYDRATION DEBUG ===`, 'pinecone');
     
     res.json(result);
   } catch (error) {
