@@ -95,7 +95,8 @@ export function useChatMessages() {
           ...response.message,
           relevantMemories: response.context?.relevantMemories || [],
           context: {
-            similarityThreshold: response.context?.similarityThreshold
+            similarityThreshold: response.context?.similarityThreshold,
+            thresholdDetails: response.context?.thresholdDetails
           }
         };
         
