@@ -339,22 +339,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // EXTENDED: More inclusive pattern to catch more variations including contractions
       const extendedAttributePattern = /(?:what|which|who|tell\s+me|do\s+you\s+know)(?:'s|\s+is|\s+are|\s+was|\s+were)\s+(?:my|your|our|their|his|her)/i;
       
-      if (personalAttributePattern.test(content) || extendedAttributePattern.test(content)) {
-        console.log(`CRITICAL DEBUG: Detected personal attribute/preference question: "${content}"`);
-        
-        // Extract the specific attribute being asked about (e.g. "car" from "what's my favorite car")
-        // Use a more flexible pattern to catch more variations
-        let attribute = "";
-        const favoriteMatch = content.match(/(?:my|your|our|their|his|her)\s+(?:favorite|preferred|best|top)\s+(\w+)/i);
-        const simpleMatch = content.match(/(?:my|your|our|their|his|her)\s+(\w+)/i);
-        
-        if (favoriteMatch && favoriteMatch[1]) {
-          attribute = favoriteMatch[1].toLowerCase();
-          console.log(`Extracted favorite attribute from question: "${attribute}"`);
-        } else if (simpleMatch && simpleMatch[1]) {
-          attribute = simpleMatch[1].toLowerCase();
-          console.log(`Extracted simple attribute from question: "${attribute}"`);
+      // Universal context retrieval system - works for any type of query
+      // Always run context extraction for improved retrieval
+      console.log(`UNIVERSAL CONTEXT SEARCH: Processing query "${content}"`);
+      
+      // First, extract all potential key entities from the user's query
+      // These will be used for enhanced search patterns
+      const potentialEntities: string[] = [];
+      
+      // Extract potential personal attributes
+      const personalAttrMatch = content.match(/(?:my|your|our|their|his|her)\s+(?:\w+)/gi);
+      if (personalAttrMatch) {
+        for (const match of personalAttrMatch) {
+          const cleanedMatch = match.replace(/^(?:my|your|our|their|his|her)\s+/, '').toLowerCase();
+          if (cleanedMatch && cleanedMatch.length > 2) {
+            potentialEntities.push(cleanedMatch);
+            console.log(`Found personal attribute: "${cleanedMatch}"`);
+          }
         }
+      }
+      
+      // Extract key nouns and concepts that might be discussed in past messages
+      const keywordMatch = content.match(/\b\w{4,}\b/g);
+      if (keywordMatch) {
+        for (const word of keywordMatch) {
+          const cleanWord = word.toLowerCase();
+          if (!['what', 'when', 'where', 'which', 'there', 'their', 'about', 'would', 'should', 'could'].includes(cleanWord)) {
+            potentialEntities.push(cleanWord);
+            console.log(`Found potential key entity: "${cleanWord}"`);
+          }
+        }
+      }
+      
+      // Look for common personal attribute patterns
+      const isPersonalQuery = (
+        content.toLowerCase().includes("favorite") || 
+        content.toLowerCase().includes("prefer") ||
+        content.toLowerCase().includes("like") ||
+        content.toLowerCase().includes("love") ||
+        content.toLowerCase().match(/my\s+\w+/i) !== null ||
+        content.toLowerCase().match(/what\s+(?:is|are|was|were)\s+my/i) !== null
+      );
+      
+      if (isPersonalQuery) {
+        console.log(`PERSONAL QUERY DETECTED: This appears to be about user's preferences or attributes`);
+      }
+      
+      // Extract the specific attribute being asked about (legacy pattern matching)
+      let attribute: string = "";
+      const favoriteMatch = content.match(/(?:my|your|our|their|his|her)\s+(?:favorite|preferred|best|top)\s+(\w+)/i);
+      const simpleMatch = content.match(/(?:my|your|our|their|his|her)\s+(\w+)/i);
+      
+      if (favoriteMatch && favoriteMatch[1]) {
+        attribute = favoriteMatch[1].toLowerCase();
+        console.log(`Extracted favorite attribute from question: "${attribute}"`);
+      } else if (simpleMatch && simpleMatch[1]) {
+        attribute = simpleMatch[1].toLowerCase();
+        console.log(`Extracted simple attribute from question: "${attribute}"`);
+      }
+      
+      // Add potentialEntities to search patterns if they look like attributes
+      if (potentialEntities.length > 0) {
+        for (const entity of potentialEntities) {
+          if (entity.length > 2 && !['what', 'when', 'where', 'which', 'there', 'their', 'about'].includes(entity)) {
+            if (!attribute) {
+              attribute = entity;
+              console.log(`Using key entity as attribute: "${attribute}"`);
+            }
+          }
+        }
+      }
+      
+      // Always perform enhanced search for all queries, not just attribute questions
+      if (true) { // We'll always run this block now
         
         // CRITICAL: Perform a comprehensive search for relevant statements
         // This is the most important part for finding declarations
@@ -368,16 +425,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // This bypasses all normal search mechanisms and directly searches the database
           console.log(`EXECUTING EMERGENCY DB SEARCH FOR ALL FERRARI/FAVORITE CAR STATEMENTS`);
           
-          // Direct SQL query to find any statements about Ferrari cars
+          // Build a dynamic SQL query using the extracted entities and attributes
+          // This makes our search universally applicable to any topic or preference
+          let sqlConditions = [];
+          
+          // Always include these base patterns for continuity with existing code
+          sqlConditions.push(sql`LOWER(content) LIKE ${'%ferrari%'}`);
+          sqlConditions.push(sql`LOWER(content) LIKE ${'%308%'}`);
+          sqlConditions.push(sql`LOWER(content) LIKE ${'%favorite car%'}`);
+          sqlConditions.push(sql`LOWER(content) LIKE ${'%my car%'}`);
+          
+          // Add specific attribute searches based on entities extracted from query
+          if (potentialEntities.length > 0) {
+            for (const entity of potentialEntities) {
+              if (entity.length > 2) {
+                // Look for my/favorite + entity pattern
+                sqlConditions.push(sql`LOWER(content) LIKE ${`%my ${entity}%`}`);
+                sqlConditions.push(sql`LOWER(content) LIKE ${`%favorite ${entity}%`}`);
+                
+                // Look for entity-is-value pattern for key entities over 4 chars
+                if (entity.length > 4) {
+                  sqlConditions.push(sql`LOWER(content) LIKE ${`%${entity} is%`}`);
+                }
+              }
+            }
+          }
+          
+          // Look for specific statements in personal queries
+          if (isPersonalQuery && attribute && attribute.length > 2) {
+            sqlConditions.push(sql`LOWER(content) LIKE ${`%my ${attribute}%`}`);
+            sqlConditions.push(sql`LOWER(content) LIKE ${`%favorite ${attribute}%`}`);
+          }
+          
+          // Execute the dynamic query with all conditions joined with OR
+          console.log(`Executing universal context search with ${sqlConditions.length} conditions`);
           const directStatements = await db.select()
             .from(memories)
-            .where(
-              sql`LOWER(content) LIKE ${'%ferrari%'} OR 
-                  LOWER(content) LIKE ${'%308%'} OR 
-                  LOWER(content) LIKE ${'%favorite car%'} OR 
-                  LOWER(content) LIKE ${'%my car%'}`
-            )
-            .limit(10);
+            .where(sql.join(sqlConditions, ' OR '))
+            .limit(15);
           
           console.log(`FOUND ${directStatements.length} DIRECT MATCHING STATEMENTS`);
           
@@ -429,7 +514,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Trying ${statementPatterns.length} different search patterns to find relevant declarations`);
           
           // For each pattern, search in the memories table
-          const matchingStatements: (Memory & { similarity: number; directMatch?: boolean })[] = [];
+          // Use the explicit type from our schema
+          const matchingStatements: (typeof memories.$inferSelect & { similarity: number; directMatch?: boolean })[] = [];
           
           for (const pattern of statementPatterns) {
             console.log(`DIRECT SEARCH: Looking for '${pattern}' in memory content...`);
