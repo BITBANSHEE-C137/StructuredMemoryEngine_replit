@@ -238,7 +238,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {/* RAG System Status Indicator */}
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg shadow-sm mb-4">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -248,23 +248,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <span className="text-xs font-medium text-white bg-green-600 px-2 py-0.5 rounded-full">Active</span>
               </div>
               
-              <div className="mt-2 text-xs text-blue-800 space-y-1">
-                <div className="flex justify-between">
-                  <span>Context retrieval:</span>
-                  <span className="font-medium">{contextSize} memories per query</span>
+              <div className="flex gap-2 flex-wrap">
+                <div className="bg-white/50 border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
+                  <span className="text-xs text-blue-800">Context Size</span>
+                  <span className="text-sm font-medium text-blue-900">{contextSize}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Similarity threshold:</span>
-                  <span className="font-medium">{parseFloat(similarityThreshold).toFixed(2)} ({(parseFloat(similarityThreshold) * 100).toFixed(0)}% min. confidence)</span>
+                
+                <div className="bg-white/50 border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
+                  <span className="text-xs text-blue-800">Threshold</span>
+                  <span className="text-sm font-medium text-blue-900">{parseFloat(similarityThreshold).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Embedding model:</span>
-                  <span className="font-medium">{settings?.defaultEmbeddingModelId || 'text-embedding-ada-002'}</span>
+                
+                <div className="bg-white/50 border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
+                  <span className="text-xs text-blue-800">Model</span>
+                  <span className="text-sm font-medium text-blue-900 truncate max-w-full">
+                    {settings?.defaultEmbeddingModelId?.includes('embedding') 
+                      ? settings?.defaultEmbeddingModelId.replace('text-embedding-', '')
+                      : 'text-embedding-3-small'}
+                  </span>
                 </div>
-              </div>
-              
-              <div className="mt-2 text-[10px] text-blue-700">
-                The system will retrieve previous memories that match your query with at least {(parseFloat(similarityThreshold) * 100).toFixed(0)}% similarity.
               </div>
             </div>
             
@@ -318,70 +320,78 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               </div>
               
-              {/* Advanced Threshold Controls */}
+              {/* Smart Retrieval Controls */}
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-sm font-medium text-primary">Advanced Threshold Controls</h4>
+                  <h4 className="text-sm font-medium text-primary">Smart Retrieval Controls</h4>
                   <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">New</div>
                 </div>
                 
-                <div className="p-3 bg-neutral/30 rounded-lg border border-neutral-dark/20 space-y-4">
-                  {/* Question Threshold Factor */}
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
+                  <p className="text-xs text-blue-800 mb-2">
+                    The system automatically detects questions vs. statements and adjusts memory retrieval accordingly:
+                  </p>
+                  <ul className="text-xs text-blue-800 list-disc list-inside space-y-1">
+                    <li>Questions get broader results to find potential answers</li>
+                    <li>Statements get more precise matching for accuracy</li>
+                  </ul>
+                </div>
+                
+                <div className="space-y-3">
+                  {/* Question Threshold Factor - Simplified */}
                   <div>
                     <label htmlFor="question-threshold" className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-primary font-medium">Question Threshold Factor</span>
+                      <span className="text-primary font-medium">Question Mode</span>
                       <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium">
-                        {parseFloat(questionThresholdFactor).toFixed(2)} ({(parseFloat(questionThresholdFactor) * 100).toFixed(0)}%)
+                        {parseFloat(questionThresholdFactor).toFixed(2)}
                       </span>
                     </label>
                     <input 
                       id="question-threshold" 
                       type="range" 
-                      min="0.5" 
-                      max="1" 
-                      step="0.01" 
+                      min="0.55" 
+                      max="0.85" 
+                      step="0.05" 
                       value={parseFloat(questionThresholdFactor)}
                       onChange={(e) => setQuestionThresholdFactor(e.target.value)}
-                      className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-primary border border-primary/20" 
+                      className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-blue-500 border border-blue-200" 
                       style={{ 
                         WebkitAppearance: 'none',
                         appearance: 'none',
                       }}
                     />
-                    <p className="text-xs text-primary-light mt-1">
-                      For questions, lower values find more memories with less similarity (recommended: 0.65-0.75)
-                    </p>
+                    <div className="flex justify-between text-xs text-blue-700 mt-1">
+                      <span>More Results</span>
+                      <span>Higher Accuracy</span>
+                    </div>
                   </div>
                   
-                  {/* Statement Threshold Factor */}
+                  {/* Statement Threshold Factor - Simplified */}
                   <div>
                     <label htmlFor="statement-threshold" className="flex items-center justify-between text-sm mb-1">
-                      <span className="text-primary font-medium">Statement Threshold Factor</span>
+                      <span className="text-primary font-medium">Statement Mode</span>
                       <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium">
-                        {parseFloat(statementThresholdFactor).toFixed(2)} ({(parseFloat(statementThresholdFactor) * 100).toFixed(0)}%)
+                        {parseFloat(statementThresholdFactor).toFixed(2)}
                       </span>
                     </label>
                     <input 
                       id="statement-threshold" 
                       type="range" 
-                      min="0.7" 
-                      max="1" 
-                      step="0.01" 
+                      min="0.75" 
+                      max="0.95" 
+                      step="0.05" 
                       value={parseFloat(statementThresholdFactor)}
                       onChange={(e) => setStatementThresholdFactor(e.target.value)}
-                      className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-primary border border-primary/20" 
+                      className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-purple-500 border border-purple-200" 
                       style={{ 
                         WebkitAppearance: 'none',
                         appearance: 'none',
                       }}
                     />
-                    <p className="text-xs text-primary-light mt-1">
-                      For statements, higher values ensure only very similar memories are found (recommended: 0.8-0.9)
-                    </p>
-                  </div>
-                  
-                  <div className="text-xs p-2 bg-blue-50 text-blue-700 rounded">
-                    <p>The system automatically detects whether your input is a question or statement and applies the appropriate threshold factor.</p>
+                    <div className="flex justify-between text-xs text-purple-700 mt-1">
+                      <span>More Results</span>
+                      <span>Higher Accuracy</span>
+                    </div>
                   </div>
                 </div>
               </div>
