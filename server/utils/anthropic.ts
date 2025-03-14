@@ -36,10 +36,23 @@ ${context}`
       ],
     });
     
-    return message.content[0].text;
-  } catch (error) {
+    // Extract the text content correctly regardless of block type
+    if (message.content && message.content.length > 0) {
+      const firstBlock = message.content[0];
+      if ('text' in firstBlock) {
+        return firstBlock.text;
+      } else if (firstBlock.type === 'text') {
+        return (firstBlock as any).text;
+      } else {
+        // Fallback for any other content type
+        return JSON.stringify(firstBlock);
+      }
+    }
+    return "Sorry, I couldn't generate a response at this time.";
+  } catch (error: any) {
     console.error("Error generating response from Anthropic:", error);
-    throw new Error(`Failed to generate response from Anthropic: ${error.message}`);
+    const errorMessage = error?.message || 'Unknown error';
+    throw new Error(`Failed to generate response from Anthropic: ${errorMessage}`);
   }
 }
 

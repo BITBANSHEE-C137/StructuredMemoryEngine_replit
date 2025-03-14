@@ -472,11 +472,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Add these direct hits to our relevantMemories regardless of vector similarity
             if (!relevantMemories.some(m => m.id === stmt.id)) {
-              relevantMemories.push({
+              // Create a memory with similarity score but without the directMatch property in the final object
+              const enhancedMemory = {
                 ...stmt,
-                similarity: 0.99, // Super high score to prioritize these matches
-                directMatch: true // Flag for debugging
-              });
+                similarity: 0.99 // Super high score to prioritize these matches
+              };
+              // Add to relevant memories (we'll log that it was a direct match but won't include in the object)
+              relevantMemories.push(enhancedMemory);
+              console.log(`Added direct match with ID ${stmt.id} to relevant memories`);
               console.log(`ADDED DIRECT HIT to relevantMemories: ID ${stmt.id}`);
             }
           }
@@ -515,7 +518,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // For each pattern, search in the memories table
           // Use the explicit type from our schema
-          const matchingStatements: (typeof memories.$inferSelect & { similarity: number; directMatch?: boolean })[] = [];
+          // Use a simpler type definition that matches what we actually store
+          const matchingStatements: (typeof memories.$inferSelect & { similarity: number })[] = [];
           
           for (const pattern of statementPatterns) {
             console.log(`DIRECT SEARCH: Looking for '${pattern}' in memory content...`);
@@ -547,11 +551,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     }
                   }
                   
-                  matchingStatements.push({
+                  // Create an object that matches our type without the directMatch property
+                  const enhancedStatement = {
                     ...stmt,
-                    similarity: 0.99, // Very high score to prioritize direct matches
-                    directMatch: true, // Debug flag
-                  });
+                    similarity: 0.99 // Very high score to prioritize direct matches
+                  };
+                  
+                  matchingStatements.push(enhancedStatement);
+                  // Log this as a direct match for debugging purposes
+                  console.log(`Added direct keyword match ID ${stmt.id} to results (similarity: 0.99)`);
                   
                   console.log(`Added direct match ID ${stmt.id} to results with similarity 0.99`);
                 }
