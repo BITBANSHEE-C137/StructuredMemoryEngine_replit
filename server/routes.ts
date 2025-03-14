@@ -325,10 +325,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Request more memories than needed to allow hybrid ranking to filter
       // For personal attribute questions, retrieve more memories with a lower threshold
       // This ensures we can find relevant statements that might not be semantically similar
+      // If we have a messageId (used for memory storage), pass it to exclude from results
       let relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
         contextSize * 4, // Increase significantly to allow for finding more potential matches
-        similarityThreshold * thresholdAdjustment
+        similarityThreshold * thresholdAdjustment,
+        newMemory?.id // Pass the memory ID to exclude from search results (prevent self-matches)
       );
       
       // CRITICAL DIRECT FERRARI DETECTION
@@ -370,12 +372,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (!relevantMemories.some(m => m.id === mem.id)) {
                 // Convert the raw database result to properly formatted memory object with similarity
                 const enhancedMemory = {
-                  id: mem.id, 
+                  id: Number(mem.id), 
                   content: typeof mem.content === 'string' ? mem.content : String(mem.content),
                   embedding: typeof mem.embedding === 'string' ? mem.embedding : String(mem.embedding),
-                  type: mem.type || 'prompt',
-                  timestamp: mem.timestamp instanceof Date ? mem.timestamp : new Date(mem.timestamp),
-                  messageId: mem.message_id,
+                  type: String(mem.type || 'prompt'),
+                  timestamp: mem.timestamp instanceof Date ? mem.timestamp : new Date(String(mem.timestamp)),
+                  messageId: mem.message_id ? Number(mem.message_id) : null,
                   metadata: mem.metadata || {},
                   similarity: 0.99 // Maximum score
                 };
