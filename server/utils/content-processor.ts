@@ -221,6 +221,22 @@ export function performKeywordMatch(query: string, content: string): number {
   const normalizedQuery = query.toLowerCase().trim();
   const normalizedContent = content.toLowerCase();
   
+  // Check for exact model numbers and brand-model combinations (high-value matches)
+  // This helps match things like "Ferrari 308GTSi" or "308GTSi" directly
+  const brandModelRegex = /\b([a-z]+[\s-]?[0-9]+[a-z0-9]*)\b/gi;
+  const queryBrandModels = normalizedQuery.match(brandModelRegex) || [];
+  const contentBrandModels = normalizedContent.match(brandModelRegex) || [];
+  
+  // Direct brand-model matches get very high scores
+  let brandModelScore = 0;
+  for (const brandModel of queryBrandModels) {
+    const normalizedBrandModel = brandModel.toLowerCase();
+    if (contentBrandModels.some(cm => cm.toLowerCase().includes(normalizedBrandModel))) {
+      brandModelScore += 5.0; // Very high score for direct brand-model matches
+      console.log(`Brand-model match found: "${normalizedBrandModel}" in query matches content`);
+    }
+  }
+  
   // Extract both individual words and multi-word phrases
   const queryWords = normalizedQuery
     .split(/\s+/)
@@ -242,7 +258,18 @@ export function performKeywordMatch(query: string, content: string): number {
     }
   }
   
-  if (queryWords.length === 0 && queryPhrases.length === 0) {
+  // Special case for short queries that might be entity names or model numbers
+  if (queryWords.length <= 2 && normalizedQuery.length > 0) {
+    // For short queries like "Ferrari" or "308GTSi", ensure they're represented
+    const shortQueryWords = normalizedQuery.split(/\s+/).filter(w => w.length > 0);
+    for (const word of shortQueryWords) {
+      if (!queryWords.includes(word) && word.length > 1) {
+        queryWords.push(word);
+      }
+    }
+  }
+  
+  if (queryWords.length === 0 && queryPhrases.length === 0 && brandModelScore === 0) {
     return 0;
   }
   
@@ -268,7 +295,7 @@ export function performKeywordMatch(query: string, content: string): number {
   }
   
   // Normalize word score
-  const maxWordScore = queryWords.length * 2.5; // Max possible score including all bonuses
+  const maxWordScore = Math.max(1, queryWords.length * 2.5); // Max possible score including all bonuses
   const normalizedWordScore = wordScore / maxWordScore;
   
   // Check for phrase matches (these are more significant)
@@ -286,13 +313,22 @@ export function performKeywordMatch(query: string, content: string): number {
   }
   
   // Normalize phrase score
-  const maxPhraseScore = queryPhrases.length * 4.0; // Max possible including all bonuses
-  const normalizedPhraseScore = phraseScore / (maxPhraseScore || 1); // Prevent division by zero
+  const maxPhraseScore = Math.max(1, queryPhrases.length * 4.0); // Max possible including all bonuses
+  const normalizedPhraseScore = phraseScore / maxPhraseScore;
   
-  // Combine scores, giving more weight to phrase matches when available
-  if (queryPhrases.length > 0) {
-    return (normalizedWordScore * 0.4) + (normalizedPhraseScore * 0.6);
+  // Normalize brand-model score
+  const maxBrandModelScore = Math.max(1, queryBrandModels.length * 5.0);
+  const normalizedBrandModelScore = brandModelScore / maxBrandModelScore;
+  
+  // Combine scores, prioritizing brand-model matches the most
+  if (brandModelScore > 0) {
+    // When we have brand-model matches, they dominate the score
+    return Math.min(1.0, 0.7 * normalizedBrandModelScore + 0.2 * normalizedPhraseScore + 0.1 * normalizedWordScore);
+  } else if (queryPhrases.length > 0) {
+    // Otherwise, prioritize phrase matches when available
+    return Math.min(1.0, 0.4 * normalizedWordScore + 0.6 * normalizedPhraseScore);
   } else {
+    // Fall back to just word matches
     return normalizedWordScore;
   }
 }
