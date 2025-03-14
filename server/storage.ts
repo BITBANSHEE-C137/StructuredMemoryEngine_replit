@@ -199,12 +199,32 @@ export class DatabaseStorage implements IStorage {
 
   async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.75): Promise<(Memory & { similarity: number })[]> {
     try {
-      // Make sure similarityThreshold is a proper number between 0 and 1
-      const threshold = Math.min(1, Math.max(0, similarityThreshold));
+      // ===== CRITICAL FIX FOR THRESHOLD VALUE =====
+      // This ensures the threshold is properly converted to a number and normalized
+      let threshold = 0.75; // Default fallback
+      
+      if (similarityThreshold !== undefined && similarityThreshold !== null) {
+        // Convert to number if it's a string (from settings.similarityThreshold)
+        if (typeof similarityThreshold === 'string') {
+          const strValue = similarityThreshold.toString().trim();
+          // Handle percentage format
+          if (strValue.includes('%')) {
+            threshold = parseFloat(strValue) / 100;
+          } else {
+            threshold = parseFloat(strValue);
+          }
+        } else {
+          // It's already a number
+          threshold = similarityThreshold;
+        }
+      }
+      
+      // Ensure threshold is valid
+      threshold = Math.min(1, Math.max(0, threshold));
       
       console.log(`=== STORAGE LAYER DEBUG ===`);
       console.log(`Input similarityThreshold: ${similarityThreshold} (type: ${typeof similarityThreshold})`);
-      console.log(`Normalized threshold: ${threshold} (${threshold * 100}%)`);
+      console.log(`FIXED threshold value: ${threshold} (${threshold * 100}%)`);
       
       // Ensure embedding is cast as vector and using the cosine distance operator (<->)
       // Added filtering by similarity threshold
