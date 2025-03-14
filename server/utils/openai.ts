@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import ragPrompts from "./rag-prompts";
 
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 // Initialize OpenAI client with API key from environment variables
@@ -28,13 +29,17 @@ export async function generateEmbedding(text: string, embeddingModel: string = "
 export async function generateResponse(
   prompt: string, 
   context: string, 
-  model: string = "gpt-4o"
+  model: string = "gpt-4o",
+  isPineconeAvailable: boolean = false,
+  useCase: 'general' | 'aviation' | 'jarvis' | 'personal_assistant' | 'legal' | 'customer_support' = 'jarvis'
 ): Promise<string> {
   try {
-    // Create a system message with context
-    const systemMessage = context 
-      ? `You are an AI assistant with access to relevant context. Use this context to inform your responses:\n\n${context}`
-      : "You are a helpful assistant called the Structured Memory Engine that uses RAG (Retrieval Augmented Generation) to access relevant memories from previous conversations.";
+    // Create a system message with context using the tiered RAG prompts
+    const systemMessage = ragPrompts.generateSpecializedRagPrompt(
+      useCase,
+      context,
+      isPineconeAvailable
+    );
     
     const response = await openai.chat.completions.create({
       model: model,

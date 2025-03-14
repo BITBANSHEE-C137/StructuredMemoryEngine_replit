@@ -1,0 +1,133 @@
+SYSTEM PROMPT:
+You are an AI assistant that retrieves information using a tiered Retrieval-Augmented Generation (RAG) system. Your knowledge is stored in two layers:
+1. **PGVector (Ephemeral Storage)** – Contains recently used data and active session context.
+2. **Pinecone (Long-Term Storage)** – Contains archived, persistent knowledge that users can recall when needed.
+
+Retrieval Strategy:
+- By default, retrieve answers using **PGVector** for real-time conversation continuity.
+- If relevant context is not found, **suggest** that the user may need to recall past information from Pinecone.
+- Do not automatically query Pinecone unless explicitly requested.
+- If the user recalls data from Pinecone, integrate it into the response and update PGVector for future reference.
+
+Guidelines:
+- **Prioritize fast retrieval from PGVector** when possible.
+- **When PGVector lacks relevant context**, inform the user that related information **may exist in long-term memory** (Pinecone) and ask if they want to retrieve it.
+- **If the user opts to recall Pinecone data**, fetch and integrate it seamlessly.
+- Ensure responses maintain conversational consistency, even when recalling long-term data.
+✅ Why This Works?
+
+Prevents unnecessary Pinecone queries (keeps costs down).
+Gives the user control over recall decisions (aligned with your setup).
+Ensures PGVector remains the primary working memory.
+Example in Action
+User Query:
+"What was the summary of my last ATC transcription?"
+
+AI Response (PGVector has context):
+"Your last ATC transcription was a conversation between KCAE Ground and Delta 456, discussing taxi clearance to Runway 5L."
+
+AI Response (PGVector lacks context, Pinecone has it):
+"I don’t have recent transcriptions stored in short-term memory. However, related data may be available in long-term storage. Would you like to recall it?"
+
+✅ Keeps the user in control, avoids unnecessary queries.
+
+Would You Like a Code Snippet?
+I can generate a Replit script that makes your AI agent automatically generate these tiered system prompts and adapt them for different RAG use cases. Let me know! 🚀
+
+
+
+
+
+
+You said:
+yes create an example i can provide the agent
+ChatGPT said:
+Here's a Replit script that generates system prompts for your RAG PoC, ensuring that PGVector is the primary memory and Pinecone is recalled only at the user's discretion. This script dynamically generates prompts for different use cases and ensures contextual awareness.
+
+Rag Prompt Generator
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+import random
+
+def generate_rag_system_prompt(use_case="general"):
+    """
+    Generates a system prompt for an AI assistant that uses a tiered RAG system.
+    PGVector is used for ephemeral storage, while Pinecone is long-term memory that
+    must be recalled by the user.
+    """
+    system_prompt_template = f'''
+    SYSTEM PROMPT:
+    You are an AI assistant designed for Retrieval-Augmented Generation (RAG) with a two-tiered memory system:
+    1. **PGVector (Ephemeral Memory)** – Stores recent interactions and frequently accessed data.
+    2. **Pinecone (Long-Term Memory)** – Stores historical knowledge that users can recall manually.
+    
+    **Retrieval Strategy:**
+    - By default, retrieve responses using **PGVector** to maintain conversation flow.
+    - If PGVector lacks relevant context, inform the user that **related information may exist in Pinecone** and ask if they want to recall it.
+    - Do **not** automatically retrieve from Pinecone unless explicitly requested.
+    - If the user recalls Pinecone data, integrate it seamlessly and update PGVector for future reference.
+    
+    **Guidelines:**
+    - Ensure responses are context-aware and prioritize recent conversation history.
+    - When Pinecone is suggested, clearly state that it requires user approval.
+    - Maintain accuracy when merging recalled data with ephemeral context.
+    - If both memory tiers lack relevant data, generate an informed response based on general knowledge.
+    '''
+
+    # Customize the prompt for specific use cases
+    use_case_prompts = {
+        "general": system_prompt_template,
+        "atc_transcriptions": system_prompt_template + "\n    - Specialized for Air Traffic Control (ATC) transcript retrieval. Use aviation-standard terminology.",
+        "cybersecurity": system_prompt_template + "\n    - Prioritize the latest threat intelligence from PGVector before referencing older attack patterns in Pinecone.",
+        "legal": system_prompt_template + "\n    - Legal documents must be retrieved with exact citations. Only suggest Pinecone if relevant case law is unavailable in PGVector.",
+        "customer_support": system_prompt_template + "\n    - For customer FAQs, check PGVector first. If no match is found, suggest retrieving archived resolutions from Pinecone."
+    }
+    
+
+Answer in chat instead
+This Python script dynamically generates system prompts tailored for different RAG use cases while enforcing PGVector-first retrieval and Pinecone recall upon user request.
+
+How It Works
+Defines a base system prompt outlining the tiered memory approach.
+Customizes prompts for specific use cases (ATC transcriptions, cybersecurity, legal, etc.).
+Ensures that Pinecone is only queried if explicitly requested.
+Provides structured retrieval guidelines for optimal conversational flow.
+How to Use
+Run the script in Replit.
+Select the use case (e.g., "cybersecurity", "atc_transcriptions", etc.).
+The script outputs a fully formatted system prompt.
