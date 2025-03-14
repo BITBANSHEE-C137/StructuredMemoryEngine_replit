@@ -325,12 +325,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Request more memories than needed to allow hybrid ranking to filter
       // For personal attribute questions, retrieve more memories with a lower threshold
       // This ensures we can find relevant statements that might not be semantically similar
-      // If we have a messageId (used for memory storage), pass it to exclude from results
+      // Pass the user memory ID to exclude from results (prevent self-matches)
       let relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
         contextSize * 4, // Increase significantly to allow for finding more potential matches
         similarityThreshold * thresholdAdjustment,
-        newMemory?.id // Pass the memory ID to exclude from search results (prevent self-matches)
+        userMemory.id // Pass the memory ID to exclude from search results (prevent self-matches)
       );
       
       // CRITICAL DIRECT FERRARI DETECTION
@@ -348,6 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             FROM memories
             WHERE (LOWER(content) LIKE ${'%ferrari%'} OR LOWER(content) LIKE ${'%308%'})
               AND LOWER(content) NOT LIKE ${'%what%'}  -- Exclude questions
+              AND id != ${userMemory.id}  -- Exclude current memory (prevent self-matches)
             ORDER BY 
               CASE 
                 WHEN LOWER(content) LIKE ${'%my favorite car%'} THEN 1
@@ -520,9 +521,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Execute the dynamic query with all conditions joined with OR
           console.log(`Executing universal context search with ${sqlConditions.length} conditions`);
+          // Execute SQL query but exclude the current memory to prevent self-matching
           const directStatements = await db.select()
             .from(memories)
-            .where(sql.join(sqlConditions, ' OR '))
+            .where(
+              sql`(${sql.join(sqlConditions, ' OR ')}) AND id != ${userMemory.id}`
+            )
             .limit(15);
           
           console.log(`FOUND ${directStatements.length} DIRECT MATCHING STATEMENTS`);
@@ -585,10 +589,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const pattern of statementPatterns) {
             console.log(`DIRECT SEARCH: Looking for '${pattern}' in memory content...`);
             
-            // Execute a case-insensitive SQL LIKE query to find matches
+            // Execute a case-insensitive SQL LIKE query to find matches, excluding current memory
             const statements = await db.select()
                 .from(memories)
-                .where(sql`LOWER(content) LIKE ${`%${pattern.toLowerCase()}%`}`)
+                .where(sql`LOWER(content) LIKE ${`%${pattern.toLowerCase()}%`} AND id != ${userMemory.id}`)
                 .limit(10);
             
             console.log(`DIRECT SEARCH RESULT: Found ${statements.length} matches for '${pattern}'`);
