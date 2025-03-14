@@ -749,10 +749,15 @@ CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
    - When you receive a statement containing personal information, immediately flag it mentally as high-priority information
 
 4. MEMORY TYPE PRIORITIZATION:
-   - When responding to questions about user preferences, prioritize memories that contain DECLARATIONS or STATEMENTS
-   - For questions like "what is my favorite X?", specifically search for memories containing "my favorite X is..." or similar declarative patterns
-   - Don't just retrieve similar questions - find the actual answers in memory
-   - When multiple memories discuss the same topic, prioritize STATEMENTS over QUESTIONS
+   - CRITICALLY IMPORTANT: When responding to questions about user preferences, ALWAYS PRIORITIZE memories that contain DECLARATIONS or STATEMENTS
+   - For questions like "what is my favorite X?", you MUST specifically look for memories containing patterns like:
+     * "my favorite X is..."
+     * "I like/love/prefer X"
+     * "testing...my X is..."
+     * Any memory where a user states a preference
+   - NEVER prioritize memories that only contain the same question
+   - If you see memories with the same question repeated, but other memories contain actual statements from the user, USE THE STATEMENTS
+   - The most relevant information is often in different memories than those with the highest vector similarity scores
 
 5. USER INFORMATION EXTRACTION:
    - Actively scan all retrieved memories for personal declarations in formats like:
