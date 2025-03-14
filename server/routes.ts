@@ -365,9 +365,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       context += `\n\nIMPORTANT SYSTEM NOTES:
 1. You are the Structured Memory Engine, a RAG-based AI assistant that uses vector similarity to find relevant memories.
 2. The current model you're using is: ${model.name} (${model.provider})
-3. You have access to ${contextSize} relevant memories for each query.
+3. You have access to ${contextSize} relevant memories for each query with a similarity threshold of ${settings.similarityThreshold}.
 4. If asked about your configuration or settings, you can directly answer with this information.
-5. For queries like "summarize recent chats" or "what model is this?", you can access this system information to answer.`;
+5. For queries like "summarize recent chats" or "what model is this?", you can access this system information to answer.
+
+CONVERSATIONAL MEMORY HANDLING:
+1. When asked about personal attributes or preferences (e.g., "what's my favorite car?"), use the provided memories.
+2. If there's a direct mention of the attribute in memories, use that information without hesitation.
+3. If no specific memory about a preference exists, acknowledge this fact and indicate you'll remember the information if provided.
+4. Prioritize actual statements like "My favorite car is X" over questions about favorites that didn't receive answers.
+5. Never invent or assume personal preferences, attributes, or biographical details not found in memories.`;
       
       // 6. Generate response based on provider
       let response = '';

@@ -221,6 +221,59 @@ export function performKeywordMatch(query: string, content: string): number {
   const normalizedQuery = query.toLowerCase().trim();
   const normalizedContent = content.toLowerCase();
   
+  // Enhanced question handling for contextual queries
+  // This is critical for questions like "what's my favorite car?"
+  const isQueryQuestion = normalizedQuery.includes("?") || 
+                        normalizedQuery.startsWith("what") || 
+                        normalizedQuery.startsWith("who") || 
+                        normalizedQuery.startsWith("when") || 
+                        normalizedQuery.startsWith("where") || 
+                        normalizedQuery.startsWith("why") || 
+                        normalizedQuery.startsWith("how") ||
+                        normalizedQuery.startsWith("can you") ||
+                        normalizedQuery.startsWith("could you");
+  
+  // Special handling for personal preference questions
+  if (isQueryQuestion) {
+    // Extract "favorite X" pattern
+    const favoritesMatch = normalizedQuery.match(/(?:my|your|their|his|her|our)?\s*(?:favorite|preferred|best)\s+(\w+)/i);
+    if (favoritesMatch) {
+      const favoriteSubject = favoritesMatch[1]; // e.g., "car", "color", etc.
+      
+      console.log(`[content-processor] Detected favorite query about: ${favoriteSubject}`);
+      
+      // Check if content contains this type of information with higher sensitivity
+      if (
+        (normalizedContent.includes("favorite") || normalizedContent.includes("prefer") || normalizedContent.includes("best")) && 
+        normalizedContent.includes(favoriteSubject)
+      ) {
+        // If the content contains statements about favorites of the requested subject
+        // this is potentially a direct answer to the query
+        console.log(`[content-processor] Found potential favorite ${favoriteSubject} answer in content`);
+        return 0.95; // Very high relevance for direct preference answers
+      }
+      
+      // Check for simple mentions of the subject in responses (might be partial answers)
+      if (normalizedContent.includes(favoriteSubject)) {
+        // Give strong preference to any mention of the subject in memories
+        return 0.85; // Good relevance for subject-related memories
+      }
+    }
+    
+    // Special handling for possession, identity or attribute questions
+    const attributeMatch = normalizedQuery.match(/(?:what|which|who)\s+(?:is|are|was|were)?\s+(?:my|your|their|his|her|our)\s+(\w+)/i);
+    if (attributeMatch) {
+      const attribute = attributeMatch[1]; // e.g., "name", "age", "car", etc.
+      
+      // Check if content answers this possession/identity question
+      if (normalizedContent.includes(attribute) && 
+          (normalizedContent.includes("your") || normalizedContent.includes("my") || 
+           normalizedContent.includes("is") || normalizedContent.includes("are"))) {
+        return 0.90; // High relevance for potential answers about possessions/attributes
+      }
+    }
+  }
+  
   // Check for exact model numbers and brand-model combinations (high-value matches)
   // This helps match things like "Ferrari 308GTSi" or "308GTSi" directly
   const brandModelRegex = /\b([a-z]+[\s-]?[0-9]+[a-z0-9]*)\b/gi;
@@ -398,13 +451,23 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
     const keywordScore = performKeywordMatch(query, memory.content);
     const hybridScore = calculateHybridScore(memory.similarity, keywordScore);
     
-    // More permissive threshold for hybrid scoring
-    const adjustedThreshold = originalThreshold * 0.85;
+    // Dynamically calculate adjusted threshold based on user's setting
+    // Using a percentage-based adjustment to respect user's preferences
+    const permissiveness = 0.85; // Reduces threshold by 15% for hybrid scoring
+    const adjustedThreshold = originalThreshold * permissiveness;
+    
+    // Define keyword thresholds relative to the user's similarity setting
+    // This ensures the system adapts to the user's preference for strictness
+    const strongKeywordThreshold = Math.max(0.6, originalThreshold * 0.8);
+    const moderateKeywordThreshold = Math.max(0.4, originalThreshold * 0.6);
     
     // Strong keyword matches can override vector similarity threshold
     // This allows highly relevant content to surface even with lower vector similarity
-    const hasStrongKeywordMatch = keywordScore > 0.6;
-    const hasModerateKeywordMatch = keywordScore > 0.4;
+    const hasStrongKeywordMatch = keywordScore > strongKeywordThreshold;
+    const hasModerateKeywordMatch = keywordScore > moderateKeywordThreshold;
+    
+    console.log(`Memory evaluation: Vector similarity ${memory.similarity.toFixed(2)} (threshold ${originalThreshold.toFixed(2)}), ` +
+                `Keyword score ${keywordScore.toFixed(2)} (strong: ${strongKeywordThreshold.toFixed(2)}, moderate: ${moderateKeywordThreshold.toFixed(2)})`);
     
     // Three ways to meet the threshold:
     // 1. Vector similarity alone is high enough
