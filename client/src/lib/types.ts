@@ -47,6 +47,9 @@ export interface Settings {
   defaultModelId: string;
   defaultEmbeddingModelId: string;
   autoClearMemories: boolean;
+  // New dynamic threshold adjustment factors
+  questionThresholdFactor: string;
+  statementThresholdFactor: string;
 }
 
 export interface RelevantMemory {
