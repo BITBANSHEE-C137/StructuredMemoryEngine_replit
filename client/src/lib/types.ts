@@ -11,6 +11,12 @@ export interface Message {
   // Add optional context property for additional data like similarity threshold
   context?: {
     similarityThreshold?: number;
+    thresholdDetails?: {
+      baseThreshold: number;      // Original threshold from settings
+      adjustmentFactor: number;   // Adjustment factor (lower for questions, higher for statements)
+      adjustedThreshold: number;  // Final threshold after adjustment
+      isQuestion: boolean;        // Whether the query was classified as a question
+    };
     [key: string]: any;
   };
 }
@@ -35,6 +41,12 @@ export interface ChatResponse {
       similarity: number;
     }[];
     similarityThreshold?: number; // Added similarity threshold used for query
+    thresholdDetails?: {
+      baseThreshold: number;      // Original threshold from settings
+      adjustmentFactor: number;   // Adjustment factor (lower for questions, higher for statements)
+      adjustedThreshold: number;  // Final threshold after adjustment
+      isQuestion: boolean;        // Whether the query was classified as a question
+    };
   };
 }
 

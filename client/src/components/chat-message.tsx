@@ -14,6 +14,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   // Use memories attached to the message itself (if available)
   const relevantMemories = message.relevantMemories;
   const similarityThreshold = message.context?.similarityThreshold; // Get similarity threshold
+  const thresholdDetails = message.context?.thresholdDetails; // Get detailed threshold information
   const isUser = message.role === 'user';
 
   return (
@@ -91,11 +92,29 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                     <div className="text-[10px] text-primary/70 mb-2 flex justify-between items-center">
                       <span>Showing relevant context used to generate this response</span>
                       <div className="flex gap-2">
-                        {similarityThreshold && (
+                        {thresholdDetails ? (
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <span className={`w-1.5 h-1.5 rounded-full ${thresholdDetails.isQuestion ? 'bg-blue-500' : 'bg-purple-500'}`}></span>
+                              {thresholdDetails.isQuestion ? 'Question' : 'Statement'} Mode
+                            </span>
+                            <div className="flex gap-1">
+                              <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
+                                Base: {(thresholdDetails.baseThreshold * 100).toFixed(1)}%
+                              </span>
+                              <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
+                                Factor: {(thresholdDetails.adjustmentFactor * 100).toFixed(0)}%
+                              </span>
+                              <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
+                                Final: {(thresholdDetails.adjustedThreshold * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        ) : similarityThreshold ? (
                           <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
                             Threshold: {(similarityThreshold * 100).toFixed(1)}%
                           </span>
-                        )}
+                        ) : null}
                         <span className="font-medium text-primary/90 bg-primary/5 px-1.5 py-0.5 rounded">
                           Similarity: {relevantMemories.length > 0 && Math.min(...relevantMemories.map(m => m.similarity)) > 0 
                             ? `${(Math.min(...relevantMemories.map(m => m.similarity)) * 100).toFixed(1)}%` 

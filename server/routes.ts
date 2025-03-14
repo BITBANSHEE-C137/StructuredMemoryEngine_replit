@@ -896,7 +896,7 @@ CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
         }
       });
       
-      // 10. Return response with metadata including the similarity threshold
+      // 10. Return response with metadata including detailed similarity threshold information
       res.json({
         message: assistantMessage,
         context: {
@@ -905,7 +905,13 @@ CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
             content: m.content,
             similarity: m.similarity
           })),
-          similarityThreshold: similarityThreshold * thresholdAdjustment // Include the actual threshold used
+          similarityThreshold: similarityThreshold * thresholdAdjustment, // Include the actual threshold used
+          thresholdDetails: {
+            baseThreshold: similarityThreshold,
+            adjustmentFactor: thresholdAdjustment,
+            adjustedThreshold: similarityThreshold * thresholdAdjustment,
+            isQuestion: isQuestion
+          }
         }
       });
     } catch (err) {
