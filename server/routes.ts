@@ -368,10 +368,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ferrariMemories.forEach(mem => {
               // Only add if not already in relevant memories
               if (!relevantMemories.some(m => m.id === mem.id)) {
-                relevantMemories.unshift({
-                  ...mem,
+                // Convert the raw database result to properly formatted memory object with similarity
+                const enhancedMemory = {
+                  id: mem.id, 
+                  content: typeof mem.content === 'string' ? mem.content : String(mem.content),
+                  embedding: typeof mem.embedding === 'string' ? mem.embedding : String(mem.embedding),
+                  type: mem.type || 'prompt',
+                  timestamp: mem.timestamp instanceof Date ? mem.timestamp : new Date(mem.timestamp),
+                  messageId: mem.message_id,
+                  metadata: mem.metadata || {},
                   similarity: 0.99 // Maximum score
-                });
+                };
+                relevantMemories.unshift(enhancedMemory);
               }
             });
             
