@@ -202,7 +202,9 @@ export class DatabaseStorage implements IStorage {
       // Make sure similarityThreshold is a proper number between 0 and 1
       const threshold = Math.min(1, Math.max(0, similarityThreshold));
       
-      console.log(`Querying memories with similarityThreshold: ${threshold} (${threshold * 100}%)`);
+      console.log(`=== STORAGE LAYER DEBUG ===`);
+      console.log(`Input similarityThreshold: ${similarityThreshold} (type: ${typeof similarityThreshold})`);
+      console.log(`Normalized threshold: ${threshold} (${threshold * 100}%)`);
       
       // Ensure embedding is cast as vector and using the cosine distance operator (<->)
       // Added filtering by similarity threshold
@@ -216,7 +218,12 @@ export class DatabaseStorage implements IStorage {
         LIMIT ${limit}
       `);
       
-      console.log(`Successfully found ${result.length} relevant memories with similarity >= ${threshold} (raw threshold = ${similarityThreshold})`);
+      console.log(`Successfully found ${result.length} relevant memories with similarity >= ${threshold}`);
+      if (result.length > 0) {
+        console.log(`First memory similarity: ${result[0].similarity}`);
+        console.log(`Last memory similarity: ${result[result.length-1].similarity}`);
+      }
+      console.log(`=== END STORAGE LAYER DEBUG ===`);
       
       // Convert the raw result to Memory objects with similarity score
       return result.map(row => ({

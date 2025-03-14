@@ -256,7 +256,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 4. Retrieve relevant memories based on the embedding
       const contextSize = settings.contextSize || 5;
       // Parse the similarity threshold as a float (it's stored as a string in the DB)
-      console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}"`);
+      console.log(`=== SIMILARITY THRESHOLD DEBUGGING ===`);
+      console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}" (type: ${typeof settings.similarityThreshold})`);
       
       // Get the current setting value and parse it more carefully
       let similarityThreshold = 0.75; // Default fallback value
@@ -264,13 +265,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         if (settings.similarityThreshold) {
           const rawValue = settings.similarityThreshold.toString().trim();
+          console.log(`Trimmed raw value: "${rawValue}"`);
           
           // Handle percentage format (e.g. "85%")
           if (rawValue.includes('%')) {
             similarityThreshold = parseFloat(rawValue) / 100;
+            console.log(`Percentage format detected, parsed as: ${similarityThreshold}`);
           } else {
             // Handle decimal format (e.g. "0.85")
             similarityThreshold = parseFloat(rawValue);
+            console.log(`Decimal format detected, parsed as: ${similarityThreshold}`);
           }
           
           // Check for NaN and apply limits
@@ -286,10 +290,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure the threshold is a valid value between 0 and 1
       similarityThreshold = Math.max(0, Math.min(1, similarityThreshold));
       
-      console.log(`Parsed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
+      console.log(`Final parsed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       if (similarityThreshold !== parseFloat(settings.similarityThreshold)) {
         console.log(`Note: Parsed value differs from raw settings value - this is the issue we're fixing`);
       }
+      console.log(`=== END THRESHOLD DEBUGGING ===`);
       
       console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       
