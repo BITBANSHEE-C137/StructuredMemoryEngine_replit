@@ -44,14 +44,29 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [messages]);
   
-  // Auto-scroll to input on initial load
+  // Auto-scroll to input on initial load and focus the textarea
   useEffect(() => {
     // Scroll to input area when component mounts
     const messageInput = document.querySelector('.message-input-area');
     if (messageInput) {
       messageInput.scrollIntoView({ behavior: 'auto' });
     }
+    
+    // Focus the textarea when component mounts
+    if (textareaRef.current) {
+      textareaRef.current.focus();
+    }
   }, []);
+  
+  // Re-focus the textarea whenever messages change (after a new response is received)
+  useEffect(() => {
+    if (!isLoading && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [messages, isLoading]);
+  
+  // Create a ref for the form to manage focus better
+  const formRef = useRef<HTMLFormElement>(null);
   
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,6 +79,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     // Reset textarea height
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
+      
+      // Refocus the textarea immediately and again after a delay
+      textareaRef.current.focus();
+      
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }, 10);
     }
     
     // Send message and get context
@@ -200,7 +224,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         {/* Message Input Area - Fixed at bottom */}
         <div className="message-input-area border-t border-primary/10 p-4 bg-gradient-to-b from-white to-primary/5 sticky bottom-0 z-10">
-          <form onSubmit={handleSubmit} className="flex items-start space-x-3 max-w-4xl mx-auto">
+          <form ref={formRef} onSubmit={handleSubmit} className="flex items-start space-x-3 max-w-4xl mx-auto">
             <div className="relative flex-1">
               <textarea
                 ref={textareaRef}
