@@ -42,14 +42,28 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
     }
-  }, [messages]);
+    
+    // Refocus the textarea when messages are updated, but only if we're not loading
+    // This ensures focus goes back to input after responses appear
+    if (!isLoading && textareaRef.current) {
+      // Small delay to ensure scroll completes first
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 100);
+    }
+  }, [messages, isLoading]);
   
-  // Auto-scroll to input on initial load
+  // Auto-scroll to input on initial load and focus the textarea
   useEffect(() => {
     // Scroll to input area when component mounts
     const messageInput = document.querySelector('.message-input-area');
     if (messageInput) {
       messageInput.scrollIntoView({ behavior: 'auto' });
+    }
+    
+    // Auto-focus the textarea when component mounts
+    if (textareaRef.current) {
+      textareaRef.current.focus();
     }
   }, []);
   
@@ -61,9 +75,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const trimmedInput = input.trim();
     setInput('');
     
+    // Save the reference to the textarea to refocus later
+    const currentTextarea = textareaRef.current;
+    
     // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+    if (currentTextarea) {
+      currentTextarea.style.height = 'auto';
     }
     
     // Send message and get context
@@ -84,7 +101,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             [latestAssistantMessage.id]: context.relevantMemories
           }));
         }
+        
+        // After the message is processed, refocus the textarea
+        if (currentTextarea) {
+          currentTextarea.focus();
+        }
       }, 100); // Small delay to ensure messages are updated
+    } else {
+      // If no context is returned (error or other issue), still refocus
+      setTimeout(() => {
+        if (currentTextarea) {
+          currentTextarea.focus();
+        }
+      }, 100);
     }
   };
   
@@ -222,6 +251,12 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     handleSubmit(e);
+                    // Maintain focus after pressing Enter
+                    setTimeout(() => {
+                      if (textareaRef.current) {
+                        textareaRef.current.focus();
+                      }
+                    }, 0);
                   }
                 }}
                 disabled={isLoading}
@@ -243,6 +278,14 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
               type="submit"
               className="bg-gradient-to-br from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white rounded-xl px-4 py-3 font-medium flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 shadow-md disabled:opacity-50 disabled:pointer-events-none h-[50px] flex-shrink-0 sticky top-0"
               disabled={isLoading || !input.trim()}
+              onClick={() => {
+                // Return focus to textarea after button click is processed
+                setTimeout(() => {
+                  if (textareaRef.current) {
+                    textareaRef.current.focus();
+                  }
+                }, 0);
+              }}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
