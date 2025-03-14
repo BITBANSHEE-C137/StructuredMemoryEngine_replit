@@ -10,25 +10,40 @@ import { useAuth } from "@/hooks/useAuth";
 
 // AuthGuard component for protected routes
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, error } = useAuth();
   const [, navigate] = useLocation();
   const [isOnLoginPage] = useRoute("/login");
+  const [isOnNotFoundPage] = useRoute("/:rest*");
+  
+  console.log("AuthGuard state:", { 
+    isAuthenticated, 
+    isLoading,
+    hasError: !!error,
+    isOnLoginPage,
+    isOnNotFoundPage,
+    currentPath: window.location.pathname
+  });
   
   // Use useEffect for navigation to avoid React warning about setState during render
   useEffect(() => {
     // Don't redirect during loading
     if (isLoading) return;
     
+    // Don't redirect for Not Found page
+    if (isOnNotFoundPage && window.location.pathname !== "/") return;
+    
     // Redirect to login if not authenticated and not already on login page
     if (!isAuthenticated && !isOnLoginPage) {
+      console.log("Redirecting to login page");
       navigate("/login");
     }
     
     // Redirect to home if authenticated and on login page
     if (isAuthenticated && isOnLoginPage) {
+      console.log("Redirecting to home page");
       navigate("/");
     }
-  }, [isAuthenticated, isLoading, isOnLoginPage, navigate]);
+  }, [isAuthenticated, isLoading, isOnLoginPage, isOnNotFoundPage, navigate]);
   
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -49,15 +64,31 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
+  console.log("App component rendering");
+  const [location] = useLocation();
+  
+  console.log("Current location:", location);
+  
+  // Split routes into two categories based on whether they need auth
+  // This helps avoid authentication circular redirects
+  const isPublicRoute = location === "/login" || location.startsWith("/not-found");
+  
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthGuard>
+      {isPublicRoute ? (
+        /* Public routes - Login and Not Found */
         <Switch>
           <Route path="/login" component={Login} />
-          <Route path="/" component={Home} />
           <Route component={NotFound} />
         </Switch>
-      </AuthGuard>
+      ) : (
+        /* Protected routes - require authentication */
+        <AuthGuard>
+          <Switch>
+            <Route path="/" component={Home} />
+          </Switch>
+        </AuthGuard>
+      )}
       <Toaster />
     </QueryClientProvider>
   );
