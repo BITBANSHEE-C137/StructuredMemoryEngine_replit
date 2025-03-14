@@ -266,12 +266,14 @@ export class DatabaseStorage implements IStorage {
       
       // Try fallback to basic query without vector operations
       try {
-        console.log(`Trying fallback query with threshold=${threshold}...`);
+        // We need to use the same threshold that was normalized above
+        const fallbackThreshold = Number(similarityThreshold) || 0.75;
+        console.log(`Trying fallback query with threshold=${fallbackThreshold}...`);
         const fallbackResult = await db.select().from(memories).limit(limit);
         
         return fallbackResult.map(row => ({
           ...row,
-          similarity: threshold // Use the same threshold that was passed to the function
+          similarity: fallbackThreshold // Use the same threshold that was passed to the function
         }));
       } catch (fallbackError) {
         console.error("Fallback query also failed:", fallbackError);
