@@ -315,8 +315,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 7. Generate response based on provider with tiered RAG approach
       let response = '';
-      // Use 'structured_memory' as the default useCase for our advanced memory system
-      const useCase = 'structured_memory';
+      // Use 'jarvis' as the default useCase to match the Iron Man Jarvis concept
+      const useCase = 'jarvis';
       
       if (model.provider === 'openai') {
         response = await openai.generateResponse(
@@ -400,11 +400,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return {
         response: `I'm an AI assistant powered by the ${model.name} model from ${model.provider}, with a maximum context capacity of ${model.maxTokens} tokens.
 
-My memory system uses a sophisticated two-tiered approach:
-- Short-term memory (PGVector): Contains ${settings.contextSize} most relevant memories per query with a similarity threshold of ${settings.similarityThreshold}
-- Long-term memory (Pinecone): ${pineconeStatus} for archival knowledge retrieval
+My memory system uses a tiered approach to manage information:
+- Primary memory (PGVector): Contains ${settings.contextSize} most relevant memories per query with a similarity threshold of ${settings.similarityThreshold}
+- Long-term archives (Pinecone): ${pineconeStatus} for historical knowledge that requires explicit retrieval
 
-This advanced architecture allows me to maintain context across conversations and retrieve relevant information from past interactions. Is there anything specific about my capabilities you'd like to know?`
+When I don't have information in my primary memory, I'll let you know that you can ask me to search my long-term archives. This gives you control over when and how I access historical data. Is there anything specific about my capabilities you'd like to know?`
       };
     }
     
@@ -459,16 +459,16 @@ This advanced architecture allows me to maintain context across conversations an
         try {
           const pineconeSettings = await storage.getPineconeSettings();
           pineconeInfo = `
-- Long-term Memory (Pinecone): Enabled
+- Long-term Archives (Pinecone): Enabled
 - Active Index: ${pineconeSettings.activeIndexName || "None"}
 - Namespace: ${pineconeSettings.namespace || "default"}
 - Last Sync: ${pineconeSettings.lastSyncTimestamp ? new Date(pineconeSettings.lastSyncTimestamp).toLocaleString() : "Never"}`;
         } catch (error) {
           console.error("Error fetching Pinecone settings:", error);
-          pineconeInfo = "\n- Long-term Memory (Pinecone): Error retrieving settings";
+          pineconeInfo = "\n- Long-term Archives (Pinecone): Error retrieving settings";
         }
       } else {
-        pineconeInfo = "\n- Long-term Memory (Pinecone): Not configured";
+        pineconeInfo = "\n- Long-term Archives (Pinecone): Not configured";
       }
       
       return {
@@ -477,7 +477,7 @@ This advanced architecture allows me to maintain context across conversations an
 - Primary AI: ${model.name} (${model.provider})
 - Default Model: ${settings.defaultModelId}
 - Embedding Model: ${settings.defaultEmbeddingModelId}
-- Short-term Memory Size: ${settings.contextSize} memories per query
+- Primary Memory Size: ${settings.contextSize} memories per query
 - Memory Similarity Threshold: ${settings.similarityThreshold}${pineconeInfo}
 
 All systems are operational. Memory functions can be managed through the settings panel if adjustments are needed.`
@@ -491,11 +491,17 @@ All systems are operational. Memory functions can be managed through the setting
        lowercaseContent.includes("search pinecone") || 
        lowercaseContent.includes("check long term") ||
        lowercaseContent.includes("retrieve from pinecone") ||
-       lowercaseContent.includes("check pinecone")
+       lowercaseContent.includes("check pinecone") ||
+       lowercaseContent.includes("search archive") ||
+       lowercaseContent.includes("search your memory") ||
+       lowercaseContent.includes("look in your archives") ||
+       lowercaseContent.includes("check your long term memory") ||
+       lowercaseContent.includes("yes, search") && content.length < 20
       ) && isPineconeAvailable
     ) {
+      // More conversational response for when the user requests a long-term memory search
       return {
-        response: `I'll initiate a search in the long-term memory archives. What specific information would you like me to retrieve? Please provide some keywords or a specific topic you'd like me to search for.`
+        response: `I'll search my long-term memory archives for that information. To help me find the most relevant details, could you provide any specific keywords, dates, or topics related to what you're looking for?`
       };
     }
     
