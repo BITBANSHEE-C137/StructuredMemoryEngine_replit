@@ -544,6 +544,105 @@ These settings determine how the system processes your queries and retrieves rel
     }
   });
 
+  // Debug RAG search endpoint
+  router.post("/debug/rag", async (req, res) => {
+    try {
+      const { content, similarityThreshold = 0.5 } = req.body;
+      
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ error: "Query content is required" });
+      }
+      
+      console.log(`=== RAG DEBUG for query: "${content}" ===`);
+      
+      // Get current settings
+      const settings = await storage.getSettings();
+      
+      // Process content before embedding
+      const processedContent = processContentForEmbedding(content, {
+        clean: true,
+        extract: true,
+        chunk: false
+      }) as string;
+      
+      console.log(`Content processing: Raw length ${content.length}, Processed length ${processedContent.length}`);
+      console.log(`Processed content: "${processedContent}"`);
+      
+      // Generate embedding with the configured embedding model
+      const embeddingModel = settings.defaultEmbeddingModelId || "text-embedding-3-small";
+      const embedding = await openai.generateEmbedding(processedContent, embeddingModel);
+      
+      console.log(`Generated embedding with model: ${embeddingModel}`);
+      
+      // First try with standard vector similarity
+      const contextSize = 10; // Request more for debugging
+      console.log(`Querying with similarity threshold: ${similarityThreshold}`);
+      
+      const vectorMemories = await storage.queryMemoriesByEmbedding(
+        embedding, 
+        contextSize,
+        similarityThreshold
+      );
+      
+      console.log(`Vector similarity found ${vectorMemories.length} memories`);
+      vectorMemories.forEach(memory => {
+        console.log(`Memory ID ${memory.id}: Similarity ${memory.similarity.toFixed(4)}, Content: "${memory.content.substring(0, 100)}..."`);
+      });
+      
+      // Apply hybrid ranking
+      const hybridMemories = applyHybridRanking(content, vectorMemories, similarityThreshold);
+      
+      console.log(`Hybrid ranking returned ${hybridMemories.length} memories`);
+      hybridMemories.forEach(memory => {
+        // Cast to any to avoid TypeScript errors for dynamic properties
+        const memoryAny = memory as any;
+        
+        // Use optional chaining for safer access
+        const originalSim = memoryAny.originalSimilarity?.toFixed(4) || 'N/A';
+        const keywordScore = memoryAny.keywordScore?.toFixed(4) || 'N/A';
+        const hybridScore = memoryAny.hybridScore?.toFixed(4) || 'N/A';
+        
+        console.log(`Memory ID ${memory.id}: Vector ${originalSim}, Keyword ${keywordScore}, Hybrid ${hybridScore}, Content: "${memory.content.substring(0, 100)}..."`);
+      });
+      
+      // Return detailed debug info
+      res.json({
+        query: {
+          original: content,
+          processed: processedContent,
+        },
+        vectorResults: vectorMemories.map(m => ({
+          id: m.id,
+          similarity: m.similarity,
+          content: m.content.substring(0, 200),
+          type: m.type,
+          timestamp: m.timestamp
+        })),
+        hybridResults: hybridMemories.map(m => {
+          const memAny = m as any;
+          return {
+            id: m.id,
+            vectorSimilarity: memAny.originalSimilarity || m.similarity,
+            keywordScore: memAny.keywordScore || 0,
+            hybridScore: memAny.hybridScore || m.similarity,
+            content: m.content.substring(0, 200),
+            type: m.type,
+            timestamp: m.timestamp
+          };
+        }),
+        settings: {
+          embeddingModel,
+          similarityThreshold
+        }
+      });
+      
+      console.log(`=== END RAG DEBUG ===`);
+    } catch (err) {
+      console.error("RAG Debug Error:", err);
+      handleError(err, res);
+    }
+  });
+
   // Register auth router
   app.use("/api/auth", authRouter);
   
