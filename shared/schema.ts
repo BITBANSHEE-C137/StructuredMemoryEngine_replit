@@ -75,6 +75,9 @@ export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
   contextSize: integer("context_size").default(5).notNull(),
   similarityThreshold: text("similarity_threshold").default("0.75").notNull(),
+  // Threshold adjustment factors for different query types
+  questionThresholdFactor: text("question_threshold_factor").default("0.7").notNull(),
+  statementThresholdFactor: text("statement_threshold_factor").default("0.85").notNull(),
   defaultModelId: text("default_model_id").default("gpt-4o").notNull(),
   defaultEmbeddingModelId: text("default_embedding_model_id").default("text-embedding-ada-002").notNull(),
   // Removed autoClearMemories option - replaced with manual memory management

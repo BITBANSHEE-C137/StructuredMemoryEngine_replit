@@ -62,6 +62,8 @@ export interface Settings {
   id: number;
   contextSize: number;
   similarityThreshold: string;
+  questionThresholdFactor: string;  // Factor for questions (more permissive)
+  statementThresholdFactor: string; // Factor for statements (more strict)
   defaultModelId: string;
   defaultEmbeddingModelId: string;
   autoClearMemories: boolean;

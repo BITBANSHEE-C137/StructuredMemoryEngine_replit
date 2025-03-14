@@ -315,9 +315,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isQuestion = content.includes('?') || 
                         /^(?:what|who|when|where|why|how|can|could|do|does|did)/i.test(content.trim());
       
-      // For questions, use a more permissive threshold to find potential answers
-      // that might not be semantically similar in vector space
-      const thresholdAdjustment = isQuestion ? 0.7 : 0.85; // More aggressive for questions
+      // Get threshold factors from settings
+      const questionFactor = parseFloat(settings.questionThresholdFactor || "0.7");
+      const statementFactor = parseFloat(settings.statementThresholdFactor || "0.85");
+      
+      // Apply the appropriate threshold factor based on query type
+      const thresholdAdjustment = isQuestion ? questionFactor : statementFactor;
       
       console.log(`Query type: ${isQuestion ? 'Question' : 'Statement/Command'}`);
       console.log(`Using threshold adjustment factor: ${thresholdAdjustment}`);
