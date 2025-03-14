@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { initializeDatabase } from "./db";
 import openai from "./utils/openai";
 import anthropic from "./utils/anthropic";
-import { processContentForEmbedding } from "./utils/content-processor";
+import { processContentForEmbedding, applyHybridRanking } from "./utils/content-processor";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { insertMessageSchema, insertSettingsSchema, type Model, type Settings } from "@shared/schema";
@@ -309,11 +309,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       
       // Pass both contextSize and similarityThreshold to the storage method
-      const relevantMemories = await storage.queryMemoriesByEmbedding(
+      let relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
-        contextSize,
-        similarityThreshold
+        contextSize * 2, // Request more memories than needed to allow hybrid ranking to filter
+        similarityThreshold * 0.9 // Slightly lower threshold to allow keyword-relevant items
       );
+      
+      // Apply hybrid ranking to improve results with keyword matching
+      console.log(`Retrieved ${relevantMemories.length} memories via vector similarity`);
+      
+      // Apply hybrid ranking with both vector similarity and keyword matching
+      relevantMemories = applyHybridRanking(content, relevantMemories, similarityThreshold);
+      
+      // Limit to requested context size after hybrid ranking
+      relevantMemories = relevantMemories.slice(0, contextSize);
+      
+      console.log(`After hybrid ranking: ${relevantMemories.length} memories selected`);
+      
+      // Add debug information to memory metadata without type errors
+      relevantMemories.forEach(memory => {
+        // Cast to any to avoid TypeScript errors for dynamic properties
+        const memoryAny = memory as any;
+        
+        // Use optional chaining for safer access
+        const originalSim = memoryAny.originalSimilarity?.toFixed(2) || 'N/A';
+        const keywordScore = memoryAny.keywordScore?.toFixed(2) || 'N/A';
+        const hybridScore = memoryAny.hybridScore?.toFixed(2) || 'N/A';
+        
+        console.log(`Memory ID ${memory.id}: Vector similarity ${originalSim}, Keyword score ${keywordScore}, Hybrid score ${hybridScore}`);
+      });
       
       // 5. Format context from relevant memories
       let context = '';
@@ -448,17 +472,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lowercaseContent.includes("how do you process") ||
       lowercaseContent.includes("content cleaning") ||
       lowercaseContent.includes("text extraction") ||
-      lowercaseContent.includes("embedding model")
+      lowercaseContent.includes("embedding model") ||
+      lowercaseContent.includes("hybrid search") ||
+      lowercaseContent.includes("search algorithm") ||
+      lowercaseContent.includes("search approach") ||
+      lowercaseContent.includes("keyword searching")
     ) {
       return {
-        response: `The Structured Memory Engine uses advanced content processing techniques to optimize text before generating embeddings:
+        response: `The Structured Memory Engine uses advanced content processing and hybrid search techniques to optimize memory retrieval:
 
 1. Content Cleaning: I remove UI elements, formatting, and standardize spacing to focus on meaningful content.
 2. Key Information Extraction: I identify and prioritize important sentences, questions, and definitive statements.
 3. Embedding Generation: I use OpenAI's text-embedding-3-small model (1536 dimensions) to create semantic vectors.
-4. Similarity Threshold: I use a threshold of ${settings.similarityThreshold} to determine which memories are relevant enough to include.
+4. Hybrid Search: I combine vector similarity (${settings.similarityThreshold} threshold) with keyword matching for optimal results:
+   - Vector similarity captures semantic meaning even when different words are used
+   - Keyword matching ensures highly relevant exact matches aren't missed
+   - Combined scoring gives priority to memories that match both approaches
 
-This process ensures that when you ask questions, I retrieve the most semantically relevant past conversations, providing better contextual understanding.`
+This hybrid approach ensures that when you ask questions, I retrieve the most relevant memories by understanding both the semantic meaning and specific keywords in your query, providing better contextual understanding than either approach alone.`
       };
     }
     

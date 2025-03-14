@@ -274,11 +274,11 @@ export function calculateHybridScore(
  * @param originalThreshold The original vector similarity threshold
  * @returns Memories sorted by hybrid score with updated similarity values
  */
-export function applyHybridRanking(
+export function applyHybridRanking<T extends { content: string; similarity: number }>(
   query: string,
-  memories: Array<{ content: string; similarity: number; [key: string]: any }>,
+  memories: Array<T>,
   originalThreshold: number = 0.75
-): Array<{ content: string; similarity: number; [key: string]: any }> {
+): Array<T & { originalSimilarity?: number; keywordScore?: number; hybridScore?: number }> {
   if (!memories || memories.length === 0 || !query) {
     return memories;
   }
