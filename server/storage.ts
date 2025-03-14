@@ -202,10 +202,8 @@ export class DatabaseStorage implements IStorage {
     try {
       // ===== CRITICAL FIX FOR THRESHOLD VALUE =====
       // This ensures the threshold is properly converted to a number and normalized
-      // Parse the user-defined threshold value (never use static values)
-      let threshold: number;
+      let threshold = 0.75; // Default fallback
       
-      // First try to use the passed threshold parameter
       if (similarityThreshold !== undefined && similarityThreshold !== null) {
         // Convert to number if it's a string (from settings.similarityThreshold)
         if (typeof similarityThreshold === 'string') {
@@ -219,39 +217,6 @@ export class DatabaseStorage implements IStorage {
         } else {
           // It's already a number
           threshold = similarityThreshold;
-        }
-      } else {
-        // If no threshold is provided, use a safer fallback than hardcoding
-        try {
-          // Try to get the threshold from settings
-          const settingsData = await this.getSettings();
-          const settingsThreshold = settingsData?.similarityThreshold;
-          
-          if (settingsThreshold) {
-            if (typeof settingsThreshold === 'string') {
-              const strValue = String(settingsThreshold).trim();
-              // Handle percentage format
-              if (strValue.includes('%')) {
-                threshold = parseFloat(strValue) / 100;
-              } else {
-                threshold = parseFloat(strValue);
-              }
-            } else if (typeof settingsThreshold === 'number') {
-              threshold = settingsThreshold;
-            } else {
-              // Last resort fallback
-              threshold = 0.75;
-              console.warn('Warning: Using last resort fallback threshold 0.75 - no valid threshold found in settings');
-            }
-          } else {
-            // Last resort fallback
-            threshold = 0.75;
-            console.warn('Warning: Using last resort fallback threshold 0.75 - no valid threshold found in settings');
-          }
-        } catch (error) {
-          // Very last resort fallback
-          threshold = 0.75;
-          console.error('Error retrieving settings for threshold, using fallback:', error);
         }
       }
       

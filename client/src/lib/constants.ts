@@ -16,11 +16,8 @@ export const DEFAULT_SETTINGS = {
   contextSize: 5,
   similarityThreshold: "0.75",
   defaultModelId: "gpt-4o",
-  defaultEmbeddingModelId: "text-embedding-ada-002",
+  defaultEmbeddingModelId: "text-embedding-ada-002"
   // Removed autoClearMemories option - using manual memory management instead
-  // Dynamic threshold adjustment factors (1.0 = no adjustment)
-  questionThresholdFactor: "0.9",
-  statementThresholdFactor: "1.1"
 };
 
 export const API_ROUTES = {
