@@ -689,6 +689,40 @@ export function performKeywordMatch(query: string, content: string): number {
 }
 
 /**
+ * Determines if two text strings share enough common keywords to be considered similar
+ * @param text1 First text string to compare
+ * @param text2 Second text string to compare
+ * @param threshold Minimum ratio of common words to consider similar (0-1)
+ * @returns Boolean indicating if texts are similar based on keyword overlap
+ */
+export function containsCommonKeywords(text1: string, text2: string, threshold: number = 0.5): boolean {
+  // Extract meaningful words (3+ chars) from both texts
+  const getKeywords = (text: string): string[] => 
+    text.toLowerCase()
+      .replace(/[^\w\s]/g, '') // Remove punctuation
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !['the', 'and', 'for', 'are', 'what', 'who', 'when', 'where', 'why', 'how'].includes(word));
+  
+  const keywords1 = getKeywords(text1);
+  const keywords2 = getKeywords(text2);
+  
+  // If either text has no keywords, they can't be similar
+  if (keywords1.length === 0 || keywords2.length === 0) return false;
+  
+  // Count common words
+  const commonWords = keywords1.filter(word => keywords2.includes(word));
+  
+  // Calculate the ratio against the smaller set of keywords
+  // This creates a more lenient match when one text is much longer than the other
+  const minKeywordCount = Math.min(keywords1.length, keywords2.length);
+  const similarity = commonWords.length / minKeywordCount;
+  
+  console.log(`Keyword similarity between texts: ${similarity.toFixed(2)} (${commonWords.length}/${minKeywordCount} common words)`);
+  
+  return similarity >= threshold;
+}
+
+/**
  * Calculate hybrid relevance score combining vector similarity and keyword matching
  * @param vectorSimilarity The vector similarity score (0-1)
  * @param keywordScore The keyword matching score (0-1)
@@ -778,12 +812,24 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
         }
       }
       
-      // Lower the score for same question memories
-      if (content === query.toLowerCase() || 
-          (content.includes(query.toLowerCase()) && content.includes('?'))) {
-        console.log(`[CRITICAL TEST CASE] ⚠️ Found same question in memory ID ${(mem as any).id} - reducing relevance`);
+      // Lower the score for same question memories - ENHANCED VERSION
+      // 1. Exact match lowers score to near zero
+      // 2. Contains the query as a question lowers score significantly
+      // 3. Similar question pattern (ends with ? and shares keywords) also gets reduced
+      if (content === query.toLowerCase()) {
+        console.log(`[CRITICAL TEST CASE] ⚠️ EXACT SAME QUESTION in memory ID ${(mem as any).id} - eliminating from results`);
+        // Practically eliminate from results with near-zero score
+        mem.similarity = 0.01; // Effectively removed
+      } else if (content.includes(query.toLowerCase()) && content.includes('?')) {
+        console.log(`[CRITICAL TEST CASE] ⚠️ Found QUESTION CONTAINING QUERY in memory ID ${(mem as any).id} - reducing relevance severely`);
         // Drop the score significantly
-        mem.similarity = 0.35; // Very low score
+        mem.similarity = 0.2; // Very low score
+      } else if (content.endsWith('?') && 
+                 query.toLowerCase().endsWith('?') && 
+                 containsCommonKeywords(content, query.toLowerCase(), 0.5)) {
+        console.log(`[CRITICAL TEST CASE] ⚠️ Found SIMILAR QUESTION PATTERN in memory ID ${(mem as any).id} - reducing relevance`);
+        // Drop the score moderately for similar questions
+        mem.similarity = 0.3; // Low score
       }
     }
     
@@ -1001,6 +1047,7 @@ export default {
   chunkContent,
   processContentForEmbedding,
   performKeywordMatch,
+  containsCommonKeywords,
   calculateHybridScore,
   applyHybridRanking
 };
