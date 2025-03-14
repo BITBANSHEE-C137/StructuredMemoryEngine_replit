@@ -258,8 +258,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Parse the similarity threshold as a float (it's stored as a string in the DB)
       console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}"`);
       
-      // Get the current setting value and parse it more carefully
-      let similarityThreshold = 0.65; // Default fallback value - lowered to improve memory retrieval
+      // Get the current setting value and parse it more carefully - don't set any default
+      let similarityThreshold;
       
       try {
         if (settings.similarityThreshold) {
@@ -275,8 +275,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Check for NaN and apply limits
           if (isNaN(similarityThreshold)) {
-            console.warn('Invalid similarity threshold value - using default 0.75');
-            similarityThreshold = 0.75;
+            // If parsing fails, use the raw value directly without modification
+            console.warn('Invalid similarity threshold value in settings - keeping original setting');
+            similarityThreshold = settings.similarityThreshold ? parseFloat(settings.similarityThreshold.toString()) : 0.75;
           }
         }
       } catch (error) {
@@ -284,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Ensure the threshold is a valid value between 0 and 1
-      similarityThreshold = Math.max(0, Math.min(1, similarityThreshold));
+      similarityThreshold = Math.max(0, Math.min(1, similarityThreshold || 0.75));
       
       console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       
