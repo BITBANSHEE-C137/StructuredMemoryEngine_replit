@@ -315,12 +315,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isQuestion = content.includes('?') || 
                         /^(?:what|who|when|where|why|how|can|could|do|does|did)/i.test(content.trim());
       
-      // For questions, use a more permissive threshold to find potential answers
-      // that might not be semantically similar in vector space
-      const thresholdAdjustment = isQuestion ? 0.7 : 0.85; // More aggressive for questions
+      // Get adaptive adjustment factors from settings instead of hardcoded values
+      // These values control how much to adjust threshold based on query type
+      // Dynamic approach using settings-based adjustment percentages
+      const questionAdjustmentFactor = settings.questionThresholdFactor || "70%"; 
+      const statementAdjustmentFactor = settings.statementThresholdFactor || "85%";
+      
+      // Convert percentage strings to decimal values
+      const questionAdjustment = typeof questionAdjustmentFactor === 'string' && questionAdjustmentFactor.includes('%') 
+        ? parseFloat(questionAdjustmentFactor) / 100 
+        : parseFloat(String(questionAdjustmentFactor));
+        
+      const statementAdjustment = typeof statementAdjustmentFactor === 'string' && statementAdjustmentFactor.includes('%') 
+        ? parseFloat(statementAdjustmentFactor) / 100 
+        : parseFloat(String(statementAdjustmentFactor));
+      
+      // Apply the appropriate adjustment factor based on query type
+      const thresholdAdjustment = isQuestion ? questionAdjustment : statementAdjustment;
       
       console.log(`Query type: ${isQuestion ? 'Question' : 'Statement/Command'}`);
-      console.log(`Using threshold adjustment factor: ${thresholdAdjustment}`);
+      console.log(`Using dynamic threshold adjustment factor: ${thresholdAdjustment} (${thresholdAdjustment * 100}%)`);
+      console.log(`Question adjustment: ${questionAdjustment}, Statement adjustment: ${statementAdjustment}`);
       
       // Request more memories than needed to allow hybrid ranking to filter
       // For personal attribute questions, retrieve more memories with a lower threshold
