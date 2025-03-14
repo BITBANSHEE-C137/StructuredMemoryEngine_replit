@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { initializeDatabase } from "./db";
 import openai from "./utils/openai";
 import anthropic from "./utils/anthropic";
+import { processContentForEmbedding } from "./utils/content-processor";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { insertMessageSchema, insertSettingsSchema, type Model, type Settings } from "@shared/schema";
@@ -240,9 +241,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelId
       });
       
-      // 2. Generate embedding for the user message using the configured embedding model
-      const embeddingModel = settings.defaultEmbeddingModelId || "text-embedding-ada-002";
-      const embedding = await openai.generateEmbedding(content, embeddingModel);
+      // 2. Process and generate embedding for the user message using the configured embedding model
+      const embeddingModel = settings.defaultEmbeddingModelId || "text-embedding-3-small";
+      
+      // Process content before embedding to improve quality
+      const processedContent = processContentForEmbedding(content, {
+        clean: true,
+        extract: true,
+        chunk: false
+      }) as string;
+      
+      console.log(`Content processing: Raw length ${content.length}, Processed length ${processedContent.length}`);
+      const embedding = await openai.generateEmbedding(processedContent, embeddingModel);
       
       // 3. Store memory with embedding
       const userMemory = await storage.createMemory({
@@ -339,8 +349,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelId
       });
       
-      // 8. Generate embedding for the response using the same embedding model
-      const responseEmbedding = await openai.generateEmbedding(response, embeddingModel);
+      // 8. Process and generate embedding for the response using the same embedding model
+      // Process the assistant's response for better embedding
+      const processedResponse = processContentForEmbedding(response, {
+        clean: true,
+        extract: true,
+        chunk: false
+      }) as string;
+      
+      console.log(`Response processing: Raw length ${response.length}, Processed length ${processedResponse.length}`);
+      const responseEmbedding = await openai.generateEmbedding(processedResponse, embeddingModel);
       
       // 9. Store memory with embedding
       const assistantMemory = await storage.createMemory({
@@ -421,6 +439,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           response: "I tried to retrieve your recent conversation history, but encountered an error. Could you please try a different query?"
         };
       }
+    }
+    
+    // Check for queries about content processing or embedding
+    if (
+      lowercaseContent.includes("content processing") ||
+      lowercaseContent.includes("embedding quality") ||
+      lowercaseContent.includes("how do you process") ||
+      lowercaseContent.includes("content cleaning") ||
+      lowercaseContent.includes("text extraction") ||
+      lowercaseContent.includes("embedding model")
+    ) {
+      return {
+        response: `The Structured Memory Engine uses advanced content processing techniques to optimize text before generating embeddings:
+
+1. Content Cleaning: I remove UI elements, formatting, and standardize spacing to focus on meaningful content.
+2. Key Information Extraction: I identify and prioritize important sentences, questions, and definitive statements.
+3. Embedding Generation: I use OpenAI's text-embedding-3-small model (1536 dimensions) to create semantic vectors.
+4. Similarity Threshold: I use a threshold of ${settings.similarityThreshold} to determine which memories are relevant enough to include.
+
+This process ensures that when you ask questions, I retrieve the most semantically relevant past conversations, providing better contextual understanding.`
+      };
     }
     
     // Check for queries about system settings
