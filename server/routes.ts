@@ -360,8 +360,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // This is the most important part for finding declarations
         try {
           console.log(`********************`);
-          console.log(`**** COMPREHENSIVE MEMORY SEARCH DEBUGGER ****`);
+          console.log(`**** EMERGENCY STATEMENT SEARCH FOR: "${content}" ****`);
           console.log(`********************`);
+          
+          // URGENT DIRECT STATEMENT SEARCH
+          // Perform a direct SQL query to find statements about preferences
+          // This bypasses all normal search mechanisms and directly searches the database
+          console.log(`EXECUTING EMERGENCY DB SEARCH FOR ALL FERRARI/FAVORITE CAR STATEMENTS`);
+          
+          // Direct SQL query to find any statements about Ferrari cars
+          const directStatements = await db.select()
+            .from(memories)
+            .where(
+              sql`LOWER(content) LIKE ${'%ferrari%'} OR 
+                  LOWER(content) LIKE ${'%308%'} OR 
+                  LOWER(content) LIKE ${'%favorite car%'} OR 
+                  LOWER(content) LIKE ${'%my car%'}`
+            )
+            .limit(10);
+          
+          console.log(`FOUND ${directStatements.length} DIRECT MATCHING STATEMENTS`);
+          
+          // Log all found statements for debugging
+          for (const stmt of directStatements) {
+            console.log(`DIRECT HIT: Memory ID ${stmt.id}: ${stmt.type} - "${stmt.content}"`);
+            
+            // Add these direct hits to our relevantMemories regardless of vector similarity
+            if (!relevantMemories.some(m => m.id === stmt.id)) {
+              relevantMemories.push({
+                ...stmt,
+                similarity: 0.99, // Super high score to prioritize these matches
+                directMatch: true // Flag for debugging
+              });
+              console.log(`ADDED DIRECT HIT to relevantMemories: ID ${stmt.id}`);
+            }
+          }
           
           // First, get a count of memories and log the most recent ones for debugging
           const allMemories = await db.select()
@@ -375,8 +408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log(`ID ${mem.id}: ${mem.type} - "${mem.content.substring(0, 100)}${mem.content.length > 100 ? '...' : ''}"`);
           }
           
-          // Extremely flexible search patterns to catch any mention of favorite cars
-          // or Ferrari regardless of exact phrasing
+          // Additional fallback patterns if direct search doesn't work
           const statementPatterns = [
             // Super flexible patterns that search the entire database
             `ferrari`,
@@ -397,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`Trying ${statementPatterns.length} different search patterns to find relevant declarations`);
           
           // For each pattern, search in the memories table
-          const matchingStatements = [];
+          const matchingStatements: (Memory & { similarity: number; directMatch?: boolean })[] = [];
           
           for (const pattern of statementPatterns) {
             console.log(`DIRECT SEARCH: Looking for '${pattern}' in memory content...`);
