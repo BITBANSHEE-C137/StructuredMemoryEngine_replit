@@ -197,7 +197,7 @@ export class DatabaseStorage implements IStorage {
     return memory;
   }
 
-  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.5): Promise<(Memory & { similarity: number })[]> {
+  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.75): Promise<(Memory & { similarity: number })[]> {
     try {
       // Make sure similarityThreshold is a proper number between 0 and 1
       const threshold = Math.min(1, Math.max(0, similarityThreshold));
@@ -239,7 +239,7 @@ export class DatabaseStorage implements IStorage {
         
         return fallbackResult.map(row => ({
           ...row,
-          similarity: 0.5 // Default similarity for fallback results
+          similarity: 0.75 // Update fallback similarity to match default threshold
         }));
       } catch (fallbackError) {
         console.error("Fallback query also failed:", fallbackError);
