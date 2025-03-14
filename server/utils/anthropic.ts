@@ -39,10 +39,14 @@ ${context}`
     // Extract the text content correctly regardless of block type
     if (message.content && message.content.length > 0) {
       const firstBlock = message.content[0];
+      
+      // Handle content blocks based on structure
       if ('text' in firstBlock) {
         return firstBlock.text;
-      } else if ('type' in firstBlock && firstBlock.type === 'text') {
-        return (firstBlock as any).text;
+      } else if ('type' in firstBlock) {
+        // Using a type assertion to handle any content structure
+        const contentBlock = firstBlock as any;
+        return contentBlock.text || JSON.stringify(contentBlock);
       } else {
         // Fallback for any other content type
         return JSON.stringify(firstBlock);
