@@ -207,7 +207,7 @@ export function processContentForEmbedding(
 }
 
 /**
- * Performs simple keyword matching to find relevant text segments
+ * Performs enhanced keyword matching to find relevant text segments
  * @param query The search query
  * @param content The content to search in
  * @returns Score between 0 and 1 representing keyword relevance
@@ -219,41 +219,95 @@ export function performKeywordMatch(query: string, content: string): number {
   
   // Normalize and split query into keywords
   const normalizedQuery = query.toLowerCase().trim();
-  const queryKeywords = normalizedQuery
+  const normalizedContent = content.toLowerCase();
+  
+  // Extract both individual words and multi-word phrases
+  const queryWords = normalizedQuery
     .split(/\s+/)
     .filter(word => word.length > 2) // Ignore short words
     .map(word => word.replace(/[^\w]/g, '')); // Remove punctuation
   
-  if (queryKeywords.length === 0) {
-    return 0;
-  }
-  
-  // Normalize content
-  const normalizedContent = content.toLowerCase();
-  
-  // Count keyword matches
-  let matchCount = 0;
-  for (const keyword of queryKeywords) {
-    if (normalizedContent.includes(keyword)) {
-      matchCount++;
+  // Also create 2-3 word phrases for important concepts
+  const queryPhrases: string[] = [];
+  const words = normalizedQuery.split(/\s+/);
+  for (let i = 0; i < words.length - 1; i++) {
+    // Two-word phrases
+    if (words[i].length > 1 && words[i+1].length > 1) {
+      queryPhrases.push(`${words[i]} ${words[i+1]}`.toLowerCase());
+    }
+    
+    // Three-word phrases
+    if (i < words.length - 2 && words[i].length > 1 && words[i+1].length > 1 && words[i+2].length > 1) {
+      queryPhrases.push(`${words[i]} ${words[i+1]} ${words[i+2]}`.toLowerCase());
     }
   }
   
-  // Calculate score based on percentage of matched keywords
-  return matchCount / queryKeywords.length;
+  if (queryWords.length === 0 && queryPhrases.length === 0) {
+    return 0;
+  }
+  
+  // Count individual word matches with score for each word
+  let wordScore = 0;
+  for (const word of queryWords) {
+    // Check if word exists in content
+    if (normalizedContent.includes(word)) {
+      // Exact match as a whole word gets higher score
+      const wholeWordRegex = new RegExp(`\\b${word}\\b`, 'i');
+      if (wholeWordRegex.test(normalizedContent)) {
+        wordScore += 1.5; // Higher score for whole word matches
+      } else {
+        wordScore += 0.5; // Lower score for partial matches
+      }
+      
+      // Bonus for multiple occurrences (up to 1.0 extra)
+      const occurrences = (normalizedContent.match(new RegExp(word, 'gi')) || []).length;
+      if (occurrences > 1) {
+        wordScore += Math.min(1.0, (occurrences - 1) * 0.2);
+      }
+    }
+  }
+  
+  // Normalize word score
+  const maxWordScore = queryWords.length * 2.5; // Max possible score including all bonuses
+  const normalizedWordScore = wordScore / maxWordScore;
+  
+  // Check for phrase matches (these are more significant)
+  let phraseScore = 0;
+  for (const phrase of queryPhrases) {
+    if (normalizedContent.includes(phrase)) {
+      // Phrases get a higher score as they indicate stronger topical relevance
+      phraseScore += 3.0;
+      
+      // Bonus for phrases appearing at the start of content (likely more relevant)
+      if (normalizedContent.indexOf(phrase) < 50) {
+        phraseScore += 1.0;
+      }
+    }
+  }
+  
+  // Normalize phrase score
+  const maxPhraseScore = queryPhrases.length * 4.0; // Max possible including all bonuses
+  const normalizedPhraseScore = phraseScore / (maxPhraseScore || 1); // Prevent division by zero
+  
+  // Combine scores, giving more weight to phrase matches when available
+  if (queryPhrases.length > 0) {
+    return (normalizedWordScore * 0.4) + (normalizedPhraseScore * 0.6);
+  } else {
+    return normalizedWordScore;
+  }
 }
 
 /**
  * Calculate hybrid relevance score combining vector similarity and keyword matching
  * @param vectorSimilarity The vector similarity score (0-1)
  * @param keywordScore The keyword matching score (0-1)
- * @param weights Optional weights for each component (default: 0.7 vector, 0.3 keyword)
+ * @param weights Optional weights for each component (default: 0.6 vector, 0.4 keyword)
  * @returns Combined relevance score between 0 and 1
  */
 export function calculateHybridScore(
   vectorSimilarity: number, 
   keywordScore: number,
-  weights: { vector: number, keyword: number } = { vector: 0.7, keyword: 0.3 }
+  weights: { vector: number, keyword: number } = { vector: 0.6, keyword: 0.4 }
 ): number {
   // Ensure weights sum to 1
   const totalWeight = weights.vector + weights.keyword;
@@ -262,9 +316,19 @@ export function calculateHybridScore(
     keyword: weights.keyword / totalWeight
   };
   
-  // Calculate weighted score
-  return (vectorSimilarity * normalizedWeights.vector) + 
-         (keywordScore * normalizedWeights.keyword);
+  // Boost score if both vector and keyword metrics are strong
+  // This helps surface truly relevant content that scores well on both dimensions
+  const combinedScore = (vectorSimilarity * normalizedWeights.vector) + 
+                       (keywordScore * normalizedWeights.keyword);
+  
+  // Apply a boosting factor when both scores are good
+  if (vectorSimilarity > 0.6 && keywordScore > 0.5) {
+    // Boost up to 15% for strong matches on both dimensions
+    const boostFactor = Math.min(0.15, (vectorSimilarity + keywordScore) * 0.075);
+    return Math.min(1.0, combinedScore + boostFactor);
+  }
+  
+  return combinedScore;
 }
 
 /**
@@ -283,18 +347,37 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
     return memories;
   }
   
+  console.log(`Applying hybrid ranking to ${memories.length} memories with query: "${query}"`);
+  
+  // Extract query keywords for logging
+  const queryWords = query.toLowerCase()
+    .split(/\s+/)
+    .filter(w => w.length > 2)
+    .map(w => w.replace(/[^\w]/g, ''));
+  
+  console.log(`Query keywords: ${queryWords.join(', ')}`);
+  
   // Calculate hybrid scores for each memory
   const hybridResults = memories.map(memory => {
     const keywordScore = performKeywordMatch(query, memory.content);
     const hybridScore = calculateHybridScore(memory.similarity, keywordScore);
     
-    // Adjust the threshold for hybrid scoring to be slightly more permissive
-    const adjustedThreshold = originalThreshold * 0.9;
+    // More permissive threshold for hybrid scoring
+    const adjustedThreshold = originalThreshold * 0.85;
     
-    // Only include memories that meet either the vector threshold or have strong keyword matches
+    // Strong keyword matches can override vector similarity threshold
+    // This allows highly relevant content to surface even with lower vector similarity
+    const hasStrongKeywordMatch = keywordScore > 0.6;
+    const hasModerateKeywordMatch = keywordScore > 0.4;
+    
+    // Three ways to meet the threshold:
+    // 1. Vector similarity alone is high enough
+    // 2. Hybrid score is decent AND has moderate keyword relevance
+    // 3. Keyword relevance is very high (direct topic match)
     const meetsThreshold = 
       memory.similarity >= originalThreshold || 
-      (hybridScore >= adjustedThreshold && keywordScore > 0.3);
+      (hybridScore >= adjustedThreshold && hasModerateKeywordMatch) ||
+      hasStrongKeywordMatch;
     
     return {
       ...memory,
@@ -305,14 +388,33 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
     };
   });
   
+  // Log hybrid scoring results
+  const beforeFilterCount = hybridResults.length;
+  const meetingThresholdCount = hybridResults.filter(m => m.meetsThreshold).length;
+  
+  console.log(`Hybrid ranking: ${meetingThresholdCount} of ${beforeFilterCount} memories meet threshold criteria`);
+  
   // Filter and sort by hybrid score
-  return hybridResults
+  const result = hybridResults
     .filter(m => m.meetsThreshold)
     .sort((a, b) => b.hybridScore - a.hybridScore)
     .map(m => ({
       ...m,
       similarity: Math.round(m.hybridScore * 100) / 100 // Round to 2 decimal places for display
     }));
+  
+  // Log top results for debugging
+  if (result.length > 0) {
+    console.log(`Top hybrid results (showing up to 3):`);
+    result.slice(0, 3).forEach((m, i) => {
+      const contentPreview = m.content.substring(0, 50).replace(/\n/g, ' ');
+      console.log(`${i+1}. Score: ${m.hybridScore.toFixed(2)} (V:${m.originalSimilarity.toFixed(2)}, K:${m.keywordScore.toFixed(2)}) - ${contentPreview}...`);
+    });
+  } else {
+    console.log(`No memories met the relevance threshold criteria`);
+  }
+  
+  return result;
 }
 
 export default {
