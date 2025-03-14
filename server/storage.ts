@@ -198,7 +198,7 @@ export class DatabaseStorage implements IStorage {
     return memory;
   }
 
-  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.75): Promise<(Memory & { similarity: number })[]> {
+  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.75, excludeMemoryId?: number): Promise<(Memory & { similarity: number })[]> {
     try {
       // ===== CRITICAL FIX FOR THRESHOLD VALUE =====
       // This ensures the threshold is properly converted to a number and normalized
