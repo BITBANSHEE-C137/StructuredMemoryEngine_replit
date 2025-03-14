@@ -7,8 +7,9 @@ const openai = new OpenAI({
 });
 
 // Generate embeddings for a given text using the configured embedding model
-export async function generateEmbedding(text: string, embeddingModel: string = "text-embedding-ada-002"): Promise<string> {
+export async function generateEmbedding(text: string, embeddingModel: string = "text-embedding-3-small"): Promise<string> {
   try {
+    console.log(`Generating embedding using model: ${embeddingModel}`);
     const response = await openai.embeddings.create({
       model: embeddingModel,
       input: text,

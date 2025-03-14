@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { initializeDatabase } from "./db";
 import openai from "./utils/openai";
 import anthropic from "./utils/anthropic";
+import { processContentForEmbedding, applyHybridRanking } from "./utils/content-processor";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { insertMessageSchema, insertSettingsSchema, type Model, type Settings } from "@shared/schema";
@@ -240,9 +241,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelId
       });
       
-      // 2. Generate embedding for the user message using the configured embedding model
-      const embeddingModel = settings.defaultEmbeddingModelId || "text-embedding-ada-002";
-      const embedding = await openai.generateEmbedding(content, embeddingModel);
+      // 2. Process and generate embedding for the user message using the configured embedding model
+      const embeddingModel = settings.defaultEmbeddingModelId || "text-embedding-3-small";
+      
+      // Process content before embedding to improve quality
+      const processedContent = processContentForEmbedding(content, {
+        clean: true,
+        extract: true,
+        chunk: false
+      }) as string;
+      
+      console.log(`Content processing: Raw length ${content.length}, Processed length ${processedContent.length}`);
+      const embedding = await openai.generateEmbedding(processedContent, embeddingModel);
       
       // 3. Store memory with embedding
       const userMemory = await storage.createMemory({
@@ -256,7 +266,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 4. Retrieve relevant memories based on the embedding
       const contextSize = settings.contextSize || 5;
       // Parse the similarity threshold as a float (it's stored as a string in the DB)
-      console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}"`);
+      console.log(`=== SIMILARITY THRESHOLD DEBUGGING ===`);
+      console.log(`Raw similarity threshold from settings: "${settings.similarityThreshold}" (type: ${typeof settings.similarityThreshold})`);
       
       // Get the current setting value and parse it more carefully
       let similarityThreshold = 0.75; // Default fallback value
@@ -264,13 +275,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         if (settings.similarityThreshold) {
           const rawValue = settings.similarityThreshold.toString().trim();
+          console.log(`Trimmed raw value: "${rawValue}"`);
           
-          // Handle percentage format (e.g. "75%")
+          // Handle percentage format (e.g. "85%")
           if (rawValue.includes('%')) {
             similarityThreshold = parseFloat(rawValue) / 100;
+            console.log(`Percentage format detected, parsed as: ${similarityThreshold}`);
           } else {
-            // Handle decimal format (e.g. "0.75")
+            // Handle decimal format (e.g. "0.85")
             similarityThreshold = parseFloat(rawValue);
+            console.log(`Decimal format detected, parsed as: ${similarityThreshold}`);
           }
           
           // Check for NaN and apply limits
@@ -286,14 +300,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Ensure the threshold is a valid value between 0 and 1
       similarityThreshold = Math.max(0, Math.min(1, similarityThreshold));
       
+      console.log(`Final parsed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
+      if (similarityThreshold !== parseFloat(settings.similarityThreshold)) {
+        console.log(`Note: Parsed value differs from raw settings value - this is the issue we're fixing`);
+      }
+      console.log(`=== END THRESHOLD DEBUGGING ===`);
+      
       console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       
       // Pass both contextSize and similarityThreshold to the storage method
-      const relevantMemories = await storage.queryMemoriesByEmbedding(
+      let relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
-        contextSize,
-        similarityThreshold
+        contextSize * 2, // Request more memories than needed to allow hybrid ranking to filter
+        similarityThreshold * 0.9 // Slightly lower threshold to allow keyword-relevant items
       );
+      
+      // Apply hybrid ranking to improve results with keyword matching
+      console.log(`Retrieved ${relevantMemories.length} memories via vector similarity`);
+      
+      // Apply hybrid ranking with both vector similarity and keyword matching
+      relevantMemories = applyHybridRanking(content, relevantMemories, similarityThreshold);
+      
+      // Limit to requested context size after hybrid ranking
+      relevantMemories = relevantMemories.slice(0, contextSize);
+      
+      console.log(`After hybrid ranking: ${relevantMemories.length} memories selected`);
+      
+      // Add debug information to memory metadata without type errors
+      relevantMemories.forEach(memory => {
+        // Cast to any to avoid TypeScript errors for dynamic properties
+        const memoryAny = memory as any;
+        
+        // Use optional chaining for safer access
+        const originalSim = memoryAny.originalSimilarity?.toFixed(2) || 'N/A';
+        const keywordScore = memoryAny.keywordScore?.toFixed(2) || 'N/A';
+        const hybridScore = memoryAny.hybridScore?.toFixed(2) || 'N/A';
+        
+        console.log(`Memory ID ${memory.id}: Vector similarity ${originalSim}, Keyword score ${keywordScore}, Hybrid score ${hybridScore}`);
+      });
       
       // 5. Format context from relevant memories
       let context = '';
@@ -329,8 +373,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         modelId
       });
       
-      // 8. Generate embedding for the response using the same embedding model
-      const responseEmbedding = await openai.generateEmbedding(response, embeddingModel);
+      // 8. Process and generate embedding for the response using the same embedding model
+      // Process the assistant's response for better embedding
+      const processedResponse = processContentForEmbedding(response, {
+        clean: true,
+        extract: true,
+        chunk: false
+      }) as string;
+      
+      console.log(`Response processing: Raw length ${response.length}, Processed length ${processedResponse.length}`);
+      const responseEmbedding = await openai.generateEmbedding(processedResponse, embeddingModel);
       
       // 9. Store memory with embedding
       const assistantMemory = await storage.createMemory({
@@ -413,6 +465,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
     
+    // Check for queries about content processing or embedding
+    if (
+      lowercaseContent.includes("content processing") ||
+      lowercaseContent.includes("embedding quality") ||
+      lowercaseContent.includes("how do you process") ||
+      lowercaseContent.includes("content cleaning") ||
+      lowercaseContent.includes("text extraction") ||
+      lowercaseContent.includes("embedding model") ||
+      lowercaseContent.includes("hybrid search") ||
+      lowercaseContent.includes("search algorithm") ||
+      lowercaseContent.includes("search approach") ||
+      lowercaseContent.includes("keyword searching")
+    ) {
+      return {
+        response: `The Structured Memory Engine uses advanced content processing and hybrid search techniques to optimize memory retrieval:
+
+1. Content Cleaning: I remove UI elements, formatting, and standardize spacing to focus on meaningful content.
+2. Key Information Extraction: I identify and prioritize important sentences, questions, and definitive statements.
+3. Embedding Generation: I use OpenAI's text-embedding-3-small model (1536 dimensions) to create semantic vectors.
+4. Hybrid Search: I combine vector similarity (${settings.similarityThreshold} threshold) with keyword matching for optimal results:
+   - Vector similarity captures semantic meaning even when different words are used
+   - Keyword matching ensures highly relevant exact matches aren't missed
+   - Combined scoring gives priority to memories that match both approaches
+
+This hybrid approach ensures that when you ask questions, I retrieve the most relevant memories by understanding both the semantic meaning and specific keywords in your query, providing better contextual understanding than either approach alone.`
+      };
+    }
+    
     // Check for queries about system settings
     if (
       lowercaseContent.includes("system settings") ||
@@ -460,6 +540,105 @@ These settings determine how the system processes your queries and retrieves rel
         message: `Successfully cleared ${result.count} memories and messages` 
       });
     } catch (err) {
+      handleError(err, res);
+    }
+  });
+
+  // Debug RAG search endpoint
+  router.post("/debug/rag", async (req, res) => {
+    try {
+      const { content, similarityThreshold = 0.5 } = req.body;
+      
+      if (!content || typeof content !== "string") {
+        return res.status(400).json({ error: "Query content is required" });
+      }
+      
+      console.log(`=== RAG DEBUG for query: "${content}" ===`);
+      
+      // Get current settings
+      const settings = await storage.getSettings();
+      
+      // Process content before embedding
+      const processedContent = processContentForEmbedding(content, {
+        clean: true,
+        extract: true,
+        chunk: false
+      }) as string;
+      
+      console.log(`Content processing: Raw length ${content.length}, Processed length ${processedContent.length}`);
+      console.log(`Processed content: "${processedContent}"`);
+      
+      // Generate embedding with the configured embedding model
+      const embeddingModel = settings.defaultEmbeddingModelId || "text-embedding-3-small";
+      const embedding = await openai.generateEmbedding(processedContent, embeddingModel);
+      
+      console.log(`Generated embedding with model: ${embeddingModel}`);
+      
+      // First try with standard vector similarity
+      const contextSize = 10; // Request more for debugging
+      console.log(`Querying with similarity threshold: ${similarityThreshold}`);
+      
+      const vectorMemories = await storage.queryMemoriesByEmbedding(
+        embedding, 
+        contextSize,
+        similarityThreshold
+      );
+      
+      console.log(`Vector similarity found ${vectorMemories.length} memories`);
+      vectorMemories.forEach(memory => {
+        console.log(`Memory ID ${memory.id}: Similarity ${memory.similarity.toFixed(4)}, Content: "${memory.content.substring(0, 100)}..."`);
+      });
+      
+      // Apply hybrid ranking
+      const hybridMemories = applyHybridRanking(content, vectorMemories, similarityThreshold);
+      
+      console.log(`Hybrid ranking returned ${hybridMemories.length} memories`);
+      hybridMemories.forEach(memory => {
+        // Cast to any to avoid TypeScript errors for dynamic properties
+        const memoryAny = memory as any;
+        
+        // Use optional chaining for safer access
+        const originalSim = memoryAny.originalSimilarity?.toFixed(4) || 'N/A';
+        const keywordScore = memoryAny.keywordScore?.toFixed(4) || 'N/A';
+        const hybridScore = memoryAny.hybridScore?.toFixed(4) || 'N/A';
+        
+        console.log(`Memory ID ${memory.id}: Vector ${originalSim}, Keyword ${keywordScore}, Hybrid ${hybridScore}, Content: "${memory.content.substring(0, 100)}..."`);
+      });
+      
+      // Return detailed debug info
+      res.json({
+        query: {
+          original: content,
+          processed: processedContent,
+        },
+        vectorResults: vectorMemories.map(m => ({
+          id: m.id,
+          similarity: m.similarity,
+          content: m.content.substring(0, 200),
+          type: m.type,
+          timestamp: m.timestamp
+        })),
+        hybridResults: hybridMemories.map(m => {
+          const memAny = m as any;
+          return {
+            id: m.id,
+            vectorSimilarity: memAny.originalSimilarity || m.similarity,
+            keywordScore: memAny.keywordScore || 0,
+            hybridScore: memAny.hybridScore || m.similarity,
+            content: m.content.substring(0, 200),
+            type: m.type,
+            timestamp: m.timestamp
+          };
+        }),
+        settings: {
+          embeddingModel,
+          similarityThreshold
+        }
+      });
+      
+      console.log(`=== END RAG DEBUG ===`);
+    } catch (err) {
+      console.error("RAG Debug Error:", err);
       handleError(err, res);
     }
   });
