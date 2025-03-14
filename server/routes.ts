@@ -335,30 +335,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (content.toLowerCase().includes('favorite') && 
          content.toLowerCase().includes('car') && 
          isQuestion) {
-        try {
-          console.log(`[CAR QUERY DETECTOR] Special handling for favorite car question`);
-          
-          // Try direct SQL search for Ferrari content first
-          const ferrariMemories = await db.execute(sql`
-            SELECT m.*, 0.98 as similarity
-            FROM memories m 
-            WHERE LOWER(m.content) LIKE ${'%ferrari%'} OR LOWER(m.content) LIKE ${'%308gtsi%'}
-            ORDER BY timestamp DESC
-            LIMIT 5
-          `);
-          
-          if (ferrariMemories && ferrariMemories.length > 0) {
-            console.log(`[CAR QUERY DETECTOR] Found ${ferrariMemories.length} Ferrari/308GTSi memories via SQL`);
-            
-            // If specific Ferrari memories were found, add them to the top of the list
-            relevantMemories = [...ferrariMemories, ...relevantMemories.filter(m => 
-              !m.content.toLowerCase().includes('what is my favorite car')
-            )].slice(0, contextSize * 2);
-          }
-        } catch(err) {
-          console.error(`[CAR QUERY DETECTOR] Error searching for Ferrari memories:`, err);
-          // Continue with existing memories if error
-        }
+        // Let the content processor handle this entirely
+        // We'll implement the Ferrari detection directly in the content processor
+        console.log(`[CAR QUERY DETECTOR] Will use enhanced content processor for favorite car detection`);
       }
 
       // Enhanced special handling for personal attribute questions
