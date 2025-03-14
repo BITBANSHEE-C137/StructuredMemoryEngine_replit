@@ -138,10 +138,52 @@ export async function checkPgVectorExtension() {
   }
 }
 
+// Function to apply the pgvector fix migration directly
+export async function applyPgvectorFix() {
+  try {
+    console.log("Applying pgvector fix migration...");
+    
+    // Read the migration file
+    const fs = await import('fs');
+    const path = await import('path');
+    const migrationPath = path.resolve('./migrations/0002_fix_pgvector.sql');
+    
+    if (!fs.existsSync(migrationPath)) {
+      console.error(`Migration file not found: ${migrationPath}`);
+      return;
+    }
+    
+    const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+    
+    // Split the migration into individual statements
+    const statements = migrationSql
+      .replace(/--.*?\n/g, '\n') // Remove comments
+      .split(';')
+      .filter(stmt => stmt.trim());
+    
+    // Execute each statement
+    for (const stmt of statements) {
+      if (stmt.trim()) {
+        try {
+          await migrationClient.unsafe(stmt);
+        } catch (error: any) {
+          console.warn(`Error executing statement (continuing anyway): ${error.message}`);
+        }
+      }
+    }
+    
+    console.log("pgvector fix migration completed");
+  } catch (error) {
+    console.error("Error applying pgvector fix:", error);
+  }
+}
+
 // Initialize database (run migrations, seed data, etc.)
 export async function initializeDatabase() {
   await runMigrations();
   await checkPgVectorExtension();
+  // Apply our custom pgvector fix
+  await applyPgvectorFix();
   await seedModels();
   await initializeSettings();
 }
