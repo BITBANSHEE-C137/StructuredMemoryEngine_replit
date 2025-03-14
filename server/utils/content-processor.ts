@@ -235,16 +235,40 @@ export function performKeywordMatch(query: string, content: string): number {
   
   // Special handling for personal preference questions
   if (isQueryQuestion) {
-    // Extract "favorite X" pattern
-    const favoritesMatch = normalizedQuery.match(/(?:my|your|their|his|her|our)?\s*(?:favorite|preferred|best)\s+(\w+)/i);
+    // Extract "favorite X" pattern - enhance to handle more variations
+    const favoritesMatch = normalizedQuery.match(/(?:my|your|their|his|her|our)?\s*(?:favorite|preferred|best|like|love|enjoy|prefer)\s+(\w+)/i);
     if (favoritesMatch) {
       const favoriteSubject = favoritesMatch[1]; // e.g., "car", "color", etc.
       
-      console.log(`[content-processor] Detected favorite query about: ${favoriteSubject}`);
+      console.log(`[content-processor] Detected preference query about: ${favoriteSubject}`);
       
-      // Check if content contains this type of information with higher sensitivity
+      // Enhanced pattern matching for statements about favorites
+      // Look for definitive patterns like "my favorite car is X" or "I love the Ferrari"
+      const preferencePatterns = [
+        // Direct statements with possessive + favorite
+        new RegExp(`(?:my|your|his|her|their)\\s+(?:favorite|preferred|best)\\s+${favoriteSubject}\\s+(?:is|are|was|were)`, 'i'),
+        // First-person statements with like/love/enjoy
+        new RegExp(`\\b(?:I|you)\\s+(?:like|love|enjoy|prefer)\\s+(?:the|a|an)?\\s+\\w+\\s+${favoriteSubject}`, 'i'),
+        // Statements about preferences
+        new RegExp(`${favoriteSubject}\\s+(?:that|which|I|you)\\s+(?:like|love|enjoy|prefer)\\s+(?:is|are|was|were)\\s+\\w+`, 'i'),
+      ];
+      
+      // Check for exact preference statements
+      for (const pattern of preferencePatterns) {
+        if (pattern.test(normalizedContent)) {
+          console.log(`[content-processor] Found EXACT favorite ${favoriteSubject} answer in content with pattern: ${pattern}`);
+          return 0.98; // Extremely high relevance for exact preference answers
+        }
+      }
+      
+      // Check if content contains any preference indicators with the subject
       if (
-        (normalizedContent.includes("favorite") || normalizedContent.includes("prefer") || normalizedContent.includes("best")) && 
+        (normalizedContent.includes("favorite") || 
+         normalizedContent.includes("prefer") || 
+         normalizedContent.includes("best") ||
+         normalizedContent.includes("like") ||
+         normalizedContent.includes("love") ||
+         normalizedContent.includes("enjoy")) && 
         normalizedContent.includes(favoriteSubject)
       ) {
         // If the content contains statements about favorites of the requested subject
@@ -260,16 +284,59 @@ export function performKeywordMatch(query: string, content: string): number {
       }
     }
     
-    // Special handling for possession, identity or attribute questions
-    const attributeMatch = normalizedQuery.match(/(?:what|which|who)\s+(?:is|are|was|were)?\s+(?:my|your|their|his|her|our)\s+(\w+)/i);
-    if (attributeMatch) {
-      const attribute = attributeMatch[1]; // e.g., "name", "age", "car", etc.
-      
-      // Check if content answers this possession/identity question
-      if (normalizedContent.includes(attribute) && 
-          (normalizedContent.includes("your") || normalizedContent.includes("my") || 
-           normalizedContent.includes("is") || normalizedContent.includes("are"))) {
-        return 0.90; // High relevance for potential answers about possessions/attributes
+    // Enhanced handling for possession, identity or attribute questions
+    // Expand patterns to catch more variations of personal attribute questions
+    const attributePatterns = [
+      // Standard "what is my X" pattern
+      /(?:what|which|who)\s+(?:is|are|was|were)?\s+(?:my|your|their|his|her|our)\s+(\w+)/i,
+      // "do you know my X" pattern
+      /(?:do|did|does|can)\s+(?:you|we|they)\s+(?:know|remember|recall)\s+(?:my|your|their|his|her|our)\s+(\w+)/i,
+      // "tell me my X" pattern
+      /(?:tell|give|show)\s+(?:me|us|him|her|them)\s+(?:my|your|their|his|her|our)\s+(\w+)/i,
+      // "where is my X" pattern
+      /(?:where|when)\s+(?:is|are|was|were)\s+(?:my|your|their|his|her|our)\s+(\w+)/i
+    ];
+    
+    // Check each pattern
+    for (const pattern of attributePatterns) {
+      const attributeMatch = normalizedQuery.match(pattern);
+      if (attributeMatch) {
+        const attribute = attributeMatch[1]; // e.g., "name", "age", "car", etc.
+        
+        console.log(`[content-processor] Detected attribute query about: ${attribute}`);
+        
+        // Look for definitive statements about this attribute
+        const attributePatterns = [
+          // Direct statements with possessive + attribute
+          new RegExp(`(?:my|your|his|her|their)\\s+${attribute}\\s+(?:is|are|was|were)`, 'i'),
+          // First-person statements about attributes
+          new RegExp(`\\b(?:I|you)\\s+(?:have|own|possess|use)\\s+(?:a|an|the)?\\s+\\w+\\s+${attribute}`, 'i'),
+          // Direct attribute statements
+          new RegExp(`(?:the|your|my)\\s+${attribute}\\s+(?:that|which)\\s+(?:you|I)\\s+(?:have|own|use|mentioned)`, 'i'),
+        ];
+        
+        // Check for exact attribute statements
+        for (const attrPattern of attributePatterns) {
+          if (attrPattern.test(normalizedContent)) {
+            console.log(`[content-processor] Found EXACT attribute ${attribute} statement in content with pattern: ${attrPattern}`);
+            return 0.97; // Very high relevance for exact attribute statements
+          }
+        }
+        
+        // Check if content includes the attribute with possessive indicators
+        if (normalizedContent.includes(attribute) && 
+            (normalizedContent.includes("your") || normalizedContent.includes("my") || 
+             normalizedContent.includes("is") || normalizedContent.includes("are") ||
+             normalizedContent.includes("have") || normalizedContent.includes("own"))) {
+          console.log(`[content-processor] Found potential ${attribute} information in content`);
+          return 0.90; // High relevance for potential answers about possessions/attributes
+        }
+        
+        // Any mention of the attribute gets moderate relevance
+        if (normalizedContent.includes(attribute)) {
+          console.log(`[content-processor] Found mention of ${attribute} in content`);
+          return 0.75; // Moderate relevance for attribute mentions
+        }
       }
     }
   }
