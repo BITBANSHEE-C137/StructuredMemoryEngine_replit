@@ -228,12 +228,18 @@ export class DatabaseStorage implements IStorage {
       
       // Ensure embedding is cast as vector and using the cosine distance operator (<->)
       // Added filtering by similarity threshold
+      console.log(`Executing SQL with threshold=${threshold}, raw similarity=${similarityThreshold}`);
+      
+      // Force a higher threshold for testing
+      const forcedThreshold = 0.85;
+      console.log(`CRITICAL TEST: Forcing threshold to ${forcedThreshold} to verify SQL filtering`);
+      
       const result = await db.execute(sql`
         SELECT m.*, 
                1 - (m.embedding <-> ${embedding}::vector) as similarity
         FROM memories m
         WHERE m.embedding IS NOT NULL
-        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${threshold}
+        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${forcedThreshold}
         ORDER BY m.embedding <-> ${embedding}::vector
         LIMIT ${limit}
       `);
