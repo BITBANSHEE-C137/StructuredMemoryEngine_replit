@@ -398,13 +398,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lowercaseContent.includes("your name")
     ) {
       return {
-        response: `I am Jarvis, sir. I'm powered by the ${model.name} model from ${model.provider}, with a maximum context capacity of ${model.maxTokens} tokens. 
+        response: `I'm an AI assistant powered by the ${model.name} model from ${model.provider}, with a maximum context capacity of ${model.maxTokens} tokens.
 
-My memory system uses a two-tiered approach:
+My memory system uses a sophisticated two-tiered approach:
 - Short-term memory (PGVector): Contains ${settings.contextSize} most relevant memories per query with a similarity threshold of ${settings.similarityThreshold}
 - Long-term memory (Pinecone): ${pineconeStatus} for archival knowledge retrieval
 
-Is there anything specific about my capabilities you'd like to know?`
+This advanced architecture allows me to maintain context across conversations and retrieve relevant information from past interactions. Is there anything specific about my capabilities you'd like to know?`
       };
     }
     
@@ -422,13 +422,13 @@ Is there anything specific about my capabilities you'd like to know?`
         // Get the most recent messages (up to 30)
         const recentMessages = await storage.getMessages(30);
         
-        // Format them for the response in Jarvis style
+        // Format them for the response
         const formattedMessages = recentMessages
-          .map(msg => `[${new Date(msg.timestamp).toLocaleString()}] ${msg.role === 'user' ? 'You' : 'Jarvis'}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`)
+          .map(msg => `[${new Date(msg.timestamp).toLocaleString()}] ${msg.role === 'user' ? 'You' : 'Assistant'}: ${msg.content.substring(0, 100)}${msg.content.length > 100 ? '...' : ''}`)
           .join('\n\n');
         
         return {
-          response: `I've compiled a summary of our recent conversations, sir:\n\n${formattedMessages}\n\nIs there a specific part of our conversation you'd like me to elaborate on?`,
+          response: `Here's a summary of our recent conversations:\n\n${formattedMessages}\n\nIs there a specific part of our conversation you'd like me to elaborate on?`,
           customContext: recentMessages.map(m => ({ 
             id: m.id,
             content: m.content,
@@ -438,7 +438,7 @@ Is there anything specific about my capabilities you'd like to know?`
       } catch (error) {
         console.error("Error retrieving recent messages:", error);
         return {
-          response: "I attempted to retrieve our conversation history, sir, but encountered a system error. Perhaps we could try a different query?"
+          response: "I attempted to retrieve our conversation history, but encountered a system error. Perhaps we could try a different query?"
         };
       }
     }
@@ -472,7 +472,7 @@ Is there anything specific about my capabilities you'd like to know?`
       }
       
       return {
-        response: `System diagnostics ready, sir. Current configuration:
+        response: `System diagnostics information:
         
 - Primary AI: ${model.name} (${model.provider})
 - Default Model: ${settings.defaultModelId}
@@ -495,7 +495,7 @@ All systems are operational. Memory functions can be managed through the setting
       ) && isPineconeAvailable
     ) {
       return {
-        response: `I'll initiate a search in the long-term memory archives, sir. What specific information would you like me to retrieve? Please provide some keywords or a specific topic you'd like me to search for.`
+        response: `I'll initiate a search in the long-term memory archives. What specific information would you like me to retrieve? Please provide some keywords or a specific topic you'd like me to search for.`
       };
     }
     
