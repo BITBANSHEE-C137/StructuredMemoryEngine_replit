@@ -429,7 +429,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // This makes our search universally applicable to any topic or preference
           let sqlConditions = [];
           
-          // We now use our universal approach with broader patterns
+          // Always include these base patterns for continuity with existing code
+          sqlConditions.push(sql`LOWER(content) LIKE ${'%ferrari%'}`);
+          sqlConditions.push(sql`LOWER(content) LIKE ${'%308%'}`);
+          sqlConditions.push(sql`LOWER(content) LIKE ${'%favorite car%'}`);
+          sqlConditions.push(sql`LOWER(content) LIKE ${'%my car%'}`);
+          
           // Add specific attribute searches based on entities extracted from query
           if (potentialEntities.length > 0) {
             for (const entity of potentialEntities) {
@@ -438,44 +443,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 sqlConditions.push(sql`LOWER(content) LIKE ${`%my ${entity}%`}`);
                 sqlConditions.push(sql`LOWER(content) LIKE ${`%favorite ${entity}%`}`);
                 
-                // Critical for board games and similar entities
-                sqlConditions.push(sql`LOWER(content) LIKE ${`%${entity} this week%`}`);
-                sqlConditions.push(sql`LOWER(content) LIKE ${`%${entity} currently%`}`);
-                sqlConditions.push(sql`LOWER(content) LIKE ${`%${entity} lately%`}`);
-                sqlConditions.push(sql`LOWER(content) LIKE ${`%${entity} now%`}`);
-                
-                // Critical for finding answers to "what is X" questions
-                sqlConditions.push(sql`LOWER(content) LIKE ${`%it's %`}`);
-                sqlConditions.push(sql`LOWER(content) LIKE ${`%its %`}`);
-                sqlConditions.push(sql`LOWER(content) LIKE ${`%that's %`}`);
-                sqlConditions.push(sql`LOWER(content) LIKE ${`%this is %`}`);
-                
-                // Look for entity-is-value pattern for key entities over 3 chars
-                if (entity.length > 3) {
+                // Look for entity-is-value pattern for key entities over 4 chars
+                if (entity.length > 4) {
                   sqlConditions.push(sql`LOWER(content) LIKE ${`%${entity} is%`}`);
-                  sqlConditions.push(sql`LOWER(content) LIKE ${`%${entity} are%`}`);
-                  
-                  // Entity preferences
-                  sqlConditions.push(sql`LOWER(content) LIKE ${`%like ${entity}%`}`);
-                  sqlConditions.push(sql`LOWER(content) LIKE ${`%love ${entity}%`}`);
-                  sqlConditions.push(sql`LOWER(content) LIKE ${`%prefer ${entity}%`}`);
-                  sqlConditions.push(sql`LOWER(content) LIKE ${`%enjoy ${entity}%`}`);
                 }
               }
-            }
-          }
-          
-          // For backward compatibility, always include the original patterns too
-          sqlConditions.push(sql`LOWER(content) LIKE ${'%ferrari%'}`);
-          sqlConditions.push(sql`LOWER(content) LIKE ${'%308%'}`);
-          sqlConditions.push(sql`LOWER(content) LIKE ${'%favorite car%'}`);
-          sqlConditions.push(sql`LOWER(content) LIKE ${'%my car%'}`);
-          
-          // Add common game types for preference queries about games
-          const gameTypes = ['board game', 'card game', 'video game', 'game', 'monopoly', 'chess', 'risk', 'trivia', 'scrabble'];
-          if (content.toLowerCase().includes('game') || content.toLowerCase().includes('play')) {
-            for (const gameType of gameTypes) {
-              sqlConditions.push(sql`LOWER(content) LIKE ${`%${gameType}%`}`);
             }
           }
           
@@ -702,19 +674,17 @@ CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
 1. Your PRIMARY purpose is to act as a personal assistant with memory - you remember everything the user tells you and can recall it when asked.
 2. CRITICALLY IMPORTANT: You MUST maintain conversational context between turns and infer connections between related statements.
 3. When a user makes sequential statements like "My favorite X is Y" followed by "Yes, it's my favorite", you MUST understand they are talking about the same thing.
-4. For pronouns like "it", "this", "that" or statements like "this week", "lately", "currently", ALWAYS check the most recent messages for context.
-5. EXTREMELY IMPORTANT: If the user says "it's X" or "that's X" after you've asked about something, interpret this as a direct answer to your question.
-6. You MUST track the conversational flow and understand when users are referring to things mentioned in recent messages.
-7. When asked about personal attributes/preferences (e.g., "what's my favorite game?"), ALWAYS check ALL memories for relevant information.
-8. ACTIVELY SEARCH memories for ANY statements about the user's attributes or preferences (e.g., "my favorite board game is Monopoly").
-9. CRUCIAL: When a user asks about their preferences or information they've shared before, CHECK ALL memories for ANY statement where they declared this information. The statement might not be in the most recent memories.
-10. When the user tells you something about themselves like "My favorite X is Y" or "X this week is Y", treat this as high-priority personal information to remember and recall later.
-11. Time-based references like "this week", "now", "lately", "currently" often indicate temporal preferences. Example: If user says "My favorite game this week is Monopoly", this means "My favorite game is Monopoly (at this point in time)".
-12. If you find a memory where the user stated a preference or personal detail, USE THIS INFORMATION in your response EVEN IF it was in a much earlier conversation.
-13. You should NEVER tell a user you don't know their preference if there's ANY memory where they've stated it before.
-14. When you find information in memories about the user, reflect it back to them (e.g., "Based on our previous conversation, I know your favorite board game is Monopoly").
-15. If no specific memory exists after thorough searching, only then acknowledge this fact and indicate you'll remember the information if provided.
-16. Never invent or assume personal preferences, attributes, or biographical details not found in memories.`;
+4. For pronouns or references like "it", "this", or "that", always look at previous messages to understand the full context.
+5. When asked about personal attributes/preferences (e.g., "what's my favorite car?"), ALWAYS check ALL memories for relevant information.
+6. ACTIVELY SEARCH memories for ANY statements about the user's attributes or preferences (e.g., "my favorite car is Ferrari").
+7. CRUCIAL: When a user asks about their preferences or information they've shared before, CHECK ALL memories for ANY statement where they declared this information. The statement might not be in the most recent memories.
+8. When the user tells you something about themselves like "My favorite X is Y", treat this as high-priority personal information to remember and recall later.
+9. If the user makes a statement like "it's Y" right after you asked about X, understand they are telling you "X is Y" and respond accordingly.
+10. If you find a memory where the user stated a preference or personal detail, USE THIS INFORMATION in your response EVEN IF it was in a much earlier conversation.
+11. You should NEVER tell a user you don't know their preference if there's ANY memory where they've stated it before.
+12. When you find information in memories about the user, reflect it back to them (e.g., "Based on our previous conversation, I know your favorite car is the Ferrari 308GTSi").
+13. If no specific memory exists after thorough searching, only then acknowledge this fact and indicate you'll remember the information if provided.
+14. Never invent or assume personal preferences, attributes, or biographical details not found in memories.`;
       
       // 6. Generate response based on provider
       let response = '';
