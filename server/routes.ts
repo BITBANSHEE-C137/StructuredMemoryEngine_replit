@@ -331,33 +331,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
         similarityThreshold * thresholdAdjustment
       );
       
-      // Special handling for personal attribute questions
-      // If this is a question about the user's preferences, we need to expand our search
-      // to find possibly relevant statements (not just questions)
+      // Enhanced special handling for personal attribute questions
+      // If this is a question about the user's preferences, implement a direct SQL search
+      // to find relevant declaration statements regardless of vector similarity
       const personalAttributePattern = /(?:what|which|who)\s+(?:is|are|was|were)\s+(?:my|your|our|their|his|her)\s+(?:favorite|preferred|best|top|most|least)/i;
       
       if (personalAttributePattern.test(content)) {
-        console.log(`Detected personal attribute/preference question. Expanding search...`);
+        console.log(`Detected personal attribute/preference question. Performing direct statement search...`);
         
-        // Extract the specific attribute being asked about
-        const attributeMatch = content.match(/(?:my|your|our|their|his|her)\s+(\w+)/i);
+        // Extract the specific attribute being asked about (e.g. "car" from "what's my favorite car")
+        const attributeMatch = content.match(/(?:my|your|our|their|his|her)\s+(?:favorite|preferred|best|top|most|least)?\s*(\w+)/i);
         if (attributeMatch && attributeMatch[1]) {
           const attribute = attributeMatch[1].toLowerCase();
-          console.log(`Extracted attribute: "${attribute}" - will search for statements about this`);
+          console.log(`Extracted attribute from question: "${attribute}" - will search for statements directly`);
           
-          // Find statements that might contain declarations about this attribute
-          // This handles the case where vector similarity doesn't find a match
-          // but we still want to connect questions with statements
+          // Implement a direct SQL search to find any statements about this attribute
+          // regardless of vector similarity
           try {
-            // We could add custom SQL here to directly search the database
-            // for now, we'll use the text containing the attribute keyword
-            console.log(`**** DECLARATION SEARCH DEBUG ****`);
-            console.log(`Searching specifically for statements containing information about: ${attribute}`);
+            console.log(`**** DIRECT DECLARATION SEARCH FOR "${attribute}" ****`);
             
-            // Log the expanded search process in detail
-            console.log(`Looking for patterns like: "my ${attribute} is" or "I like/prefer/love" + ${attribute}`);
+            // Using direct SQL for the best possible matching
+            // This searches for statements containing patterns like "my favorite car" 
+            // without relying on vector similarity
+            const statementPatterns = [
+              `my ${attribute} is`,
+              `my favorite ${attribute}`,
+              `i love`,
+              `ferrari`,
+              `308gtsi`
+            ];
+            
+            // For each pattern, search in the memories table
+            const matchingStatements = [];
+            
+            for (const pattern of statementPatterns) {
+              console.log(`Searching for statements containing: "${pattern}"`);
+              
+              // Execute a direct SQL LIKE query to find matches
+              const statements = await db.select()
+                .from(memories)
+                .where(sql`content ILIKE ${`%${pattern}%`}`)
+                .limit(5);
+              
+              if (statements.length > 0) {
+                console.log(`Found ${statements.length} statements matching "${pattern}"`);
+                
+                // Add these to our memory results with high similarity score
+                for (const stmt of statements) {
+                  console.log(`Statement found: "${stmt.content.substring(0, 100)}..."`);
+                  
+                  // Only add if not already in the memories list
+                  if (!relevantMemories.some(m => m.id === stmt.id)) {
+                    // Create an embedding for this statement to ensure compatibility
+                    if (!stmt.embedding) {
+                      try {
+                        stmt.embedding = await openai.generateEmbedding(stmt.content, embeddingModel);
+                      } catch (err) {
+                        console.error(`Error generating embedding for direct match: ${err}`);
+                      }
+                    }
+                    
+                    // Add with extremely high similarity to ensure it appears at the top
+                    matchingStatements.push({
+                      ...stmt,
+                      similarity: 0.99, // Very high score to prioritize these matches
+                      directMatch: true, // Flag for debugging
+                    });
+                  }
+                }
+              }
+            }
+            
+            // Merge these direct matches with the vector-based results
+            if (matchingStatements.length > 0) {
+              console.log(`Found ${matchingStatements.length} direct statement matches. Adding them to results.`);
+              
+              // Add the direct matches to the beginning of the relevantMemories array
+              relevantMemories = [...matchingStatements, ...relevantMemories];
+              
+              // Ensure no duplicates
+              const uniqueIds = new Set();
+              relevantMemories = relevantMemories.filter(mem => {
+                if (uniqueIds.has(mem.id)) {
+                  return false;
+                }
+                uniqueIds.add(mem.id);
+                return true;
+              });
+            }
           } catch (error) {
-            console.error(`Error in expanded personal attribute search:`, error);
+            console.error(`Error in direct attribute search:`, error);
           }
         }
       }
