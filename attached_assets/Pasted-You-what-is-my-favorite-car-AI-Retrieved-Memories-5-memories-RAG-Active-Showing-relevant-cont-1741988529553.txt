@@ -1,0 +1,150 @@
+You
+what is my favorite car?
+AI
+Retrieved Memories
+5 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 98.2%
+1
+Memory #259
+High relevance
+98.9% match
+my favorite car is the Ferrari 308gtsi years 1984-1985
+2
+Memory #267
+High relevance
+98.9% match
+My favorite car is the Ferrari 308GTS
+3
+Memory #271
+High relevance
+98.9% match
+My favorite car is Ferrari 308GTSi
+4
+Memory #325
+High relevance
+98.2% match
+My favorite car is the Ferrari 308GTSi. It's a beautiful classic car with amazing styling.
+5
+Memory #332
+High relevance
+98.5% match
+My favorite car is the Ferrari 308GTSi. It is a classic sports car with beautiful styling.
+Memory retrieval powered by vector embedding similarity search.
+Based on our previous conversations, your favorite car is the Ferrari 308GTSi, particularly the models from 1984-1985. You’ve mentioned it’s a classic sports car with beautiful styling.
+You
+what is my favorite car?
+AI
+Retrieved Memories
+7 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 94.0%
+1
+Memory #259
+High relevance
+98.7% match
+my favorite car is the Ferrari 308gtsi years 1984-1985
+2
+Memory #267
+High relevance
+98.6% match
+My favorite car is the Ferrari 308GTS
+3
+Memory #325
+High relevance
+98.6% match
+My favorite car is the Ferrari 308GTSi. It's a beautiful classic car with amazing styling.
+4
+Memory #332
+High relevance
+98.0% match
+My favorite car is the Ferrari 308GTSi. It is a classic sports car with beautiful styling.
+5
+Memory #349
+High relevance
+98.2% match
+Based on our previous conversations, your favorite car is the Ferrari 308GTSi. You described it as a beautiful classic car with amazing styling, and y...
+6
+Memory #271
+High relevance
+99.0% match
+My favorite car is Ferrari 308GTSi
+7
+Memory #257
+High relevance
+94.0% match
+what's my favorite car?
+Memory retrieval powered by vector embedding similarity search.
+Based on our previous conversations, your favorite car is the Ferrari 308GTSi, particularly the 1984-1985 model years. You’ve described it as a beautiful classic car with amazing styling.
+You
+what is my favorite car?
+AI
+Retrieved Memories
+7 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 94.0%
+1
+Memory #259
+High relevance
+98.8% match
+my favorite car is the Ferrari 308gtsi years 1984-1985
+2
+Memory #267
+High relevance
+98.5% match
+My favorite car is the Ferrari 308GTS
+3
+Memory #271
+High relevance
+98.1% match
+My favorite car is Ferrari 308GTSi
+4
+Memory #325
+High relevance
+98.8% match
+My favorite car is the Ferrari 308GTSi. It's a beautiful classic car with amazing styling.
+5
+Memory #332
+High relevance
+98.6% match
+My favorite car is the Ferrari 308GTSi. It is a classic sports car with beautiful styling.
+6
+Memory #247
+High relevance
+94.0% match
+what's my favorite car?
+7
+Memory #257
+High relevance
+94.0% match
+what's my favorite car?
+Memory retrieval powered by vector embedding similarity search.
+Based on our previous conversations, your favorite car is the Ferrari 308GTSi, specifically from the years 1984-1985. You have mentioned that it's a beautiful classic sports car with amazing styling.
+You
+what is my favorite car?
+AI
+Retrieved Memories
+3 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 98.1%
+1
+Memory #259
+High relevance
+98.8% match
+my favorite car is the Ferrari 308gtsi years 1984-1985
+2
+Memory #267
+High relevance
+98.1% match
+My favorite car is the Ferrari 308GTS
+3
+Memory #271
+High relevance
+98.8% match
+My favorite car is Ferrari 308GTSi
+Memory retrieval powered by vector embedding similarity search.
+Based on our previous conversations, your favorite car is the Ferrari 308GTSi, specifically the 1984-1985 model years.
