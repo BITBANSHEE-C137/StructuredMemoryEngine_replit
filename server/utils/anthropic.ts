@@ -41,7 +41,7 @@ ${context}`
       const firstBlock = message.content[0];
       if ('text' in firstBlock) {
         return firstBlock.text;
-      } else if (firstBlock.type === 'text') {
+      } else if ('type' in firstBlock && firstBlock.type === 'text') {
         return (firstBlock as any).text;
       } else {
         // Fallback for any other content type

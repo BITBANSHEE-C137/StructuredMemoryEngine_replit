@@ -638,13 +638,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Memory ID ${memory.id}: Vector similarity ${originalSim}, Keyword score ${keywordScore}, Hybrid score ${hybridScore}`);
       });
       
-      // 5. Format context from relevant memories
+      // 5. Format context from relevant memories with enhanced structure
       let context = '';
       if (relevantMemories.length > 0) {
-        context = "Here are some relevant past interactions:\n\n" + 
-          relevantMemories
-            .map((memory, i) => `[Memory ${i + 1}] ${memory.content}`)
-            .join("\n\n");
+        // IMPROVEMENT 1: Memory Prioritization and Weighting
+        // Sort memories by similarity score to prioritize the most relevant ones
+        const sortedMemories = [...relevantMemories].sort((a, b) => b.similarity - a.similarity);
+        
+        context = "# RELEVANT MEMORIES FROM PAST INTERACTIONS\n";
+        context += "The following memories were retrieved based on semantic similarity to your query. Higher relevance scores indicate stronger connection to your current question:\n\n";
+        
+        // IMPROVEMENT 2: Enhanced Context Structuring & IMPROVEMENT 3: Relevance Indicators
+        context += sortedMemories.map((memory, i) => {
+          // Calculate a percentage for better human readability
+          const relevancePercentage = Math.round(memory.similarity * 100);
+          
+          // Format timestamp to be more readable if available
+          let formattedTime = '';
+          try {
+            if (memory.timestamp) {
+              const date = new Date(memory.timestamp);
+              formattedTime = date.toLocaleString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit'
+              });
+            }
+          } catch (e) {
+            console.error('Error formatting timestamp:', e);
+          }
+          
+          // IMPROVEMENT 4: Memory Types Differentiation
+          const typeLabel = memory.type === 'prompt' ? 'USER QUERY' : 'SYSTEM RESPONSE';
+          const timeContext = formattedTime ? ` (${formattedTime})` : '';
+          
+          return `[Memory ${i + 1} | ${relevancePercentage}% relevance | ${typeLabel}${timeContext}]\n${memory.content}`;
+        }).join("\n\n");
       }
       
       // Get recent conversation context for better continuity
@@ -653,13 +683,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const recentMessages = await storage.getMessages(5); // Get the most recent 5 messages
         if (recentMessages.length > 0) {
           // Add a section specifically for recent conversation flow
-          context += "\n\n# RECENT CONVERSATION CONTEXT (READ CAREFULLY)\n";
-          context += "These are the most recent messages in our conversation. Pay special attention to these for continuity:\n\n";
+          context += "\n\n# RECENT CONVERSATION FLOW\n";
+          context += "These are the most recent messages in our conversation, shown in chronological order. Use these to maintain conversation continuity:\n\n";
           
-          // Format recent messages with clear roles and content
+          // Format recent messages with enhanced structure showing conversation flow
           const formattedRecentConversation = recentMessages
             .reverse() // Show in chronological order (oldest first)
-            .map(msg => `[${msg.role.toUpperCase()}]: ${msg.content}`)
+            .map((msg, index) => {
+              // Format timestamp for better readability
+              let formattedTime = '';
+              try {
+                const date = new Date(msg.timestamp);
+                formattedTime = date.toLocaleString('en-US', { 
+                  hour: '2-digit', 
+                  minute: '2-digit'
+                });
+              } catch (e) {
+                console.error('Error formatting timestamp:', e);
+              }
+              
+              const timeInfo = formattedTime ? ` at ${formattedTime}` : '';
+              const roleLabel = msg.role === 'user' ? 'USER' : 'ASSISTANT';
+              
+              // Add conversation flow markers to show the back-and-forth
+              const prefix = index === 0 ? '' : (msg.role === 'user' ? '↩️ ' : '↪️ ');
+              
+              return `${prefix}[${roleLabel}${timeInfo}]: ${msg.content}`;
+            })
             .join("\n\n");
           
           context += formattedRecentConversation;
@@ -670,13 +720,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error fetching recent conversation context:", error);
       }
       
-      // Add special system context to help guide the model
-      context += `\n\nIMPORTANT SYSTEM NOTES:
-1. You are the Structured Memory Engine, a RAG-based AI assistant that uses vector similarity to find relevant memories.
-2. The current model you're using is: ${model.name} (${model.provider})
-3. You have access to ${contextSize} relevant memories for each query with a similarity threshold of ${settings.similarityThreshold}.
-4. If asked about your configuration or settings, you can directly answer with this information.
-5. For queries like "summarize recent chats" or "what model is this?", you can access this system information to answer.
+      // IMPROVEMENT 5: Self-Correction and Clarification Mechanism
+      context += `\n\n# SYSTEM GUIDELINES FOR MEMORY USAGE AND REASONING
+
+1. MEMORY RELEVANCE: You are the Structured Memory Engine, a context-aware AI assistant that retrieves and uses memories based on semantic similarity. The memories shown above were selected because they are semantically relevant to the current query.
+
+2. SYSTEM DETAILS: You're currently running on ${model.name} (${model.provider}) and configured to retrieve up to ${contextSize} relevant memories with a similarity threshold of ${settings.similarityThreshold}.
+
+3. HANDLING UNCERTAINTY: When memories contain conflicting information, acknowledge the contradiction, explain both perspectives, and consider which is more recent or relevant before responding.
+
+4. USER PREFERENCES: Pay special attention to memories that indicate user preferences, factual information, or persistent characteristics, and maintain consistency when referring to them.
+
+5. MEMORY GAPS: If you recognize that relevant information should exist but wasn't retrieved, acknowledge the gap rather than inventing details.
+
+6. META-QUERIES: For questions about your configuration, settings, or memory system (e.g., "what model is this?", "summarize recent chats"), you can directly answer using the system information provided.
+
+7. CONTEXT RELATIONSHIPS: Look for relationships between memories - whether retrieved memories form part of a sequence or conversation, represent different perspectives on the same topic, or show evolution of ideas over time.
 
 CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
 1. Your PRIMARY purpose is to act as a personal assistant with memory - you remember everything the user tells you and can recall it when asked.
