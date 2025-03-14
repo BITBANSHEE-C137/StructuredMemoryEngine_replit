@@ -639,6 +639,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .join("\n\n");
       }
       
+      // Get recent conversation context for better continuity
+      // This is crucial for tracking references to previous statements
+      try {
+        const recentMessages = await storage.getMessages(5); // Get the most recent 5 messages
+        if (recentMessages.length > 0) {
+          // Add a section specifically for recent conversation flow
+          context += "\n\n# RECENT CONVERSATION CONTEXT (READ CAREFULLY)\n";
+          context += "These are the most recent messages in our conversation. Pay special attention to these for continuity:\n\n";
+          
+          // Format recent messages with clear roles and content
+          const formattedRecentConversation = recentMessages
+            .reverse() // Show in chronological order (oldest first)
+            .map(msg => `[${msg.role.toUpperCase()}]: ${msg.content}`)
+            .join("\n\n");
+          
+          context += formattedRecentConversation;
+          
+          console.log(`Added ${recentMessages.length} recent messages for conversation continuity`);
+        }
+      } catch (error) {
+        console.error("Error fetching recent conversation context:", error);
+      }
+      
       // Add special system context to help guide the model
       context += `\n\nIMPORTANT SYSTEM NOTES:
 1. You are the Structured Memory Engine, a RAG-based AI assistant that uses vector similarity to find relevant memories.
@@ -647,17 +670,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 4. If asked about your configuration or settings, you can directly answer with this information.
 5. For queries like "summarize recent chats" or "what model is this?", you can access this system information to answer.
 
-CONVERSATIONAL MEMORY HANDLING:
+CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
 1. Your PRIMARY purpose is to act as a personal assistant with memory - you remember everything the user tells you and can recall it when asked.
-2. When asked about personal attributes/preferences (e.g., "what's my favorite car?"), ALWAYS check ALL memories for relevant information.
-3. ACTIVELY SEARCH memories for ANY statements about the user's attributes or preferences (e.g., "my favorite car is Ferrari").
-4. CRUCIAL: When a user asks about their preferences or information they've shared before, CHECK ALL memories for ANY statement where they declared this information. The statement might not be in the most recent memories.
-5. When the user tells you something about themselves like "My favorite X is Y", treat this as high-priority personal information to remember and recall later.
-6. If you find a memory where the user stated a preference or personal detail, USE THIS INFORMATION in your response EVEN IF it was in a much earlier conversation.
-7. You should NEVER tell a user you don't know their preference if there's ANY memory where they've stated it before.
-8. When you find information in memories about the user, reflect it back to them (e.g., "Based on our previous conversation, I know your favorite car is the Ferrari 308GTSi").
-9. If no specific memory exists after thorough searching, only then acknowledge this fact and indicate you'll remember the information if provided.
-10. Never invent or assume personal preferences, attributes, or biographical details not found in memories.`;
+2. CRITICALLY IMPORTANT: You MUST maintain conversational context between turns and infer connections between related statements.
+3. When a user makes sequential statements like "My favorite X is Y" followed by "Yes, it's my favorite", you MUST understand they are talking about the same thing.
+4. For pronouns or references like "it", "this", or "that", always look at previous messages to understand the full context.
+5. When asked about personal attributes/preferences (e.g., "what's my favorite car?"), ALWAYS check ALL memories for relevant information.
+6. ACTIVELY SEARCH memories for ANY statements about the user's attributes or preferences (e.g., "my favorite car is Ferrari").
+7. CRUCIAL: When a user asks about their preferences or information they've shared before, CHECK ALL memories for ANY statement where they declared this information. The statement might not be in the most recent memories.
+8. When the user tells you something about themselves like "My favorite X is Y", treat this as high-priority personal information to remember and recall later.
+9. If the user makes a statement like "it's Y" right after you asked about X, understand they are telling you "X is Y" and respond accordingly.
+10. If you find a memory where the user stated a preference or personal detail, USE THIS INFORMATION in your response EVEN IF it was in a much earlier conversation.
+11. You should NEVER tell a user you don't know their preference if there's ANY memory where they've stated it before.
+12. When you find information in memories about the user, reflect it back to them (e.g., "Based on our previous conversation, I know your favorite car is the Ferrari 308GTSi").
+13. If no specific memory exists after thorough searching, only then acknowledge this fact and indicate you'll remember the information if provided.
+14. Never invent or assume personal preferences, attributes, or biographical details not found in memories.`;
       
       // 6. Generate response based on provider
       let response = '';
