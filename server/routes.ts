@@ -310,12 +310,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       
       // Pass both contextSize and similarityThreshold to the storage method
+      // Enhanced question-answer matching
+      // Detect if the query is a question that might need expanded search
+      const isQuestion = content.includes('?') || 
+                        /^(?:what|who|when|where|why|how|can|could|do|does|did)/i.test(content.trim());
+      
+      // For questions, use a more permissive threshold to find potential answers
+      // that might not be semantically similar in vector space
+      const thresholdAdjustment = isQuestion ? 0.7 : 0.85; // More aggressive for questions
+      
+      console.log(`Query type: ${isQuestion ? 'Question' : 'Statement/Command'}`);
+      console.log(`Using threshold adjustment factor: ${thresholdAdjustment}`);
+      
       // Request more memories than needed to allow hybrid ranking to filter
-      // Use a slightly lower threshold to allow keyword-relevant items to be considered
+      // Use a dynamically adjusted threshold based on question/statement type
       let relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
-        contextSize * 2,
-        similarityThreshold * 0.85
+        contextSize * 3, // Increase to allow more candidates for hybrid ranking
+        similarityThreshold * thresholdAdjustment
       );
       
       // Apply hybrid ranking to improve results with keyword matching
