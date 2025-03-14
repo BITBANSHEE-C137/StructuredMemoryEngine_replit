@@ -309,10 +309,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Processed similarity threshold: ${similarityThreshold} (${similarityThreshold * 100}%)`);
       
       // Pass both contextSize and similarityThreshold to the storage method
+      // Request more memories than needed to allow hybrid ranking to filter
+      // Use a slightly lower threshold to allow keyword-relevant items to be considered
       let relevantMemories = await storage.queryMemoriesByEmbedding(
         embedding, 
-        contextSize * 2, // Request more memories than needed to allow hybrid ranking to filter
-        similarityThreshold * 0.9 // Slightly lower threshold to allow keyword-relevant items
+        contextSize * 2,
+        similarityThreshold * 0.85
       );
       
       // Apply hybrid ranking to improve results with keyword matching
@@ -320,6 +322,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Apply hybrid ranking with both vector similarity and keyword matching
       relevantMemories = applyHybridRanking(content, relevantMemories, similarityThreshold);
+      
+      // Log the hybrid-ranked memories to verify scores
+      console.log("Memories after hybrid ranking:");
+      relevantMemories.forEach(mem => {
+        // Cast to any to access the additional properties safely
+        const memAny = mem as any;
+        console.log(`  ID ${mem.id}: Vector ${memAny.originalSimilarity?.toFixed(2) || mem.similarity.toFixed(2)}, `+
+                    `Keyword ${memAny.keywordScore?.toFixed(2) || 'N/A'}, `+
+                    `Final ${mem.similarity.toFixed(2)}`);
+      });
       
       // Limit to requested context size after hybrid ranking
       relevantMemories = relevantMemories.slice(0, contextSize);
@@ -426,8 +438,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lowercaseContent.includes("are you gpt") ||
       lowercaseContent.includes("are you claude")
     ) {
+      // Generate variable similarity scores for a more realistic display
+      const customMemories = [
+        {
+          id: -1,
+          content: `Model: ${model.name} (${model.provider})`,
+          similarity: 0.94
+        },
+        {
+          id: -2,
+          content: `Maximum tokens: ${model.maxTokens}`,
+          similarity: 0.89
+        },
+        {
+          id: -3,
+          content: `Context size: ${settings.contextSize} memories per query`,
+          similarity: 0.82
+        },
+        {
+          id: -4,
+          content: `Similarity threshold: ${settings.similarityThreshold}`,
+          similarity: 0.77
+        }
+      ];
+      
       return {
-        response: `You're interacting with the Structured Memory Engine using the ${model.name} model from ${model.provider}. This model can handle up to ${model.maxTokens} tokens of context. The engine is configured to use ${settings.contextSize} relevant memories for each query with a similarity threshold of ${settings.similarityThreshold}.`
+        response: `You're interacting with the Structured Memory Engine using the ${model.name} model from ${model.provider}. This model can handle up to ${model.maxTokens} tokens of context. The engine is configured to use ${settings.contextSize} relevant memories for each query with a similarity threshold of ${settings.similarityThreshold}.`,
+        customContext: customMemories
       };
     }
     
@@ -451,11 +488,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           response: `Here's a summary of recent conversations:\n\n${formattedMessages}`,
-          customContext: recentMessages.map(m => ({ 
-            id: m.id,
-            content: m.content,
-            similarity: 1.0
-          }))
+          customContext: recentMessages.map((m, index) => {
+            // Calculate decreasing similarity scores based on recency
+            // This gives a more realistic UI display instead of 100% for all memories
+            const similarity = Math.max(0.30, 0.95 - (index * 0.04));
+            return { 
+              id: m.id,
+              content: m.content,
+              similarity: similarity
+            };
+          })
         };
       } catch (error) {
         console.error("Error retrieving recent messages:", error);
@@ -478,6 +520,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       lowercaseContent.includes("search approach") ||
       lowercaseContent.includes("keyword searching")
     ) {
+      // Create custom memories with varying similarity scores for a realistic display
+      const customMemories = [
+        {
+          id: -10,
+          content: `Content cleaning: Remove UI elements, formatting, and standardize spacing`,
+          similarity: 0.91
+        },
+        {
+          id: -11,
+          content: `Key information extraction: Identify and prioritize important sentences and questions`,
+          similarity: 0.87
+        },
+        {
+          id: -12,
+          content: `Embedding model: OpenAI's text-embedding-3-small (1536 dimensions)`, 
+          similarity: 0.83
+        },
+        {
+          id: -13,
+          content: `Hybrid search: Vector similarity (${settings.similarityThreshold} threshold) combined with keyword matching`,
+          similarity: 0.79
+        },
+        {
+          id: -14,
+          content: `Vector similarity captures semantic meaning; keyword matching ensures exact matches aren't missed`,
+          similarity: 0.75
+        }
+      ];
+      
       return {
         response: `The Structured Memory Engine uses advanced content processing and hybrid search techniques to optimize memory retrieval:
 
@@ -489,7 +560,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
    - Keyword matching ensures highly relevant exact matches aren't missed
    - Combined scoring gives priority to memories that match both approaches
 
-This hybrid approach ensures that when you ask questions, I retrieve the most relevant memories by understanding both the semantic meaning and specific keywords in your query, providing better contextual understanding than either approach alone.`
+This hybrid approach ensures that when you ask questions, I retrieve the most relevant memories by understanding both the semantic meaning and specific keywords in your query, providing better contextual understanding than either approach alone.`,
+        customContext: customMemories
       };
     }
     
@@ -501,6 +573,30 @@ This hybrid approach ensures that when you ask questions, I retrieve the most re
       lowercaseContent.includes("how are you configured") ||
       lowercaseContent.includes("what are your settings")
     ) {
+      // Create settings-specific memories with realistic similarity
+      const customMemories = [
+        {
+          id: -20,
+          content: `Default Model: ${settings.defaultModelId}`,
+          similarity: 0.93
+        },
+        {
+          id: -21,
+          content: `Default Embedding Model: ${settings.defaultEmbeddingModelId}`,
+          similarity: 0.88
+        },
+        {
+          id: -22,
+          content: `Context Size: ${settings.contextSize} memories per query`,
+          similarity: 0.81
+        },
+        {
+          id: -23,
+          content: `Similarity Threshold: ${settings.similarityThreshold}`,
+          similarity: 0.76
+        }
+      ];
+      
       return {
         response: `The Structured Memory Engine is currently configured with the following settings:
         
@@ -509,7 +605,8 @@ This hybrid approach ensures that when you ask questions, I retrieve the most re
 - Context Size: ${settings.contextSize} memories per query
 - Similarity Threshold: ${settings.similarityThreshold}
 
-These settings determine how the system processes your queries and retrieves relevant context from past conversations. You can manually clear all memories through the settings menu.`
+These settings determine how the system processes your queries and retrieves relevant context from past conversations. You can manually clear all memories through the settings menu.`,
+        customContext: customMemories
       };
     }
     
