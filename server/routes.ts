@@ -315,8 +315,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // 7. Generate response based on provider with tiered RAG approach
       let response = '';
-      // Use 'jarvis' as the default useCase to match the Iron Man Jarvis concept
-      const useCase = 'jarvis';
+      // Use 'structured_memory' as the default useCase for our advanced memory system
+      const useCase = 'structured_memory';
       
       if (model.provider === 'openai') {
         response = await openai.generateResponse(
