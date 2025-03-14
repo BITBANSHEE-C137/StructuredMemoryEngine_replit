@@ -138,10 +138,87 @@ export async function checkPgVectorExtension() {
   }
 }
 
+// Function to apply the pgvector fix migration directly
+export async function applyPgvectorFix() {
+  try {
+    console.log("Applying pgvector fix migration...");
+    
+    // First, check if the migration needs to be applied by verifying the vector column type
+    const columnCheck = await migrationClient`
+      SELECT data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'memories' 
+      AND column_name = 'embedding'
+    `;
+    
+    // Check if memories table exists and embedding column has vector type
+    if (columnCheck.length > 0 && columnCheck[0]?.data_type === 'USER-DEFINED') {
+      console.log("Vector column already has correct type, skipping pgvector fix");
+      
+      // Make sure extension exists
+      await migrationClient`CREATE EXTENSION IF NOT EXISTS vector`;
+      
+      // Check if index exists, and create if needed
+      const indexCheck = await migrationClient`
+        SELECT indexname 
+        FROM pg_indexes 
+        WHERE tablename = 'memories' 
+        AND indexname = 'embedding_idx'
+      `;
+      
+      if (indexCheck.length === 0) {
+        console.log("Creating vector index...");
+        try {
+          await migrationClient`CREATE INDEX IF NOT EXISTS embedding_idx ON memories USING ivfflat (embedding vector_cosine_ops)`;
+        } catch (error) {
+          console.warn(`Error creating index (continuing anyway): ${error.message}`);
+        }
+      }
+      
+      return;
+    }
+    
+    // If we need to apply the migration, read the migration file
+    const fs = await import('fs');
+    const path = await import('path');
+    const migrationPath = path.resolve('./migrations/0002_fix_pgvector.sql');
+    
+    if (!fs.existsSync(migrationPath)) {
+      console.error(`Migration file not found: ${migrationPath}`);
+      return;
+    }
+    
+    const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+    
+    // Split the migration into individual statements
+    const statements = migrationSql
+      .replace(/--.*?\n/g, '\n') // Remove comments
+      .split(';')
+      .filter(stmt => stmt.trim());
+    
+    // Execute each statement
+    for (const stmt of statements) {
+      if (stmt.trim()) {
+        try {
+          await migrationClient.unsafe(stmt);
+        } catch (error: any) {
+          console.warn(`Error executing statement (continuing anyway): ${error.message}`);
+        }
+      }
+    }
+    
+    console.log("pgvector fix migration completed");
+  } catch (error) {
+    console.error("Error applying pgvector fix:", error);
+  }
+}
+
 // Initialize database (run migrations, seed data, etc.)
 export async function initializeDatabase() {
   await runMigrations();
   await checkPgVectorExtension();
+  // Apply our custom pgvector fix
+  await applyPgvectorFix();
   await seedModels();
   await initializeSettings();
 }

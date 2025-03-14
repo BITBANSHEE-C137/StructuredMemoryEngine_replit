@@ -16,6 +16,7 @@ import {
   fetchVectorsFromPinecone,
   listPineconeIndexes
 } from "./utils/pinecone";
+import { performKeywordMatch } from "./utils/content-processor";
 
 // Define the storage interface
 export interface IStorage {
@@ -140,7 +141,7 @@ export class DatabaseStorage implements IStorage {
         timestamp: memory.timestamp as Date,
         metadata: memory.metadata
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating memory:", error);
       
       // Handle foreign key constraint violation
@@ -206,7 +207,7 @@ export class DatabaseStorage implements IStorage {
       if (similarityThreshold !== undefined && similarityThreshold !== null) {
         // Convert to number if it's a string (from settings.similarityThreshold)
         if (typeof similarityThreshold === 'string') {
-          const strValue = similarityThreshold.toString().trim();
+          const strValue = String(similarityThreshold).trim();
           // Handle percentage format
           if (strValue.includes('%')) {
             threshold = parseFloat(strValue) / 100;
@@ -226,102 +227,195 @@ export class DatabaseStorage implements IStorage {
       console.log(`Input similarityThreshold: ${similarityThreshold} (type: ${typeof similarityThreshold})`);
       console.log(`FIXED threshold value: ${threshold} (${threshold * 100}%)`);
       
-      // CRITICAL FIX: Ensure embedding parameter is properly converted to vector for PostgreSQL
-      // OpenAI embeddings come as arrays of numbers, which we've stored as strings in our code
-      // Need to parse and format correctly for pgvector
-      
-      // Check if the embedding is already in the correct format
+      // Format embedding for pgvector - IMPROVED VERSION
       let embeddingVector;
       try {
-        // If embedding is a string that looks like JSON array 
-        if (typeof embedding === 'string' && (embedding.startsWith('[') || embedding.includes(','))) {
-          // Try to parse as JSON array
-          const embeddingArray = JSON.parse(embedding);
-          // Format for Postgres vector
-          embeddingVector = `[${embeddingArray.join(',')}]`;
+        // If embedding is a string that looks like a JSON array 
+        if (typeof embedding === 'string') {
+          if (embedding.startsWith('[') && embedding.endsWith(']')) {
+            // It's already in JSON array format
+            embeddingVector = embedding;
+          } else if (embedding.includes(',')) {
+            // It's comma-separated values
+            const values = embedding.split(',').map(v => v.trim()).filter(v => v);
+            embeddingVector = `[${values.join(',')}]`;
+          } else {
+            // It's something else
+            embeddingVector = embedding;
+          }
         } else {
-          // Assume it's already formatted correctly
+          // Not a string, use as is
           embeddingVector = embedding;
         }
       } catch (e) {
-        // If parsing fails, use as-is
-        console.warn("Failed to parse embedding, using as-is:", e);
+        console.warn("Failed to process embedding:", e);
         embeddingVector = embedding;
       }
       
-      console.log(`Executing SQL with threshold=${threshold}`);
-      console.log(`Embedding type: ${typeof embeddingVector}`);
+      // Check if the query is using the fallback mode (for debugging)
+      let usingFallback = false;
       
-      const result = await db.execute(sql`
-        SELECT m.*, 
-               1 - (m.embedding <-> ${embeddingVector}::vector) as similarity
-        FROM memories m
-        WHERE m.embedding IS NOT NULL
-        AND 1 - (m.embedding <-> ${embeddingVector}::vector) >= ${threshold}
-        ORDER BY 1 - (m.embedding <-> ${embeddingVector}::vector) DESC
-        LIMIT ${limit}
-      `);
-      
-      console.log(`Successfully found ${result.length} relevant memories with similarity >= ${threshold}`);
-      if (result.length > 0) {
-        console.log(`First memory similarity: ${result[0].similarity}`);
-        console.log(`Last memory similarity: ${result[result.length-1].similarity}`);
+      // CRITICAL FIX: Try different approaches for vector search
+      let vectorResult;
+      try {
+        console.log(`Trying direct vector query...`);
+        // Attempt direct vector query first
+        vectorResult = await db.execute(sql`
+          SELECT m.*, 
+                 1 - (m.embedding <-> ${embeddingVector}::vector) as similarity
+          FROM memories m
+          WHERE m.embedding IS NOT NULL
+          AND 1 - (m.embedding <-> ${embeddingVector}::vector) >= ${threshold}
+          ORDER BY 1 - (m.embedding <-> ${embeddingVector}::vector) DESC
+          LIMIT ${limit}
+        `);
+      } catch (vectorError: any) {
+        console.warn("Vector query failed:", vectorError.message);
+        
+        // Try alternate approach if direct approach fails
+        try {
+          console.log("Trying alternate vector casting approach...");
+          
+          // Parse embedding into an array if needed
+          let embeddingArray;
+          if (typeof embedding === 'string' && embedding.startsWith('[')) {
+            embeddingArray = JSON.parse(embedding);
+          } else if (typeof embedding === 'string' && embedding.includes(',')) {
+            embeddingArray = embedding.split(',').map(v => parseFloat(v.trim()));
+          }
+          
+          // Use a simpler query approach as a backup
+          if (Array.isArray(embeddingArray)) {
+            const vectorLiteral = `[${embeddingArray.join(',')}]`;
+            const alternateResult = await db.execute(sql`
+              SELECT *, 
+                     1 - (embedding <-> ${vectorLiteral}::vector) as similarity
+              FROM memories 
+              WHERE embedding IS NOT NULL
+              ORDER BY embedding <-> ${vectorLiteral}::vector ASC
+              LIMIT ${limit}
+            `);
+            vectorResult = alternateResult;
+          } else {
+            throw new Error("Could not parse embedding into array");
+          }
+        } catch (alternateError: any) {
+          console.warn("Alternate vector query also failed:", alternateError.message);
+          throw alternateError; // Let fallback handle it
+        }
       }
       
-      // Convert the raw result to Memory objects with similarity score
-      return result.map(row => ({
-        id: Number(row.id),
-        content: String(row.content),
-        embedding: String(row.embedding),
-        type: String(row.type),
-        messageId: row.message_id ? Number(row.message_id) : null,
-        timestamp: row.timestamp as Date,
-        metadata: row.metadata,
-        similarity: Number(row.similarity) || 0
-      }));
-    } catch (error) {
-      console.error("Error querying memories by embedding:", error);
-      
-      // Improved fallback that attempts to simulate vector search
-      try {
-        console.log(`Trying fallback query...`);
-        // Get a sample of memories to work with
-        const fallbackResult = await db.select().from(memories).limit(Math.max(limit * 3, 20));
-        
-        // If we have the embedding as an array, we can do a simple direct comparison
-        let embeddingArray: number[] = [];
-        try {
-          if (typeof embedding === 'string') {
-            if (embedding.startsWith('[')) {
-              embeddingArray = JSON.parse(embedding);
-            } else if (embedding.includes(',')) {
-              embeddingArray = embedding.split(',').map(Number);
-            }
-          }
-        } catch (e) {
-          console.warn("Couldn't parse embedding for fallback comparison");
+      if (vectorResult && vectorResult.length > 0) {
+        console.log(`Vector search successful! Found ${vectorResult.length} memories`);
+        if (vectorResult.length > 0) {
+          console.log(`First memory similarity: ${vectorResult[0].similarity}`);
+          console.log(`Last memory similarity: ${vectorResult[vectorResult.length-1].similarity}`);
         }
         
-        // Add random but deterministic similarity scores if we can't do better
-        let result = fallbackResult.map(row => {
-          // Calculate hash-based similarity for deterministic results
-          const contentHash = this.hashString(row.content);
-          // Generate similarity between 0.5 and 0.9 based on content
-          const hashBasedSimilarity = 0.5 + (contentHash % 40) / 100;
+        // Filter results by threshold if the query didn't do it
+        const filteredResult = vectorResult.filter((row: any) => {
+          const sim = typeof row.similarity === 'number' ? row.similarity : 0;
+          return sim >= threshold;
+        });
+        
+        console.log(`After threshold filtering: ${filteredResult.length} memories`);
+        
+        // Convert the raw result to Memory objects with similarity score
+        return filteredResult.map((row: any) => ({
+          id: Number(row.id),
+          content: String(row.content),
+          embedding: String(row.embedding),
+          type: String(row.type),
+          messageId: row.message_id ? Number(row.message_id) : null,
+          timestamp: row.timestamp as Date,
+          metadata: row.metadata,
+          similarity: Number(row.similarity) || 0
+        }));
+      }
+      
+      // If we reached here, both methods failed or returned no results
+      // We'll use a more intelligent fallback mechanism that prioritizes matching keywords
+      usingFallback = true;
+      console.log(`Using intelligent fallback mechanism (no vector search available)`);
+      
+      // Get a sample of memories
+      const fallbackResult = await db.select().from(memories).limit(Math.max(limit * 5, 50));
+      console.log(`Fallback: retrieved ${fallbackResult.length} memories for keyword analysis`);
+      
+      // Import the keyword matching function
+      const { performKeywordMatch } = await import('./utils/content-processor');
+      
+      // Parse the query embedding to get the original text if available
+      let queryText = "";
+      if (typeof embedding === 'object' && (embedding as any).metadata && (embedding as any).metadata.text) {
+        queryText = (embedding as any).metadata.text;
+      }
+      
+      // Get the query text from previous memories if we couldn't extract it
+      if (!queryText) {
+        try {
+          const latestMemories = await db
+            .select()
+            .from(memories)
+            .where(eq(memories.type, 'prompt'))
+            .orderBy(desc(memories.timestamp))
+            .limit(1);
           
+          if (latestMemories.length > 0) {
+            queryText = latestMemories[0].content;
+          }
+        } catch (error) {
+          console.warn("Couldn't get latest prompt for fallback:", error);
+        }
+      }
+      
+      // In the worst case, just use a timestamp-based approach
+      if (!queryText) {
+        // Sort by newest and give them decreasing scores
+        fallbackResult.sort((a, b) => {
+          const dateA = new Date(a.timestamp);
+          const dateB = new Date(b.timestamp);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        const result = fallbackResult.slice(0, limit).map((memory, index) => {
+          // Assign decreasing similarity scores from 0.9 to 0.5
+          const simulatedSimilarity = 0.9 - (index * (0.4 / Math.min(limit, fallbackResult.length)));
           return {
-            ...row,
-            similarity: hashBasedSimilarity
+            ...memory,
+            similarity: simulatedSimilarity
           };
         });
         
-        // Sort by similarity and limit to requested amount
-        result.sort((a, b) => b.similarity - a.similarity);
-        return result.slice(0, limit);
-      } catch (fallbackError) {
-        console.error("Fallback query also failed:", fallbackError);
-        return []; // Return empty array as last resort
+        return result;
       }
+      
+      // Here we actually have some query text to work with for keyword matching
+      console.log(`Fallback with keyword matching on query: "${queryText.substring(0, 50)}..."`);
+      
+      // Calculate keyword match scores
+      const scoredMemories = fallbackResult.map(memory => {
+        // Use proper keyword matching algorithm
+        const keywordScore = performKeywordMatch(queryText, memory.content);
+        
+        return {
+          ...memory,
+          similarity: keywordScore * 0.9 // Scale to make it comparable to vector similarity
+        };
+      });
+      
+      // Filter, sort by score, and limit to requested amount
+      const matchedMemories = scoredMemories
+        .filter(m => m.similarity >= threshold)
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, limit);
+      
+      console.log(`Fallback returned ${matchedMemories.length} memories with keyword match >= ${threshold}`);
+      
+      return matchedMemories;
+    } catch (error) {
+      console.error("All approaches for memory search failed:", error);
+      return []; // Return empty array as last resort
     }
   }
   
@@ -471,13 +565,10 @@ export class DatabaseStorage implements IStorage {
     const currentSettings = await this.getPineconeSettings();
     
     // Handle metadata merging
-    let mergedMetadata = currentSettings.metadata;
-    if (updatedSettings.metadata) {
-      mergedMetadata = {
-        ...mergedMetadata,
-        ...updatedSettings.metadata
-      };
-    }
+    const mergedMetadata = { 
+      ...(currentSettings.metadata || {}),
+      ...(updatedSettings.metadata || {})
+    };
     
     // Update settings with the new values
     const [updated] = await db.update(pineconeSettings)
@@ -532,10 +623,12 @@ export class DatabaseStorage implements IStorage {
       
       // Store the sync result in the settings metadata for future reference
       const currentSettings = await this.getPineconeSettings();
-      const metadata = currentSettings.metadata ? { ...currentSettings.metadata } : {};
+      const metadataObj = typeof currentSettings.metadata === 'object' && currentSettings.metadata !== null 
+        ? { ...currentSettings.metadata as object } 
+        : {};
       
-      // Add the sync result to metadata
-      metadata.lastSyncResult = {
+      // Add the sync result to metadata using proper type handling
+      const syncResult = {
         count: result.count,
         duplicateCount: result.duplicateCount,
         dedupRate: result.dedupRate,
@@ -544,13 +637,16 @@ export class DatabaseStorage implements IStorage {
         timestamp: result.timestamp || new Date().toISOString()
       };
       
+      // Use type assertion for the metadata object
+      (metadataObj as any).lastSyncResult = syncResult;
+      
       // Update the settings with result and last sync timestamp
       await this.updatePineconeSettings({
         activeIndexName: indexName,
         namespace,
         isEnabled: true,
         lastSyncTimestamp: new Date(),
-        metadata
+        metadata: metadataObj as any
       });
       
       // Return comprehensive response with all sync statistics

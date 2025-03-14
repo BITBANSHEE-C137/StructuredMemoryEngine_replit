@@ -1,0 +1,195 @@
+You
+summarize recent chats
+AI
+Retrieved Memories
+30 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 30.0%
+1
+Memory #1892
+High relevance
+95.0% match
+Hello, who are you?
+2
+Memory #1893
+High relevance
+91.0% match
+Hello! I am the Structured Memory Engine, a RAG-based AI assistant. I use a retrieval-augmented generation approach to provide helpful and context-awa...
+3
+Memory #1894
+High relevance
+87.0% match
+Who one the world series in 1992?
+4
+Memory #1895
+83.0% match
+The Toronto Blue Jays won the World Series in 1992. They defeated the Atlanta Braves in six games, marking the first time a team from outside the Unit...
+5
+Memory #1896
+79.0% match
+What is concentrated dark matter and how did Rick Sanchez discover how to make it?
+6
+Memory #1897
+75.0% match
+Concentrated dark matter is a fictional substance from the animated TV series *Rick and Morty*. In the show, it is depicted as an incredibly powerful ...
+7
+Memory #1898
+71.0% match
+explain the game The Oregon Trail
+8
+Memory #1899
+67.0% match
+**The Oregon Trail** is a classic educational computer game originally developed in 1971 to teach students about the experiences of pioneers traveling...
+9
+Memory #1900
+63.0% match
+how is the game monopoly played?
+10
+Memory #1901
+59.0% match
+Monopoly is a classic board game where players aim to become the wealthiest by buying, trading, and developing properties while bankrupting their oppo...
+11
+Memory #1902
+55.0% match
+what was the top board game in 1992?
+12
+Memory #1903
+51.0% match
+The top board game in 1992 was **The Settlers of Catan**, designed by Klaus Teuber. It was released in Germany in 1992 and gained immense popularity f...
+13
+Memory #1904
+47.0% match
+which board game was more popular? risk or life?
+14
+Memory #1905
+43.0% match
+Both *Risk* and *The Game of Life* are classic board games, but their popularity varies based on factors like target audience, gameplay style, and cul...
+15
+Memory #1906
+39.0% match
+which sold the most units?
+16
+Memory #1907
+35.0% match
+Could you clarify what you're referring to? Are you asking about the sales of a specific product, album, book, or something else? Let me know so I can...
+17
+Memory #1908
+31.0% match
+of the board game i just asked about
+18
+Memory #1909
+30.0% match
+It seems you're referring to a board game you previously mentioned, but I don't have specific details about which board game you're asking about. Coul...
+19
+Memory #1910
+30.0% match
+can you try again? which game sold the most?
+20
+Memory #1911
+30.0% match
+It seems you're asking about the best-selling game, possibly a board game based on our earlier interactions. The best-selling board game of all time i...
+21
+Memory #1912
+30.0% match
+list the games I've asked you about?
+22
+Memory #1913
+30.0% match
+Based on our past interactions, you've asked me about: 1. The best-selling board game of all time (Chess and Monopoly were mentioned in my response)....
+23
+Memory #1914
+30.0% match
+who are you?
+24
+Memory #1915
+30.0% match
+I am an AI assistant called the Structured Memory Engine. My purpose is to help you by using relevant context from our past interactions, along with m...
+25
+Memory #1916
+30.0% match
+what model are you?
+26
+Memory #1917
+30.0% match
+You're interacting with the Structured Memory Engine using the GPT 4o 2024 11 20 model from openai. This model can handle up to 8000 tokens of context...
+27
+Memory #1918
+30.0% match
+how do I know if my RAG agent is working?
+28
+Memory #1919
+30.0% match
+To determine if your RAG (Retrieval-Augmented Generation) agent is working correctly, you can follow these steps: ### 1. **Check Retrieval Functional...
+29
+Memory #1920
+30.0% match
+who one the world series in 1992?
+30
+Memory #1921
+30.0% match
+The Toronto Blue Jays won the 1992 World Series. They defeated the Atlanta Braves in six games, making history as the first non-U.S. team to win the c...
+Memory retrieval powered by vector embedding similarity search.
+Here's a summary of recent conversations:
+
+[3/13/2025, 7:21:59 PM] User: Hello, who are you?
+
+[3/13/2025, 7:22:02 PM] Assistant: Hello! I am the Structured Memory Engine, a RAG-based AI assistant. I use a retrieval-augmented gene...
+
+[3/13/2025, 7:22:30 PM] User: Who one the world series in 1992?
+
+[3/13/2025, 7:22:32 PM] Assistant: The Toronto Blue Jays won the World Series in 1992. They defeated the Atlanta Braves in six games, m...
+
+[3/13/2025, 7:23:40 PM] User: What is concentrated dark matter and how did Rick Sanchez discover how to make it?
+
+[3/13/2025, 7:23:48 PM] Assistant: Concentrated dark matter is a fictional substance from the animated TV series *Rick and Morty*. In t...
+
+[3/13/2025, 7:24:42 PM] User: explain the game The Oregon Trail
+
+[3/13/2025, 7:24:55 PM] Assistant: **The Oregon Trail** is a classic educational computer game originally developed in 1971 to teach st...
+
+[3/13/2025, 7:25:28 PM] User: how is the game monopoly played?
+
+[3/13/2025, 7:25:46 PM] Assistant: Monopoly is a classic board game where players aim to become the wealthiest by buying, trading, and ...
+
+[3/13/2025, 7:26:10 PM] User: what was the top board game in 1992?
+
+[3/13/2025, 7:26:13 PM] Assistant: The top board game in 1992 was **The Settlers of Catan**, designed by Klaus Teuber. It was released ...
+
+[3/13/2025, 7:27:21 PM] User: which board game was more popular? risk or life?
+
+[3/13/2025, 7:27:29 PM] Assistant: Both *Risk* and *The Game of Life* are classic board games, but their popularity varies based on fac...
+
+[3/13/2025, 7:27:59 PM] User: which sold the most units?
+
+[3/13/2025, 7:28:01 PM] Assistant: Could you clarify what you're referring to? Are you asking about the sales of a specific product, al...
+
+[3/13/2025, 7:28:36 PM] User: of the board game i just asked about
+
+[3/13/2025, 7:28:39 PM] Assistant: It seems you're referring to a board game you previously mentioned, but I don't have specific detail...
+
+[3/13/2025, 7:30:19 PM] User: can you try again? which game sold the most?
+
+[3/13/2025, 7:30:23 PM] Assistant: It seems you're asking about the best-selling game, possibly a board game based on our earlier inter...
+
+[3/13/2025, 7:31:41 PM] User: list the games I've asked you about?
+
+[3/13/2025, 7:31:47 PM] Assistant: Based on our past interactions, you've asked me about:
+
+1. The best-selling board game of all time (...
+
+[3/13/2025, 7:32:40 PM] User: who are you?
+
+[3/13/2025, 7:32:42 PM] Assistant: I am an AI assistant called the Structured Memory Engine. My purpose is to help you by using relevan...
+
+[3/13/2025, 7:33:03 PM] User: what model are you?
+
+[3/13/2025, 7:33:03 PM] Assistant: You're interacting with the Structured Memory Engine using the GPT 4o 2024 11 20 model from openai. ...
+
+[3/13/2025, 7:33:32 PM] User: how do I know if my RAG agent is working?
+
+[3/13/2025, 7:33:43 PM] Assistant: To determine if your RAG (Retrieval-Augmented Generation) agent is working correctly, you can follow...
+
+[3/13/2025, 7:42:09 PM] User: who one the world series in 1992?
+
+[3/13/2025, 7:42:11 PM] Assistant: The Toronto Blue Jays won the 1992 World Series. They defeated the Atlanta Braves in six games, maki...
