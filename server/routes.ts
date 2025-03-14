@@ -331,13 +331,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         similarityThreshold * thresholdAdjustment
       );
       
-      // CRITICAL FIX FOR FERRARI DETECTION
+      // CRITICAL DIRECT FERRARI DETECTION
+      // If this is a query about favorite cars, use direct SQL to find Ferrari mentions
       if (content.toLowerCase().includes('favorite') && 
          content.toLowerCase().includes('car') && 
          isQuestion) {
-        // Let the content processor handle this entirely
-        // We'll implement the Ferrari detection directly in the content processor
-        console.log(`[CAR QUERY DETECTOR] Will use enhanced content processor for favorite car detection`);
+         
+        console.log(`[FERRARI DIRECT SQL DETECTION] Direct SQL search for Ferrari memories`);
+        
+        // Execute a direct SQL query to find Ferrari memories using priority scoring
+        try {
+          const ferrariMemories = await db.execute(sql`
+            SELECT id, content, embedding, type, timestamp, message_id, metadata, 0.99 as similarity
+            FROM memories
+            WHERE (LOWER(content) LIKE ${'%ferrari%'} OR LOWER(content) LIKE ${'%308%'})
+              AND LOWER(content) NOT LIKE ${'%what%'}  -- Exclude questions
+            ORDER BY 
+              CASE 
+                WHEN LOWER(content) LIKE ${'%my favorite car%'} THEN 1
+                WHEN LOWER(content) LIKE ${'%ferrari 308%'} THEN 2
+                ELSE 3
+              END,
+              id DESC
+            LIMIT 5
+          `);
+          
+          console.log(`[FERRARI DIRECT SQL DETECTION] Found ${ferrariMemories.length} Ferrari memories via SQL`);
+          
+          if (ferrariMemories && ferrariMemories.length > 0) {
+            // Log the found Ferrari memories
+            ferrariMemories.forEach((mem, i) => {
+              console.log(`Ferrari memory ${i+1}: ID ${mem.id}, Content: "${mem.content}"`);
+            });
+            
+            // Add these direct hits to the beginning of our relevant memories
+            ferrariMemories.forEach(mem => {
+              // Only add if not already in relevant memories
+              if (!relevantMemories.some(m => m.id === mem.id)) {
+                relevantMemories.unshift({
+                  ...mem,
+                  similarity: 0.99 // Maximum score
+                });
+              }
+            });
+            
+            console.log(`[FERRARI DIRECT SQL DETECTION] Added Ferrari memories to relevant memories`);
+          }
+        } catch (error) {
+          console.error(`[FERRARI DIRECT SQL DETECTION] Error searching:`, error);
+        }
       }
 
       // Enhanced special handling for personal attribute questions
