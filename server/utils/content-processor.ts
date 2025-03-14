@@ -446,12 +446,14 @@ export function performKeywordMatch(query: string, content: string): number {
     // Check for "X is Y" pattern
     const isPattern = new RegExp(`\\b${entity}\\s+(?:is|are|was|were)\\b`);
     if (isPattern.test(content)) {
+      console.log(`[content-processor] Found basic statement pattern match for entity "${entity}"`);
       return true;
     }
     
     // Check for "my/your X is Y" pattern
     const possessivePattern = new RegExp(`(?:my|your|his|her|their)\\s+${entity}\\s+(?:is|are|was|were)\\b`);
     if (possessivePattern.test(content)) {
+      console.log(`[content-processor] Found possessive statement pattern match for entity "${entity}"`);
       return true;
     }
     
@@ -463,7 +465,81 @@ export function performKeywordMatch(query: string, content: string): number {
       content.includes("means") ||
       content.includes("recognized as")
     )) {
+      console.log(`[content-processor] Found definition pattern match for entity "${entity}"`);
       return true;
+    }
+    
+    // Enhanced personal attributes detection
+    // Check if entity is a common personal attribute
+    const personalAttributes = ['name', 'age', 'birthday', 'location', 'address', 'phone', 
+                               'email', 'occupation', 'job', 'hobby', 'pet', 'car', 'favorite', 'preferred'];
+    
+    if (personalAttributes.includes(entity.toLowerCase())) {
+      // Special patterns for personal attributes
+      
+      // "I/my name is" pattern
+      if (entity.toLowerCase() === 'name' && 
+          (content.toLowerCase().includes("my name is") || 
+           content.toLowerCase().includes("i am ") || 
+           content.toLowerCase().includes("i'm "))) {
+        console.log('[content-processor] Found personal name statement');
+        return true;
+      }
+      
+      // Age pattern
+      if (entity.toLowerCase() === 'age' && 
+          (content.toLowerCase().includes("years old") || 
+           content.toLowerCase().includes("my age is"))) {
+        console.log('[content-processor] Found age statement');
+        return true;
+      }
+      
+      // Location pattern
+      if ((entity.toLowerCase() === 'location' || entity.toLowerCase() === 'address') && 
+          (content.toLowerCase().includes("i live in") || 
+           content.toLowerCase().includes("i'm from") || 
+           content.toLowerCase().includes("i am from"))) {
+        console.log('[content-processor] Found location statement');
+        return true;
+      }
+      
+      // Occupation pattern
+      if ((entity.toLowerCase() === 'job' || entity.toLowerCase() === 'occupation') && 
+          (content.toLowerCase().includes("i work as") || 
+           content.toLowerCase().includes("i'm a") || 
+           content.toLowerCase().includes("i am a"))) {
+        console.log('[content-processor] Found occupation statement');
+        return true;
+      }
+      
+      // Favorite pattern (most important for preference questions)
+      if (entity.toLowerCase() === 'favorite' && 
+          (content.toLowerCase().includes("my favorite") || 
+           content.toLowerCase().includes("i like") || 
+           content.toLowerCase().includes("i prefer") || 
+           content.toLowerCase().includes("i love"))) {
+        console.log('[content-processor] Found favorite/preference statement');
+        return true;
+      }
+    }
+    
+    // Preference statement patterns
+    const preferencePatterns = [
+      // "I like/love/prefer X" pattern
+      new RegExp(`\\bI\\s+(?:like|love|prefer|enjoy)\\s+(?:the\\s+)?\\w+\\s*${entity}\\b`, 'i'),
+      
+      // "X is my favorite Y" pattern
+      new RegExp(`\\b\\w+\\s+(?:is|are)\\s+(?:my|your|his|her|their)\\s+(?:favorite|preferred)\\s+${entity}\\b`, 'i'),
+      
+      // Testing pattern for debugging
+      new RegExp(`\\btesting\\s+${entity}\\s*[:=]\\s*\\w+`, 'i')
+    ];
+    
+    for (const pattern of preferencePatterns) {
+      if (pattern.test(content)) {
+        console.log(`[content-processor] Found preference pattern match for entity "${entity}"`);
+        return true;
+      }
     }
     
     return false;
