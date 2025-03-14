@@ -565,13 +565,10 @@ export class DatabaseStorage implements IStorage {
     const currentSettings = await this.getPineconeSettings();
     
     // Handle metadata merging
-    let mergedMetadata = currentSettings.metadata;
-    if (updatedSettings.metadata) {
-      mergedMetadata = {
-        ...mergedMetadata,
-        ...updatedSettings.metadata
-      };
-    }
+    const mergedMetadata = { 
+      ...(currentSettings.metadata || {}),
+      ...(updatedSettings.metadata || {})
+    };
     
     // Update settings with the new values
     const [updated] = await db.update(pineconeSettings)
@@ -626,10 +623,12 @@ export class DatabaseStorage implements IStorage {
       
       // Store the sync result in the settings metadata for future reference
       const currentSettings = await this.getPineconeSettings();
-      const metadata = currentSettings.metadata ? { ...currentSettings.metadata } : {};
+      const metadataObj = typeof currentSettings.metadata === 'object' && currentSettings.metadata !== null 
+        ? { ...currentSettings.metadata as object } 
+        : {};
       
-      // Add the sync result to metadata
-      metadata.lastSyncResult = {
+      // Add the sync result to metadata using proper type handling
+      const syncResult = {
         count: result.count,
         duplicateCount: result.duplicateCount,
         dedupRate: result.dedupRate,
@@ -638,13 +637,16 @@ export class DatabaseStorage implements IStorage {
         timestamp: result.timestamp || new Date().toISOString()
       };
       
+      // Use type assertion for the metadata object
+      (metadataObj as any).lastSyncResult = syncResult;
+      
       // Update the settings with result and last sync timestamp
       await this.updatePineconeSettings({
         activeIndexName: indexName,
         namespace,
         isEnabled: true,
         lastSyncTimestamp: new Date(),
-        metadata
+        metadata: metadataObj as any
       });
       
       // Return comprehensive response with all sync statistics
