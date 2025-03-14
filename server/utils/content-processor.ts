@@ -398,17 +398,37 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
   const result = hybridResults
     .filter(m => m.meetsThreshold)
     .sort((a, b) => b.hybridScore - a.hybridScore)
-    .map(m => ({
-      ...m,
-      similarity: Math.round(m.hybridScore * 100) / 100 // Round to 2 decimal places for display
-    }));
+    .map(m => {
+      // Get normalized hybrid score rounded to 2 decimal places
+      let adjustedSimilarity = Math.round(m.hybridScore * 100) / 100;
+      
+      // IMPORTANT FIX: Prevent exact 1.0 (100%) scores to avoid confusion
+      // Also prevent multiple results with exactly the same score
+      if (adjustedSimilarity >= 0.995) {
+        // If it's a true 100% match, make it 99% instead
+        // Add a small random value to differentiate multiple near-exact matches
+        const randomAdj = Math.random() * 0.01; // tiny random adjustment between 0 and 0.01
+        adjustedSimilarity = 0.99 - randomAdj;
+      }
+      
+      return {
+        ...m,
+        similarity: adjustedSimilarity
+      };
+    });
   
   // Log top results for debugging
   if (result.length > 0) {
     console.log(`Top hybrid results (showing up to 3):`);
     result.slice(0, 3).forEach((m, i) => {
       const contentPreview = m.content.substring(0, 50).replace(/\n/g, ' ');
-      console.log(`${i+1}. Score: ${m.hybridScore.toFixed(2)} (V:${m.originalSimilarity.toFixed(2)}, K:${m.keywordScore.toFixed(2)}) - ${contentPreview}...`);
+      console.log(`${i+1}. Score: ${m.hybridScore.toFixed(2)} (V:${m.originalSimilarity.toFixed(2)}, K:${m.keywordScore.toFixed(2)}) - Display: ${m.similarity.toFixed(2)} - ${contentPreview}...`);
+      
+      // If it's an exact match, log specifically to help with debugging
+      if (m.originalSimilarity > 0.99 || m.content.trim().toLowerCase() === query.trim().toLowerCase()) {
+        console.log(`   ⚠️ EXACT MATCH DETECTED: Original score ${m.originalSimilarity} adjusted to ${m.similarity}`);
+        console.log(`   ⚠️ Query: "${query}", Content: "${m.content.substring(0, 100)}"`);
+      }
     });
   } else {
     console.log(`No memories met the relevance threshold criteria`);
