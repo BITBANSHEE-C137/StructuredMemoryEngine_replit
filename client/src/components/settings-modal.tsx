@@ -5,7 +5,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useChatMessages } from '@/lib/hooks';
 import { PineconeSettingsModal } from './pinecone-settings-modal';
-import { RAGStatusPanel } from './rag-status-panel';
+import { RAGStatusPanel } from '@/components/rag-status-panel';
 
 interface SettingsModalProps {
   isOpen: boolean;
