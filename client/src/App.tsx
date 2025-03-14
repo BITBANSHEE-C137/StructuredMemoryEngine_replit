@@ -64,31 +64,21 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-  console.log("App component rendering");
-  const [location] = useLocation();
-  
-  console.log("Current location:", location);
-  
-  // Split routes into two categories based on whether they need auth
-  // This helps avoid authentication circular redirects
-  const isPublicRoute = location === "/login" || location.startsWith("/not-found");
-  
   return (
     <QueryClientProvider client={queryClient}>
-      {isPublicRoute ? (
-        /* Public routes - Login and Not Found */
-        <Switch>
-          <Route path="/login" component={Login} />
-          <Route component={NotFound} />
-        </Switch>
-      ) : (
-        /* Protected routes - require authentication */
-        <AuthGuard>
-          <Switch>
-            <Route path="/" component={Home} />
-          </Switch>
-        </AuthGuard>
-      )}
+      <Switch>
+        <Route path="/login">
+          <Login />
+        </Route>
+        
+        <Route path="/">
+          <Home />
+        </Route>
+        
+        <Route>
+          <NotFound />
+        </Route>
+      </Switch>
       <Toaster />
     </QueryClientProvider>
   );
