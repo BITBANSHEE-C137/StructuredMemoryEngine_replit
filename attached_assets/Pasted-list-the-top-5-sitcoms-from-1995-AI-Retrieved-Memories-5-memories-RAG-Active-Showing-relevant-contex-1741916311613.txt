@@ -1,0 +1,46 @@
+list the top 5 sitcoms from 1995
+AI
+Retrieved Memories
+5 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 75.0%
+1
+Memory #1391
+75.0% match
+Could you clarify what you're referring to? Are you asking about the sales of a specific product, album, book, or something else? Let me know so I can...
+2
+Memory #1392
+75.0% match
+of the board game i just asked about
+3
+Memory #1393
+75.0% match
+It seems you're referring to a board game you previously mentioned, but I don't have specific details about which board game you're asking about. Coul...
+4
+Memory #1394
+75.0% match
+can you try again? which game sold the most?
+5
+Memory #1395
+75.0% match
+It seems you're asking about the best-selling game, possibly a board game based on our earlier interactions. The best-selling board game of all time i...
+Memory retrieval powered by vector embedding similarity search.
+In 1995, several sitcoms were incredibly popular and made a lasting cultural impact. Based on viewership, critical acclaim, and influence at the time, here are five of the most notable sitcoms from 1995:
+
+1. **Friends** (NBC)
+- This wildly popular sitcom about six friends navigating life and love in New York City was in its second season in 1995 and already a cultural phenomenon.
+
+2. **Seinfeld** (NBC)
+- Often referred to as "a show about nothing," this sitcom was at the height of its success in 1995, airing its sixth and seventh seasons.
+
+3. **Frasier** (NBC)
+- A spinoff of *Cheers*, this witty and sophisticated comedy about a radio psychiatrist and his quirky family was critically acclaimed and winning awards in 1995.
+
+4. **The Fresh Prince of Bel-Air** (NBC)
+- Starring Will Smith, this sitcom about a street-smart teenager adapting to life with his wealthy relatives in Bel-Air remained a fan favorite in 1995.
+
+5. **Home Improvement** (ABC)
+- This family sitcom about a tool-obsessed father, played by Tim Allen, was one of the highest-rated shows in 1995, appealing to a broad audience.
+
+Let me know if you'd like more information about any of these!

@@ -230,16 +230,15 @@ export class DatabaseStorage implements IStorage {
       // Added filtering by similarity threshold
       console.log(`Executing SQL with threshold=${threshold}, raw similarity=${similarityThreshold}`);
       
-      // Force a higher threshold for testing
-      const forcedThreshold = 0.85;
-      console.log(`CRITICAL TEST: Forcing threshold to ${forcedThreshold} to verify SQL filtering`);
+      // Use the properly normalized threshold (not forced)
+      console.log(`Using normalized threshold of ${threshold} for SQL query`);
       
       const result = await db.execute(sql`
         SELECT m.*, 
                1 - (m.embedding <-> ${embedding}::vector) as similarity
         FROM memories m
         WHERE m.embedding IS NOT NULL
-        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${forcedThreshold}
+        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${threshold}
         ORDER BY m.embedding <-> ${embedding}::vector
         LIMIT ${limit}
       `);
@@ -267,12 +266,12 @@ export class DatabaseStorage implements IStorage {
       
       // Try fallback to basic query without vector operations
       try {
-        console.log("Trying fallback query...");
+        console.log(`Trying fallback query with threshold=${threshold}...`);
         const fallbackResult = await db.select().from(memories).limit(limit);
         
         return fallbackResult.map(row => ({
           ...row,
-          similarity: 0.75 // Update fallback similarity to match default threshold
+          similarity: threshold // Use the same threshold that was passed to the function
         }));
       } catch (fallbackError) {
         console.error("Fallback query also failed:", fallbackError);
