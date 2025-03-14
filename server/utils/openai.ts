@@ -90,7 +90,7 @@ export async function getAvailableModels(): Promise<string[]> {
       .map(model => model.id);
     
     return chatModels;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching OpenAI models:", error);
     return [];
   }

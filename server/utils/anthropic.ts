@@ -54,7 +54,7 @@ export async function validateApiKey(): Promise<boolean> {
       messages: [{ role: 'user', content: 'Hello' }],
     });
     return true;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error validating Anthropic API key:", error);
     return false;
   }
