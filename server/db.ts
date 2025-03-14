@@ -108,8 +108,36 @@ export async function seedModels() {
 // Initialize default settings if they don't exist
 export async function initializeSettings() {
   try {
-    // This will be handled by the storage layer
-    console.log("Settings initialization will be handled by storage layer");
+    console.log("Checking settings table for threshold factors...");
+    
+    // Check if we need to add the new threshold factor columns
+    const columnCheck = await migrationClient`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'settings' 
+      AND column_name = 'question_threshold_factor'
+    `;
+    
+    if (columnCheck.length === 0) {
+      console.log("Adding new threshold factor columns to settings table...");
+      
+      // Add the new columns for threshold factors
+      await migrationClient`
+        ALTER TABLE settings 
+        ADD COLUMN IF NOT EXISTS question_threshold_factor TEXT NOT NULL DEFAULT '70%';
+      `;
+      
+      await migrationClient`
+        ALTER TABLE settings 
+        ADD COLUMN IF NOT EXISTS statement_threshold_factor TEXT NOT NULL DEFAULT '85%';
+      `;
+      
+      console.log("Successfully added threshold factor columns to settings table");
+    } else {
+      console.log("Threshold factor columns already exist in settings table");
+    }
+    
+    console.log("Settings initialization completed");
   } catch (error) {
     console.error("Error initializing settings:", error);
   }
