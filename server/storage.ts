@@ -311,6 +311,7 @@ export class DatabaseStorage implements IStorage {
                 FROM memories 
                 WHERE embedding IS NOT NULL
                 AND id != ${excludeMemoryId}
+                AND 1 - (embedding <-> ${vectorLiteral}::vector) >= ${threshold}
                 ORDER BY embedding <-> ${vectorLiteral}::vector ASC
                 LIMIT ${limit}
               `);
@@ -320,6 +321,7 @@ export class DatabaseStorage implements IStorage {
                        1 - (embedding <-> ${vectorLiteral}::vector) as similarity
                 FROM memories 
                 WHERE embedding IS NOT NULL
+                AND 1 - (embedding <-> ${vectorLiteral}::vector) >= ${threshold}
                 ORDER BY embedding <-> ${vectorLiteral}::vector ASC
                 LIMIT ${limit}
               `);
