@@ -8,6 +8,34 @@
       "when": 1714411793444,
       "tag": "0000_sturdy_iron_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1714411893444,
+      "tag": "0001_create_pgvector_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1714411993444,
+      "tag": "0002_add_embedding_model",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1714412093444,
+      "tag": "0003_fix_vector_column",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1714412193444,
+      "tag": "0004_rebuild_memories_table",
+      "breakpoints": true
     }
   ]
 }
