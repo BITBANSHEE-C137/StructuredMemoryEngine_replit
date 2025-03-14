@@ -27,7 +27,7 @@ async function verifyDatabaseState() {
   if (latestMemories.length > 0) {
     console.log(`Latest memory: ID=${latestMemories[0].id}, Content="${latestMemories[0].content.substring(0, 50)}..."`);
     console.log(`Memory metadata: ${JSON.stringify(latestMemories[0].metadata)}`);
-    console.log(`Memory message_id: ${latestMemories[0].message_id}`);
+    console.log(`Memory messageId: ${latestMemories[0].messageId}`);
   } else {
     console.log("No memories found in database!");
   }
@@ -67,9 +67,9 @@ async function directDatabaseInsert() {
     console.log(`Created memory with ID: ${memoryResult.id}`);
     
     // 4. Verify persistence immediately after insert
-    await verifyMemoryExists(memoryResult.id);
+    await verifyMemoryExists(Number(memoryResult.id));
     
-    return { messageId: messageResult.id, memoryId: memoryResult.id };
+    return { messageId: Number(messageResult.id), memoryId: Number(memoryResult.id) };
   } catch (error) {
     console.error("Direct insert failed:", error);
     throw error;
