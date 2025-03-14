@@ -1,13 +1,14 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { initializeDatabase } from "./db";
+import { initializeDatabase, db } from "./db";
 import openai from "./utils/openai";
 import anthropic from "./utils/anthropic";
 import { processContentForEmbedding, applyHybridRanking } from "./utils/content-processor";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
-import { insertMessageSchema, insertSettingsSchema, type Model, type Settings } from "@shared/schema";
+import { insertMessageSchema, insertSettingsSchema, type Model, type Settings, memories } from "@shared/schema";
+import { sql } from "drizzle-orm";
 import authRouter from "./routes/auth";
 import pineconeRouter from "./routes/pinecone";
 import { authMiddleware, isAuthenticated } from "./middleware/auth";
@@ -620,9 +621,29 @@ These settings determine how the system processes your queries and retrieves rel
       const page = req.query.page ? parseInt(req.query.page as string) : 1;
       const pageSize = req.query.pageSize ? parseInt(req.query.pageSize as string) : 10;
       
+      console.log(`=== MEMORIES ENDPOINT DEBUG ===`);
+      console.log(`Requesting memories: page ${page}, pageSize ${pageSize}`);
+      
+      // Force query database count first to validate
+      const [{ count }] = await db.select({ count: sql`count(*)` }).from(memories);
+      console.log(`Direct DB count query: ${count} memories`);
+      
       const result = await storage.getMemories(page, pageSize);
+      console.log(`Storage Layer returned: ${result.memories.length} memories, total: ${result.total}`);
+      
+      // Ensure the count is consistent
+      if (Number(count) !== result.total) {
+        console.warn(`Count inconsistency detected! DB count: ${count}, Storage result total: ${result.total}`);
+        // Force update the total to match actual DB count
+        result.total = Number(count);
+      }
+      
+      console.log(`Returning ${result.memories.length} memories (page ${page}/${Math.ceil(result.total/pageSize)}), total: ${result.total}`);
+      console.log(`=== END MEMORIES DEBUG ===`);
+      
       res.json(result);
     } catch (err) {
+      console.error("Error fetching memories:", err);
       handleError(err, res);
     }
   });
