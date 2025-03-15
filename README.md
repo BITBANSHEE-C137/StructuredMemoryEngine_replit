@@ -82,7 +82,7 @@ The system is architected as a series of interconnected layers, each providing s
 
 ### Core Technology Stack
 
-The system utilizes cutting-edge technologies across its implementation:
+The system utilizes the following technologies across its implementation:
 
 - **Frontend Technologies**:
   - React 18+ with TypeScript for type-safe component development
