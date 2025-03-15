@@ -153,11 +153,14 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
           </div>
           
           {settings && (
-            <div className={`transform transition-all duration-300 ease-in-out overflow-hidden ${
-              isRAGPanelOpen 
-                ? 'max-h-[800px] opacity-100 mt-4' 
-                : 'max-h-0 opacity-0 mt-0'
-            }`}>
+            <div 
+              className="overflow-hidden transition-all duration-500 ease-in-out" 
+              style={{ 
+                maxHeight: isRAGPanelOpen ? '800px' : '0',
+                opacity: isRAGPanelOpen ? 1 : 0,
+                marginTop: isRAGPanelOpen ? '1rem' : '0'
+              }}
+            >
               <div className="bg-white/50 rounded-lg border border-blue-100 p-4">
                 <RAGStatusPanel 
                   contextSize={settings.contextSize}
