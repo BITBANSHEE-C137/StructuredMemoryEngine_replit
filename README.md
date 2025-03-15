@@ -111,35 +111,35 @@ The following visuals demonstrate the system's interface and key components:
 ### Integrated Chat Interface with Memory Panel
 
 <div align="center">
-  <img src="./screenshots/main-interface.png" alt="Main Interface" width="800">
+  <img src="./screenshots/main-interface.png" alt="Main Interface" width="600">
   <p><em>The primary user interface incorporates both conversation interaction and memory visualization, with contextual retrieval capabilities.</em></p>
 </div>
 
 ### Memory Configuration System
 
 <div align="center">
-  <img src="./screenshots/settings.png" alt="Settings Interface" width="800">
+  <img src="./screenshots/settings.png" alt="Settings Interface" width="400">
   <p><em>The advanced configuration panel enables precise control over memory parameters, AI provider selection, and similarity thresholds.</em></p>
 </div>
 
 ### Cloud-based Vector Memory Integration
 
 <div align="center">
-  <img src="./screenshots/pinecone-settings.png" alt="Pinecone Settings" width="800">
+  <img src="./screenshots/pinecone-settings.png" alt="Pinecone Settings" width="400">
   <p><em>The vector database integration panel provides configuration for persistent memory storage across sessions and platforms.</em></p>
 </div>
 
 ### Vector Index Management Interface
 
 <div align="center">
-  <img src="./screenshots/pinecone-indexes.png" alt="Pinecone Indexes" width="800">
+  <img src="./screenshots/pinecone-indexes.png" alt="Pinecone Indexes" width="400">
   <p><em>The index management system enables creation and organization of vector collections with dimension and similarity metric configuration.</em></p>
 </div>
 
 ### Memory Synchronization and Migration Tools
 
 <div align="center">
-  <img src="./screenshots/pinecone-sync.png" alt="Pinecone Sync" width="800">
+  <img src="./screenshots/pinecone-sync.png" alt="Pinecone Sync" width="400">
   <p><em>Bidirectional synchronization between local and cloud vector databases ensures memory persistence and availability.</em></p>
 </div>
 
@@ -258,7 +258,7 @@ A session context window refers to how much of the ongoing conversation the chat
 #### Key Differences
 
 <div align="center">
-  <img src="./screenshots/context-window-comparison.png" alt="Context Window Comparison" width="800">
+  <img src="./screenshots/context-window-comparison.png" alt="Context Window Comparison" width="500">
   <p><em>Comparison of Per-Prompt Context Window vs. Session Context Window characteristics</em></p>
 </div>
 
