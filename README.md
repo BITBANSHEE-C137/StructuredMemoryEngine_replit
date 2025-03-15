@@ -102,7 +102,7 @@ The system utilizes the following technologies across its implementation:
 - **Vector Database Technologies**:
   - Local pgvector-powered database for high-performance retrieval
   - Pinecone vector database integration for long-term memory persistence
-  - Multi-index memory organization with namespace-based segmentation
+  - Multi-index memory organization
 
 ## Visual System Overview
 
@@ -149,7 +149,7 @@ The Structured Memory Engine employs a sophisticated multi-layered approach to m
 
 ### Memory Creation and Storage Process
 
-1. **Semantic Embedding Generation**: User queries and AI responses undergo advanced processing through state-of-the-art embedding models, converting natural language into high-dimensional vector representations that capture semantic meaning.
+1. **Semantic Embedding Generation**: User queries and AI responses undergo advanced processing through embedding models, converting natural language into high-dimensional vector representations that capture semantic meaning.
 
 2. **Dual-Database Architecture**: The system implements a two-tier storage approach:
    - **Local Vector Store**: PostgreSQL with pgvector extension provides high-performance, low-latency access to recent interactions
@@ -166,8 +166,7 @@ The SME implements an experimental hybrid retrieval approach that combines:
 
 ### Security Considerations
 
-When implementing this system in production environments, consider these security best practices:
-
+When implementing this system consider these security best practices:
 
 1. Always use HTTPS in production
 2. Store API keys and secrets securely using environment variables or a secrets manager
@@ -268,13 +267,3 @@ A session context window refers to how much of the ongoing conversation the chat
 - Some AI chatbots use summarization techniques to keep relevant details from earlier messages within the window.
 - A larger per-prompt context window helps retain more history, but does not create long-term memory—it's just a larger temporary workspace.
 
-
-#### How SME Addresses These Limitations
-
-The Structured Memory Engine addresses the fundamental limitations of traditional context windows by:
-
-1. **Persistent Vector Memory**: Storing all interactions as semantic vectors that persist beyond the session
-2. **Semantic Retrieval**: Dynamically retrieving only the most relevant memories based on the current query
-3. **Unlimited Effective Context**: Breaking free from token limits by maintaining a searchable memory bank that spans all previous interactions
-4. **Cross-Session Continuity**: Enabling conversations to pick up where they left off, even after weeks or months
-5. **Selective Memory Injection**: Including only the most relevant historical context in each prompt, optimizing token usage
