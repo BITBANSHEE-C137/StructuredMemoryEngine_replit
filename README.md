@@ -10,9 +10,10 @@ A real-time context-aware RAG (Retrieval Augmented Generation) chatbot system th
 - **Vector-based Memory Storage**: Utilizes PostgreSQL with pgvector extension for efficient semantic similarity search
 - **Multi-Provider AI Support**: Seamlessly integrates with both OpenAI and Anthropic models
 - **Contextual Memory Retrieval**: Automatically retrieves relevant historical information during conversations
+- **Pinecone Integration**: Connect to Pinecone vector database for extended memory storage and retrieval
 - **Customizable Settings**: Fine-tune memory relevance, context window size, and similarity thresholds
-- **Real-time Embedding Visualization**: Visual representation of memory similarity and vector space
-- **Modern UI/UX**: Clean, responsive interface with AppStack-inspired design system
+- **Real-time Memory Panel**: Interactive visualization of relevant memories for each conversation
+- **Modern UI/UX**: Clean, responsive interface with focus on usability and continuous conversation
 
 ## 📸 Screenshots
 
@@ -31,6 +32,7 @@ The settings modal allows customization of AI providers, model selection, embedd
 - **Frontend**: React, TypeScript, TailwindCSS, Shadcn UI components
 - **Backend**: Express.js, Node.js 
 - **Database**: PostgreSQL with pgvector extension for vector embedding storage
+- **Vector Database**: Pinecone for scalable vector search and persistent memory
 - **AI Integration**: OpenAI and Anthropic APIs for text generation and embeddings
 - **State Management**: React Query, custom hooks
 
@@ -38,10 +40,12 @@ The settings modal allows customization of AI providers, model selection, embedd
 
 The application follows a modern client-server architecture:
 
-1. **User Interface Layer**: React frontend with responsive design and real-time updates
+1. **User Interface Layer**: React frontend with responsive design, focus management, and real-time updates
 2. **API Layer**: Express.js REST API endpoints for chat, memory operations, and settings
-3. **Memory Management Layer**: Vector database operations for semantic storage and retrieval
-4. **AI Integration Layer**: Provider-agnostic interface for multiple language models
+3. **Memory Management Layer**: 
+   - Local vector storage using PostgreSQL with pgvector
+   - External vector storage via Pinecone integration for scaling and persistence
+4. **AI Integration Layer**: Provider-agnostic interface for multiple language models (OpenAI, Anthropic)
 
 ## 🔧 Setup Requirements
 
@@ -403,6 +407,8 @@ When deploying, ensure the following environment variables are properly configur
 | `PGPORT` | PostgreSQL port | `5432` |
 | `OPENAI_API_KEY` | Your OpenAI API key | `sk-...` |
 | `ANTHROPIC_API_KEY` | Your Anthropic API key | `sk-ant-...` |
+| `PINECONE_API_KEY` | Your Pinecone API key | `abc123...` |
+| `PINECONE_ENVIRONMENT` | Pinecone environment (region) | `us-east-1` |
 | `SESSION_SECRET` | Secret for session encryption | `random_string` |
 
 ### Securing Your Deployment
@@ -430,10 +436,12 @@ When deploying, ensure the following environment variables are properly configur
 ## 🛣️ Roadmap
 
 - [ ] Memory clustering and categorization
-- [ ] Integration with Pinecone and other vector databases
+- [x] Integration with Pinecone vector database
+- [x] Improved chat UX with focus management
 - [ ] Fine-tuning capabilities for custom domain adaptation
 - [ ] Advanced memory visualization tools
 - [ ] User management and multi-tenant support
+- [ ] Integration with additional vector databases
 
 ## 📜 License
 

@@ -100,6 +100,15 @@ export function useChatMessages() {
           }
         };
         
+        // After processing the response, ensure the textarea is focused
+        // Use setTimeout to ensure this happens after the component re-renders
+        setTimeout(() => {
+          const textareaElement = document.querySelector('.message-input-area textarea');
+          if (textareaElement) {
+            (textareaElement as HTMLTextAreaElement).focus();
+          }
+        }, 10);
+        
         // Add both real messages in correct order (chronological)
         // The user message followed by the assistant response
         return [...filtered, userMessage, assistantMessage];
