@@ -892,6 +892,37 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
         // Drop the score moderately for similar questions
         mem.similarity = 0.3; // Low score
       }
+      // 4. NEW: More aggressive matching for specific question patterns (who/what/when/where/why/how)
+      else if (content.includes('?') && query.toLowerCase().includes('?')) {
+        // Parse question patterns - this will catch cases like "who won the X" vs "who won X"
+        // which have different wording but are functionally the same question
+        const contentWords = content.toLowerCase().split(/\s+/);
+        const queryWords = query.toLowerCase().split(/\s+/);
+        
+        // Check if both start with the same question word
+        if (contentWords.length > 0 && queryWords.length > 0 && 
+            contentWords[0] === queryWords[0] &&
+            ['who', 'what', 'when', 'where', 'why', 'how'].includes(contentWords[0])) {
+          
+          // Extract the key entities/subjects from both
+          const getKeyNouns = (words: string[]): string[] => {
+            return words.filter(w => w.length > 3 && 
+              !['who', 'what', 'when', 'where', 'why', 'how', 'the', 'did', 'was', 'were', 'are', 'is'].includes(w));
+          };
+          
+          const contentNouns = getKeyNouns(contentWords);
+          const queryNouns = getKeyNouns(queryWords);
+          
+          // If they share significant nouns/entities, they're likely the same question
+          const sharedNouns = contentNouns.filter(n => queryNouns.includes(n));
+          
+          if (sharedNouns.length >= Math.min(2, Math.min(contentNouns.length, queryNouns.length))) {
+            console.log(`⚠️ FUNCTIONALLY EQUIVALENT QUESTION in memory ID ${memoryId} - reducing relevance`);
+            // These are functionally the same question with minor wording differences
+            mem.similarity = 0.15; // Very low score to remove it from results
+          }
+        }
+      }
     }
   }
   
