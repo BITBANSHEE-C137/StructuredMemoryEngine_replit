@@ -26,12 +26,14 @@ export const messages = pgTable("messages", {
   role: text("role").notNull(), // user or assistant
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   modelId: text("model_id").notNull(), // ID of the model used for generation
+  format: text("format"), // Response format (plain-text, lists, tables, etc.)
 });
 
 export const insertMessageSchema = createInsertSchema(messages).pick({
   content: true,
   role: true,
   modelId: true,
+  format: true,
 });
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
