@@ -1,269 +1,448 @@
-# Structured Memory Engine: Overcoming AI Chatbot Memory Limitations
+# Structured Memory Engine
 
 ![Version](https://img.shields.io/badge/version-1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-## Executive Summary
+A real-time context-aware RAG (Retrieval Augmented Generation) chatbot system that enables intelligent memory management through advanced semantic retrieval and AI-powered interactions.
 
-The Structured Memory Engine (SME) is an experimental, open-source proof-of-concept for AI-driven conversation systems, exploring approaches to address limitations of current commercial chatbot platforms. By implementing a semantic memory architecture, SME aims to transform ephemeral interactions into persistent, contextually-aware conversational experiences. This project was developed entirely with AI assistance as an experiment in real-time context capture for RAG systems.
+## 🚀 Features
 
+- **Vector-based Memory Storage**: Utilizes PostgreSQL with pgvector extension for efficient semantic similarity search
+- **Multi-Provider AI Support**: Seamlessly integrates with both OpenAI and Anthropic models
+- **Contextual Memory Retrieval**: Automatically retrieves relevant historical information during conversations
+- **Pinecone Integration**: Connect to Pinecone vector database for extended memory storage and retrieval
+- **Customizable Settings**: Fine-tune memory relevance, context window size, and similarity thresholds
+- **Real-time Memory Panel**: Interactive visualization of relevant memories for each conversation
+- **Modern UI/UX**: Clean, responsive interface with focus on usability and continuous conversation
 
-## Problem Statement
- 
+## 📸 Screenshots
 
-Modern AI-driven chatbots have made progress in conversational capabilities but still face fundamental limitations regarding context retention and memory persistence. These limitations affect their ability to deliver sustained, meaningful interactions over extended periods or across multiple sessions.
+### Main Chat Interface
+The main interface shows the chat interaction area with the memory system panel on the right. The system provides immediate context-aware responses based on conversation history.
 
-### Key Limitations of Current AI Chatbots
+![Main Interface](./screenshots/main-interface.png)
 
-#### 1. Limited Context Window
+### Settings Configuration
+The settings modal allows customization of AI providers, model selection, embedding parameters, and memory management options.
 
-Commercially available chatbot platforms such as OpenAI's GPT-4, Anthropic's Claude, or Google's Gemini maintain a fixed-size context window, typically ranging between approximately 4,000 and 32,000 tokens. Once a conversation exceeds this predefined limit, older interactions are automatically discarded, causing the chatbot to lose previously discussed context (OpenAI, 2024; Anthropic, 2024).
+![Settings](./screenshots/settings.png)
 
-As OpenAI explicitly states, "ChatGPT has limited memory and will lose context from the beginning of the conversation after a certain threshold, causing it to repeat questions or lose coherence" (OpenAI Help Center, 2024). This limitation results in repetitive questions, fragmented conversational continuity, and diminished user experience.
+## 🛠️ Technology Stack
 
-#### 2. Lack of Persistent Cross-Session Memory
+- **Frontend**: React, TypeScript, TailwindCSS, Shadcn UI components
+- **Backend**: Express.js, Node.js 
+- **Database**: PostgreSQL with pgvector extension for vector embedding storage
+- **Vector Database**: Pinecone for scalable vector search and persistent memory
+- **AI Integration**: OpenAI and Anthropic APIs for text generation and embeddings
+- **State Management**: React Query, custom hooks
 
-Most existing AI chat systems are inherently stateless, meaning each new user session starts fresh without referencing prior interactions unless explicitly engineered otherwise. Amazon's Bedrock AI documentation confirms this design limitation, noting that by default, conversational agents retain context only within a single session. For context to persist across sessions, developers must explicitly implement external memory management systems (Amazon Bedrock Documentation, 2023).
+## 🏗️ Architecture
 
-This inherent statelessness leads to:
+The application follows a modern client-server architecture:
 
-- Poor user experience, due to repetitive questions and forgotten context (Humanloop, 2024).
-- Operational inefficiency, as users repeatedly re-enter previously shared information.
-- Limited AI adaptability and personalization, preventing chatbots from evolving based on long-term interaction history.
+1. **User Interface Layer**: React frontend with responsive design, focus management, and real-time updates
+2. **API Layer**: Express.js REST API endpoints for chat, memory operations, and settings
+3. **Memory Management Layer**: 
+   - Local vector storage using PostgreSQL with pgvector
+   - External vector storage via Pinecone integration for scaling and persistence
+4. **AI Integration Layer**: Provider-agnostic interface for multiple language models (OpenAI, Anthropic)
 
+## 🔧 Setup Requirements
 
-While frameworks such as LangChain and LlamaIndex aim to mitigate some of these challenges by adding context management layers, their complexity, ongoing maintenance overhead, and lack of structured memory management often hinder widespread adoption and practical usability (LangChain Documentation, 2024).
+- Node.js v18+ and npm 8+
+- PostgreSQL 14+ with pgvector extension
+- OpenAI API key and/or Anthropic API key
+- For authentication: Either Replit account (for Replit environment) or your own authentication system
 
-### The Need for Structured, Persistent AI Memory
+### Replit-Specific Dependencies
 
-To address these limitations, chatbots can benefit from a structured memory framework that enables context persistence across interactions, sessions, and platforms. Such an approach can improve conversational continuity, accuracy, personalization, and overall user experience.
+This project was initially developed for the Replit platform and uses several Replit-specific features:
 
-The Structured Memory Engine (SME) was created as a proof-of-concept to explore solutions to these challenges. This experimental project, developed entirely using AI assistance, tests approaches for structured memory management to improve conversation quality and context retention across sessions.
+1. **Replit Auth**: The authentication system uses Replit's built-in OAuth service
+2. **Replit Secrets**: Environment variables are stored in Replit's Secrets system
+3. **Replit Database**: The PostgreSQL database is automatically configured by Replit
 
-## SME vs. Traditional RAG Systems
+These features need to be reconfigured when deploying outside of Replit. See the deployment sections below for alternatives.
 
-While Retrieval-Augmented Generation (RAG) has become a standard approach for enhancing LLMs with external knowledge, the Structured Memory Engine (SME) explores several additions to basic RAG implementations. This experimental project tests the following differences from typical RAG systems:
+## 🚦 Getting Started
 
-| Feature | Traditional RAG | Structured Memory Engine |
-|---------|----------------|--------------------------|
-| **Memory Persistence** | Typically stateless between sessions | Full cross-session persistence with cloud vector synchronization |
-| **Context Management** | Fixed-size, recency-based context window | Dynamic, relevance-based context selection independent of recency |
-| **Retrieval Mechanism** | Static similarity thresholds | Adaptive thresholds that adjust based on query classification |
-| **Query Analysis** | Basic embedding similarity search | Hybrid scoring combining vector similarity with keyword matching |
-| **Storage Architecture** | Single vector database | Dual-database architecture (local + cloud) with bidirectional sync |
-| **Memory Visualization** | Typically absent | Real-time visualization of semantic relationships and memory retrieval |
-| **Provider Integration** | Usually tied to single LLM provider | Multi-provider support with unified memory interface |
+### Running on Replit
 
-The approach in SME treats conversation history as a structured, persistent memory system rather than merely as retrieval corpus. This experimental design aims to enable progressive learning, continuity across sessions, and improved contextual awareness.
+1. Fork this repository on Replit
+2. Set up Replit Secrets (environment variables):
+   - `OPENAI_API_KEY`: Your OpenAI API key
+   - `ANTHROPIC_API_KEY`: Your Anthropic API key
+   - `SESSION_SECRET`: A random string for session encryption
+3. The PostgreSQL database will be automatically set up by Replit
+4. Run the application using the Start button or the Replit Run command
 
-## SME Core Capabilities
+### Running Outside Replit Environment
 
-- **Advanced Vector-based Memory Architecture**: Implements PostgreSQL with pgvector extension to create semantic representations of conversations, enabling precise similarity search
-- **Cloud-based Persistent Memory**: Integrates with Pinecone vector database for long-term memory storage across sessions and platforms
-- **Multi-modal LLM Integration**: Provides unified interface supporting multiple AI providers including OpenAI and Anthropic 
-- **Semantic Context Retrieval**: Dynamically identifies and surfaces relevant historical information during ongoing conversations
-- **Adaptive Threshold Technology**: Automatically adjusts similarity thresholds based on query type classification (questions vs. statements)
-- **Precision Memory Configuration**: Fine-grained control over memory relevance parameters, context scope, and retrieval sensitivity
-- **Memory Visualization System**: Real-time visualization of semantic relationships and memory vector space
-
-## System Architecture and Technical Components
-
-The Structured Memory Engine employs a sophisticated multi-tiered architecture that enables scalable, persistent memory management with real-time performance characteristics.
-
-### Component Architecture
-
-The system is architected as a series of interconnected layers, each providing specialized functionality:
-
-1. **User Interface Layer**: Built with React and TypeScript, providing a responsive, intuitive interface for conversation and memory management
-2. **API & Middleware Layer**: Express.js endpoints implementing RESTful interfaces for all memory and AI operations
-3. **Memory Management Layer**: Specialized components for vector operations, embedding generation, and memory persistence
-4. **AI Integration Layer**: Provider-agnostic interfaces supporting multiple large language model providers
-5. **Storage Layer**: Dual-database architecture combining local vector storage with cloud-based persistent memory
-
-### Core Technology Stack
-
-The system utilizes the following technologies across its implementation:
-
-- **Frontend Technologies**:
-  - React 18+ with TypeScript for type-safe component development
-  - TailwindCSS with Shadcn UI component system for responsive interface design
-  - React Query for efficient state management and API integration
-
-- **Backend Framework**:
-  - Node.js with Express for high-performance API endpoints
-  - PostgreSQL with pgvector extension providing efficient vector operations
-  - Drizzle ORM for type-safe database interaction
-
-- **AI Integration**:
-  - OpenAI and Anthropic API integrations with unified interface
-  - OpenAI text-embedding-3-small model for vector embeddings
-  - Vector similarity search algorithms for memory retrieval
-
-- **Vector Database Technologies**:
-  - Local pgvector-powered database for high-performance retrieval
-  - Pinecone vector database integration for long-term memory persistence
-  - Multi-index memory organization
-
-## Visual System Overview
-
-The following visuals demonstrate the system's interface and key components:
-
-### Integrated Chat Interface with Memory Panel
-
-<div align="center">
-  <img src="./screenshots/main-interface.png" alt="Main Interface" width="600">
-  <p><em>The primary user interface incorporates both conversation interaction and memory visualization, with contextual retrieval capabilities.</em></p>
-</div>
-
-### Memory Configuration System
-
-<div align="center">
-  <img src="./screenshots/settings.png" alt="Settings Interface" width="400">
-  <p><em>The advanced configuration panel enables precise control over memory parameters, AI provider selection, and similarity thresholds.</em></p>
-</div>
-
-### Cloud-based Vector Memory Integration
-
-<div align="center">
-  <img src="./screenshots/pinecone-settings.png" alt="Pinecone Settings" width="400">
-  <p><em>The vector database integration panel provides configuration for persistent memory storage across sessions and platforms.</em></p>
-</div>
-
-### Vector Index Management Interface
-
-<div align="center">
-  <img src="./screenshots/pinecone-indexes.png" alt="Pinecone Indexes" width="400">
-  <p><em>The index management system enables creation and organization of vector collections with dimension and similarity metric configuration.</em></p>
-</div>
-
-### Memory Synchronization and Migration Tools
-
-<div align="center">
-  <img src="./screenshots/pinecone-sync.png" alt="Pinecone Sync" width="400">
-  <p><em>Bidirectional synchronization between local and cloud vector databases ensures memory persistence and availability.</em></p>
-</div>
-
-## Technical Implementation and Methodology
-
-The Structured Memory Engine employs a sophisticated multi-layered approach to memory management and contextual understanding:
-
-### Memory Creation and Storage Process
-
-1. **Semantic Embedding Generation**: User queries and AI responses undergo advanced processing through embedding models, converting natural language into high-dimensional vector representations that capture semantic meaning.
-
-2. **Dual-Database Architecture**: The system implements a two-tier storage approach:
-   - **Local Vector Store**: PostgreSQL with pgvector extension provides high-performance, low-latency access to recent interactions
-   - **Cloud-based Long-term Memory**: Pinecone vector database integration enables persistent storage and retrieval of historical conversations across sessions and platforms
-
-3. **Adaptive Context Window Management**: Unlike fixed-context systems, SME dynamically manages memory using semantic relevance rather than recency, ensuring the most important information is preserved regardless of conversation length.
-
-### Contextual Retrieval Mechanism
-
-The SME implements an experimental hybrid retrieval approach that combines:
-
-1. **Dynamic Query Analysis**: Incoming queries are algorithmically classified as questions or statements, with different retrieval parameters applied to each type
+1. Clone the repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Set up environment variables in a `.env` file:
+   ```
+   # Database configuration
+   DATABASE_URL=postgresql://user:password@localhost:5432/memory_engine
+   PGUSER=your_postgres_user
+   PGPASSWORD=your_postgres_password
+   PGDATABASE=memory_engine
+   PGHOST=localhost
+   PGPORT=5432
    
+   # API Keys
+   OPENAI_API_KEY=your_openai_key
+   ANTHROPIC_API_KEY=your_anthropic_key 
+   
+   # Session configuration
+   SESSION_SECRET=your_random_secret_string
+   ```
+4. Install and enable the pgvector extension in your PostgreSQL database:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
+5. Initialize the database:
+   ```
+   npm run db:push
+   ```
+6. Replace Replit authentication with your own auth system:
+   - The application uses Replit's authentication service by default
+   - To use your own authentication system:
+     1. Modify `server/routes/auth.ts` to integrate with your preferred auth provider
+     2. Update the login/logout endpoints to work with your authentication system
+     3. Update `client/src/hooks/useAuth.ts` to match your authentication API responses
+   - Alternatively, you can implement a simpler authentication method like:
+     - JWT-based authentication with Passport.js
+     - Auth0, Firebase Auth, or other authentication services
+     - Basic username/password authentication for local development
+   - Here's a simple example of a local development auth system in the [Authentication Guide](#authentication-guide)
+7. Start the development server:
+   ```
+   npm run dev
+   ```
 
-### Security Considerations
+## Authentication Guide
 
-When implementing this system consider these security best practices:
+This project uses Replit Authentication by default, which is only available within the Replit platform. When running outside of Replit, you'll need to implement your own authentication system. Here's a basic example of implementing a simple authentication system:
+
+1. Install required packages:
+   ```
+   npm install jsonwebtoken passport passport-local express-session
+   ```
+
+2. Create a new authentication middleware file at `server/middleware/local-auth.ts`:
+   ```typescript
+   import { Request, Response, NextFunction } from 'express';
+   import jwt from 'jsonwebtoken';
+
+   // Get JWT secret from environment variable
+   const JWT_SECRET = process.env.SESSION_SECRET || 'your-fallback-secret';
+
+   interface UserInfo {
+     id: string;
+     name: string;
+     profileImage?: string;
+   }
+
+   // Extend the Express Request type to include a user property
+   declare global {
+     namespace Express {
+       interface Request {
+         user?: UserInfo;
+       }
+     }
+   }
+
+   // Verify JWT token from Authorization header
+   export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+     // Get token from Authorization header
+     const authHeader = req.headers.authorization;
+     const token = authHeader && authHeader.split(' ')[1];
+     
+     if (!token) {
+       return res.status(401).json({ 
+         error: 'Unauthorized',
+         message: 'No token provided' 
+       });
+     }
+     
+     try {
+       // Verify token
+       const user = jwt.verify(token, JWT_SECRET) as UserInfo;
+       req.user = user;
+       next();
+     } catch (err) {
+       return res.status(401).json({ 
+         error: 'Unauthorized',
+         message: 'Invalid token' 
+       });
+     }
+   }
+
+   // Check if user is authenticated
+   export function isAuthenticated(req: Request): boolean {
+     return !!req.user;
+   }
+
+   // Get current user
+   export function getCurrentUser(req: Request): UserInfo | null {
+     return req.user || null;
+   }
+   ```
+
+3. Update your auth routes in `server/routes/auth.ts`:
+   ```typescript
+   import express from 'express';
+   import jwt from 'jsonwebtoken';
+
+   const router = express.Router();
+   const JWT_SECRET = process.env.SESSION_SECRET || 'your-fallback-secret';
+
+   // Sample users (in a real app, these would be in a database)
+   const users = [
+     { id: '1', username: 'user', password: 'password', name: 'Demo User' }
+   ];
+
+   // Login route
+   router.post('/login', (req, res) => {
+     const { username, password } = req.body;
+     
+     // Find user by username and password
+     const user = users.find(u => u.username === username && u.password === password);
+     
+     if (!user) {
+       return res.status(401).json({ error: 'Invalid credentials' });
+     }
+     
+     // Create token
+     const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET, { expiresIn: '24h' });
+     
+     res.json({ token });
+   });
+
+   // Get current user info
+   router.get('/user', (req, res) => {
+     // Auth middleware adds user to request if token is valid
+     const authHeader = req.headers.authorization;
+     const token = authHeader && authHeader.split(' ')[1];
+     
+     if (!token) {
+       return res.json({ authenticated: false, user: null });
+     }
+     
+     try {
+       const user = jwt.verify(token, JWT_SECRET);
+       return res.json({ authenticated: true, user });
+     } catch (err) {
+       return res.json({ authenticated: false, user: null });
+     }
+   });
+
+   export default router;
+   ```
+
+4. Update your `client/src/hooks/useAuth.ts` file:
+   ```typescript
+   import { useQuery, useMutation } from "@tanstack/react-query";
+   import { useState, useEffect } from "react";
+   import { apiRequest } from "@/lib/queryClient";
+   import { API_ROUTES } from "@/lib/constants";
+
+   interface UserInfo {
+     id: string;
+     name: string;
+     profileImage?: string;
+   }
+
+   interface AuthResponse {
+     authenticated: boolean;
+     user: UserInfo | null;
+   }
+
+   interface LoginCredentials {
+     username: string;
+     password: string;
+   }
+
+   export function useAuth() {
+     // Get token from localStorage
+     const [token, setToken] = useState<string | null>(
+       typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null
+     );
+
+     // Function to handle login
+     const login = useMutation({
+       mutationFn: async (credentials: LoginCredentials) => {
+         const response = await apiRequest(API_ROUTES.AUTH.LOGIN, {
+           method: 'POST',
+           body: JSON.stringify(credentials),
+           headers: {
+             'Content-Type': 'application/json'
+           }
+         });
+         return response.json();
+       },
+       onSuccess: (data) => {
+         if (data.token) {
+           localStorage.setItem('auth_token', data.token);
+           setToken(data.token);
+         }
+       }
+     });
+
+     // Function to handle logout
+     const logout = () => {
+       localStorage.removeItem('auth_token');
+       setToken(null);
+     };
+
+     // Get current user
+     const { data, isLoading, error, refetch } = useQuery<AuthResponse>({
+       queryKey: [API_ROUTES.AUTH.USER],
+       queryFn: async () => {
+         if (!token) return { authenticated: false, user: null };
+         
+         const response = await fetch(API_ROUTES.AUTH.USER, {
+           headers: {
+             'Authorization': `Bearer ${token}`
+           }
+         });
+         return response.json();
+       },
+       enabled: !!token,
+     });
+
+     // Refresh auth when token changes
+     useEffect(() => {
+       if (token) {
+         refetch();
+       }
+     }, [token, refetch]);
+
+     return {
+       isAuthenticated: !!data?.authenticated,
+       user: data?.user || null,
+       isLoading,
+       error,
+       login,
+       logout,
+     };
+   }
+   ```
+
+This is a simplified example for local development. For production use, consider using established authentication services or frameworks.
+
+## 🚀 Deployment Options
+
+### Deploying on Replit
+
+1. Fork this repository on Replit
+2. Set up your environment variables in Replit Secrets
+3. Click the "Run" button to start the application
+4. Use the "Deploy" feature in Replit to make your app publicly accessible
+
+### Deploying to Other Cloud Providers
+
+#### Heroku
+
+1. Create a new Heroku application
+2. Add the PostgreSQL add-on with the pgvector extension
+3. Configure environment variables in Heroku's settings
+4. Deploy using Heroku Git or GitHub integration:
+   ```
+   heroku login
+   heroku git:remote -a your-app-name
+   git push heroku main
+   ```
+
+#### Vercel or Netlify (Frontend) + Railway/Render (Backend)
+
+1. Split the deployment:
+   - Deploy the frontend to Vercel/Netlify
+   - Deploy the Express backend to Railway or Render
+2. Set up your PostgreSQL database with pgvector on Railway or Render
+3. Configure environment variables for both frontend and backend
+4. Connect your frontend to the backend using the appropriate environment variables
+
+#### Docker Deployment
+
+1. Create a Dockerfile in the project root:
+   ```dockerfile
+   FROM node:18-alpine
+   
+   WORKDIR /app
+   
+   COPY package*.json ./
+   RUN npm install
+   
+   COPY . .
+   
+   RUN npm run build
+   
+   EXPOSE 5000
+   
+   CMD ["npm", "start"]
+   ```
+2. Build and run the Docker image:
+   ```
+   docker build -t structured-memory-engine .
+   docker run -p 5000:5000 --env-file .env structured-memory-engine
+   ```
+3. For the database, you can use a managed PostgreSQL service or run PostgreSQL in a separate container
+
+### Environment Variable Configuration
+
+When deploying, ensure the following environment variables are properly configured:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/dbname` |
+| `PGUSER` | PostgreSQL username | `postgres` |
+| `PGPASSWORD` | PostgreSQL password | `your_password` |
+| `PGDATABASE` | PostgreSQL database name | `memory_engine` |
+| `PGHOST` | PostgreSQL host | `localhost` |
+| `PGPORT` | PostgreSQL port | `5432` |
+| `OPENAI_API_KEY` | Your OpenAI API key | `sk-...` |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key | `sk-ant-...` |
+| `PINECONE_API_KEY` | Your Pinecone API key | `abc123...` |
+| `PINECONE_ENVIRONMENT` | Pinecone environment (region) | `us-east-1` |
+| `SESSION_SECRET` | Secret for session encryption | `random_string` |
+
+### Securing Your Deployment
 
 1. Always use HTTPS in production
 2. Store API keys and secrets securely using environment variables or a secrets manager
 3. Implement rate limiting for API endpoints
-4. Configure CORS settings to restrict access to your backend
+4. Consider adding CORS configuration to restrict access to your backend
 5. Regularly update dependencies to patch security vulnerabilities
 
-## Future Roadmap
+## 🧠 How It Works
 
-The Structured Memory Engine is under active development, with several key enhancements planned for future releases:
+1. **Memory Creation**: User queries and AI responses are embedded using vector models and stored in the database
+2. **Contextual Retrieval**: When a new query is received, the system embeds it and searches for similar past memories
+3. **Enhanced Generation**: The most relevant memories are included in the context for the AI, enabling more informed responses
+4. **Continuous Learning**: As conversations progress, the memory database grows, improving contextual awareness
 
-### Internet Search Agent
+## 💡 Use Cases
 
-A dedicated agent module that will enable the system to dynamically retrieve and incorporate real-time information from internet sources, supplementing the conversation with up-to-date facts and data beyond the existing memory store. This will allow the system to address queries requiring current information while maintaining context awareness through the existing memory architecture.
+- **Knowledge Base Assistants**: Create chatbots that learn from interactions and build domain knowledge
+- **Customer Support**: Maintain context across multiple questions without repetition
+- **Research Assistants**: Track complex discussions and reference previous findings
+- **Personal Productivity**: Remember details from past conversations to provide more coherent assistance
 
-### Multi-Namespace Support
+## 🛣️ Roadmap
 
-Enhanced memory organization through hierarchical namespace management, allowing:
-- Segmentation of memories by topic, domain, or user-defined categories
-- Parallel querying across multiple namespaces with configurable priority weighting
-- Improved privacy controls with namespace-level access permissions
-- Dynamic namespace creation based on conversation analysis
+- [ ] Memory clustering and categorization
+- [x] Integration with Pinecone vector database
+- [x] Improved chat UX with focus management
+- [ ] Fine-tuning capabilities for custom domain adaptation
+- [ ] Advanced memory visualization tools
+- [ ] User management and multi-tenant support
+- [ ] Integration with additional vector databases
 
-### File Upload and Document Processing
-
-A comprehensive document processing pipeline that will:
-- Support multiple file formats (PDF, DOCX, TXT, etc.)
-- Extract text and structured data from uploaded documents
-- Automatically summarize document content for efficient storage
-- Create semantic embeddings of document segments for context retrieval
-- Link document knowledge with conversational memory
-
-### Prompt and Query Optimization
-
-Extensive prompt engineering improvements focusing on:
-- Fine-tuned prompts for different interaction types and contexts
-- Dynamic query reformulation for improved memory retrieval
-- Context-aware prompt templates with parameter optimization
-- A/B testing framework for prompt performance evaluation
-- Automated prompt parameter tuning based on user interaction data
-
-## License and Attribution
+## 📜 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-### References
-
-1. OpenAI. (2024). ChatGPT: Optimizing Language Models for Dialogue. OpenAI Technical Documentation.
-2. Anthropic. (2024). Claude Technical Documentation: Context Window Limitations. Anthropic Developer Hub.
-3. Amazon. (2023). Bedrock AI Documentation: Memory Management in Conversational Agents. AWS Technical Library.
-4. Humanloop. (2024). Practical Limitations of LLM Conversation Agents. Whitepaper Series.
-5. LangChain Documentation. (2024). Memory Components and Context Preservation. LangChain Technical Library.
-
-## Appendix: Context Window in AI Systems
-
-### Per-Prompt Context Window vs. Session Context Window in an AI Chatbot
-
-When discussing AI chatbots, especially large language models (LLMs) like ChatGPT or Claude, the context window refers to the amount of text (tokens) the model can "remember" and process at a given time. Understanding the distinction between these two types of context windows is crucial for grasping the benefits of the Structured Memory Engine.
-
-#### 1. Per-Prompt Context Window
-
-This refers to the maximum number of tokens (words, punctuation, and spaces included) that the model can process within a single request (prompt + response).
-
-- Every time you send a message, the model processes your input and generates a response within a fixed token limit (e.g., 4K, 8K, 32K tokens, depending on the model version).
-- If your input exceeds this limit, older parts may get truncated (removed from memory) before processing.
-- This limit includes both your message and the AI's response, meaning long responses may limit how much input can be considered.
-
-**Example:**
-- If an AI model has an 8K-token context window:
-- You send a 5K-token prompt.
-- The AI can generate up to 3K tokens before hitting the limit.
-
-#### 2. Session Context Window
-
-A session context window refers to how much of the ongoing conversation the chatbot retains.
-
-- Some chatbots try to simulate memory across multiple prompts by summarizing or selectively retaining key details from previous messages.
-- However, at any given moment, the active memory of the model is still bound by the per-prompt context window.
-
-**How It Works in a Session:**
-- As a conversation continues, earlier messages might fall out of the model's context window and be forgotten.
-- If a model has a 4K-token context limit, and your conversation grows to 10K tokens, only the most recent 4K tokens (or a compressed summary) are retained.
-
-**Example:**
-- You have a long conversation spanning 15 messages totaling 10K tokens.
-- If the model's limit is 4K tokens, only the most recent or most relevant 4K tokens (from both user and AI) are used.
-
-#### Key Differences
-
-<div align="center">
-  <img src="./screenshots/context-window-comparison.png" alt="Context Window Comparison" width="500">
-  <p><em>Comparison of Per-Prompt Context Window vs. Session Context Window characteristics</em></p>
-</div>
-
-#### Implications for AI Chatbots
-
-- If you want the model to "remember" key details, you may need to restate important context periodically.
-- Some AI chatbots use summarization techniques to keep relevant details from earlier messages within the window.
-- A larger per-prompt context window helps retain more history, but does not create long-term memory—it's just a larger temporary workspace.
-
