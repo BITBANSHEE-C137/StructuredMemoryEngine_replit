@@ -269,3 +269,60 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 3. Amazon. (2023). Bedrock AI Documentation: Memory Management in Conversational Agents. AWS Technical Library.
 4. Humanloop. (2024). Practical Limitations of LLM Conversation Agents. Whitepaper Series.
 5. LangChain Documentation. (2024). Memory Components and Context Preservation. LangChain Technical Library.
+
+## Appendix: Context Window in AI Systems
+
+### Per-Prompt Context Window vs. Session Context Window in an AI Chatbot
+
+When discussing AI chatbots, especially large language models (LLMs) like ChatGPT or Claude, the context window refers to the amount of text (tokens) the model can "remember" and process at a given time. Understanding the distinction between these two types of context windows is crucial for grasping the benefits of the Structured Memory Engine.
+
+#### 1. Per-Prompt Context Window
+
+This refers to the maximum number of tokens (words, punctuation, and spaces included) that the model can process within a single request (prompt + response).
+
+- Every time you send a message, the model processes your input and generates a response within a fixed token limit (e.g., 4K, 8K, 32K tokens, depending on the model version).
+- If your input exceeds this limit, older parts may get truncated (removed from memory) before processing.
+- This limit includes both your message and the AI's response, meaning long responses may limit how much input can be considered.
+
+**Example:**
+- If an AI model has an 8K-token context window:
+- You send a 5K-token prompt.
+- The AI can generate up to 3K tokens before hitting the limit.
+
+#### 2. Session Context Window
+
+A session context window refers to how much of the ongoing conversation the chatbot retains.
+
+- Some chatbots try to simulate memory across multiple prompts by summarizing or selectively retaining key details from previous messages.
+- However, at any given moment, the active memory of the model is still bound by the per-prompt context window.
+
+**How It Works in a Session:**
+- As a conversation continues, earlier messages might fall out of the model's context window and be forgotten.
+- If a model has a 4K-token context limit, and your conversation grows to 10K tokens, only the most recent 4K tokens (or a compressed summary) are retained.
+
+**Example:**
+- You have a long conversation spanning 15 messages totaling 10K tokens.
+- If the model's limit is 4K tokens, only the most recent or most relevant 4K tokens (from both user and AI) are used.
+
+#### Key Differences
+
+<div align="center">
+  <img src="./screenshots/context-window-comparison.png" alt="Context Window Comparison" width="800">
+  <p><em>Comparison of Per-Prompt Context Window vs. Session Context Window characteristics</em></p>
+</div>
+
+#### Implications for AI Chatbots
+
+- If you want the model to "remember" key details, you may need to restate important context periodically.
+- Some AI chatbots use summarization techniques to keep relevant details from earlier messages within the window.
+- A larger per-prompt context window helps retain more history, but does not create long-term memory—it's just a larger temporary workspace.
+
+#### How SME Addresses These Limitations
+
+The Structured Memory Engine addresses the fundamental limitations of traditional context windows by:
+
+1. **Persistent Vector Memory**: Storing all interactions as semantic vectors that persist beyond the session
+2. **Semantic Retrieval**: Dynamically retrieving only the most relevant memories based on the current query
+3. **Unlimited Effective Context**: Breaking free from token limits by maintaining a searchable memory bank that spans all previous interactions
+4. **Cross-Session Continuity**: Enabling conversations to pick up where they left off, even after weeks or months
+5. **Selective Memory Injection**: Including only the most relevant historical context in each prompt, optimizing token usage
