@@ -55,6 +55,11 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
       setTotal(totalMemories);
     }
   }, [totalMemories]);
+  
+  // Debug effect to log when isRAGPanelOpen changes
+  useEffect(() => {
+    console.log("isRAGPanelOpen changed to:", isRAGPanelOpen);
+  }, [isRAGPanelOpen]);
 
   // Fetch memories when panel is open
   useEffect(() => {
@@ -136,7 +141,10 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
               <span className="text-blue-800">RAG System Controls</span>
             </h3>
             <button 
-              onClick={() => setIsRAGPanelOpen(!isRAGPanelOpen)} 
+              onClick={() => {
+                console.log("RAG panel toggle clicked. Current state:", isRAGPanelOpen);
+                setIsRAGPanelOpen(!isRAGPanelOpen);
+              }} 
               className="text-blue-600 hover:text-blue-800 transition-colors text-xs flex items-center"
             >
               {isRAGPanelOpen ? 'Hide Details' : 'Show Details'}
@@ -152,25 +160,17 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
             </button>
           </div>
           
-          {settings && (
-            <div 
-              className="overflow-hidden transition-all duration-500 ease-in-out" 
-              style={{ 
-                maxHeight: isRAGPanelOpen ? '800px' : '0',
-                opacity: isRAGPanelOpen ? 1 : 0,
-                marginTop: isRAGPanelOpen ? '1rem' : '0'
-              }}
-            >
-              <div className="bg-white/50 rounded-lg border border-blue-100 p-4">
-                <RAGStatusPanel 
-                  contextSize={settings.contextSize}
-                  similarityThreshold={settings.similarityThreshold}
-                  questionThresholdFactor={settings.questionThresholdFactor || "0.7"}
-                  statementThresholdFactor={settings.statementThresholdFactor || "0.85"}
-                  embeddingModel={settings.defaultEmbeddingModelId || 'text-embedding-3-small'}
-                  compact={false}
-                />
-              </div>
+          {/* Show RAG Status Panel when isRAGPanelOpen is true */}
+          {settings && isRAGPanelOpen && (
+            <div className="mt-4 bg-white/50 rounded-lg border border-blue-100 p-4">
+              <RAGStatusPanel 
+                contextSize={settings.contextSize}
+                similarityThreshold={settings.similarityThreshold}
+                questionThresholdFactor={settings.questionThresholdFactor || "0.7"}
+                statementThresholdFactor={settings.statementThresholdFactor || "0.85"}
+                embeddingModel={settings.defaultEmbeddingModelId || 'text-embedding-3-small'}
+                compact={false}
+              />
             </div>
           )}
           
