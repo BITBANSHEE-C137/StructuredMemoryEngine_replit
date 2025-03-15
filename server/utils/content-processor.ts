@@ -812,25 +812,8 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
         }
       }
       
-      // Lower the score for same question memories - ENHANCED VERSION
-      // 1. Exact match lowers score to near zero
-      // 2. Contains the query as a question lowers score significantly
-      // 3. Similar question pattern (ends with ? and shares keywords) also gets reduced
-      if (content === query.toLowerCase()) {
-        console.log(`[CRITICAL TEST CASE] ⚠️ EXACT SAME QUESTION in memory ID ${(mem as any).id} - eliminating from results`);
-        // Practically eliminate from results with near-zero score
-        mem.similarity = 0.01; // Effectively removed
-      } else if (content.includes(query.toLowerCase()) && content.includes('?')) {
-        console.log(`[CRITICAL TEST CASE] ⚠️ Found QUESTION CONTAINING QUERY in memory ID ${(mem as any).id} - reducing relevance severely`);
-        // Drop the score significantly
-        mem.similarity = 0.2; // Very low score
-      } else if (content.endsWith('?') && 
-                 query.toLowerCase().endsWith('?') && 
-                 containsCommonKeywords(content, query.toLowerCase(), 0.5)) {
-        console.log(`[CRITICAL TEST CASE] ⚠️ Found SIMILAR QUESTION PATTERN in memory ID ${(mem as any).id} - reducing relevance`);
-        // Drop the score moderately for similar questions
-        mem.similarity = 0.3; // Low score
-      }
+      // Note: Question memory handling is now done in the general section below
+      // to ensure the logic is applied to all queries, not just Ferrari test cases
     }
     
     console.log(`[CRITICAL TEST CASE] Ferrari mentions found in memories: ${foundFerrari ? 'YES' : 'NO'}`);
@@ -878,6 +861,38 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
   
   if (isQuestion) {
     console.log(`Query appears to be a question. Will favor statement/response memories that may contain answers.`);
+    
+    // GENERAL QUESTION HANDLING (moved from Ferrari-specific section)
+    // Apply question-question similarity detection to ALL queries, not just Ferrari test
+    console.log(`Applying question similarity detection to all ${memories.length} memories.`);
+    
+    // Process and filter all memories to handle similar questions
+    for (let i = 0; i < memories.length; i++) {
+      const mem = memories[i];
+      const content = mem.content.toLowerCase();
+      const memoryId = (mem as any).id || 'unknown';
+      
+      // 1. Exact match lowers score to near zero - Effectively removes duplicate questions
+      if (content === query.toLowerCase()) {
+        console.log(`⚠️ EXACT SAME QUESTION in memory ID ${memoryId} - eliminating from results`);
+        // Practically eliminate from results with near-zero score
+        mem.similarity = 0.01; // Effectively removed
+      } 
+      // 2. Contains the query as a question lowers score significantly
+      else if (content.includes(query.toLowerCase()) && content.includes('?')) {
+        console.log(`⚠️ Found QUESTION CONTAINING QUERY in memory ID ${memoryId} - reducing relevance severely`);
+        // Drop the score significantly
+        mem.similarity = 0.2; // Very low score
+      } 
+      // 3. Similar question pattern (ends with ? and shares keywords) also gets reduced
+      else if (content.endsWith('?') && 
+               query.toLowerCase().endsWith('?') && 
+               containsCommonKeywords(content, query.toLowerCase(), 0.5)) {
+        console.log(`⚠️ Found SIMILAR QUESTION PATTERN in memory ID ${memoryId} - reducing relevance`);
+        // Drop the score moderately for similar questions
+        mem.similarity = 0.3; // Low score
+      }
+    }
   }
   
   // Calculate hybrid scores for each memory
