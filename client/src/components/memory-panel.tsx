@@ -32,7 +32,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(totalMemories || 0);
   const [loading, setLoading] = useState(false);
-  const [isRAGPanelOpen, setIsRAGPanelOpen] = useState(false);
+  // RAG panel state removed as the section has been removed
   
   // Fetch Pinecone stats
   const { stats: pineconeStats, isLoading: loadingPinecone } = usePineconeStats();
@@ -56,10 +56,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
     }
   }, [totalMemories]);
   
-  // Debug effect to log when isRAGPanelOpen changes
-  useEffect(() => {
-    console.log("isRAGPanelOpen changed to:", isRAGPanelOpen);
-  }, [isRAGPanelOpen]);
+
 
   // Fetch memories when panel is open
   useEffect(() => {
@@ -131,76 +128,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">Memory System</span>
         </h2>
         
-        {/* RAG System Status */}
-        <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-4 mb-5 border border-blue-100">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-semibold text-primary flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-              <span className="text-blue-800">RAG System Controls</span>
-            </h3>
-            <button 
-              onClick={() => {
-                console.log("RAG panel toggle clicked. Current state:", isRAGPanelOpen);
-                setIsRAGPanelOpen(!isRAGPanelOpen);
-              }} 
-              className="text-blue-600 hover:text-blue-800 transition-colors text-xs flex items-center"
-            >
-              {isRAGPanelOpen ? 'Hide Details' : 'Show Details'}
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className={`h-4 w-4 ml-1 transform transition-transform ${isRAGPanelOpen ? 'rotate-180' : ''}`} 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-          </div>
-          
-          {/* Show RAG Status Panel when isRAGPanelOpen is true */}
-          {settings && isRAGPanelOpen && (
-            <div className="mt-4 bg-white/50 rounded-lg border border-blue-100 p-4">
-              <RAGStatusPanel 
-                contextSize={settings.contextSize}
-                similarityThreshold={settings.similarityThreshold}
-                questionThresholdFactor={settings.questionThresholdFactor || "0.7"}
-                statementThresholdFactor={settings.statementThresholdFactor || "0.85"}
-                embeddingModel={settings.defaultEmbeddingModelId || 'text-embedding-3-small'}
-                compact={false}
-              />
-            </div>
-          )}
-          
-          {/* Simplified status display (always visible) */}
-          <div className="flex gap-2 flex-wrap">
-            <div className="bg-white border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
-              <span className="text-xs text-blue-800">Context Size</span>
-              <span className="text-sm font-medium text-blue-900">{settings?.contextSize || 3}</span>
-            </div>
-            
-            <div className="bg-white border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
-              <span className="text-xs text-blue-800">Threshold</span>
-              <span className="text-sm font-medium text-blue-900">
-                {settings ? parseFloat(settings.similarityThreshold).toFixed(2) : "0.75"}
-              </span>
-            </div>
-            
-            <div className="bg-white border border-blue-200 rounded-lg py-1.5 px-2 flex-1 flex flex-col items-center">
-              <span className="text-xs text-blue-800">Mode Factors</span>
-              <div className="flex items-center gap-1">
-                <span className="inline-flex items-center text-xs text-blue-600 bg-blue-50 px-1 py-0.5 rounded">
-                  Q: {settings ? parseFloat(settings.questionThresholdFactor || "0.7").toFixed(2) : "0.70"}
-                </span>
-                <span className="inline-flex items-center text-xs text-purple-600 bg-purple-50 px-1 py-0.5 rounded">
-                  S: {settings ? parseFloat(settings.statementThresholdFactor || "0.85").toFixed(2) : "0.85"}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Memory stats section starts here - we removed the RAG System Controls section */}
         
         {/* Memory Stats */}
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-5 mb-5 border border-primary/10">
