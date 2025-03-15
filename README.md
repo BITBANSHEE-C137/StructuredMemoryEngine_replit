@@ -7,9 +7,7 @@
 
 The Structured Memory Engine (SME) is an experimental, open-source proof-of-concept for AI-driven conversation systems, exploring approaches to address limitations of current commercial chatbot platforms. By implementing a semantic memory architecture, SME aims to transform ephemeral interactions into persistent, contextually-aware conversational experiences. This project was developed entirely with AI assistance as an experiment in real-time context capture for RAG systems.
 
-
 ## Problem Statement
- 
 
 Modern AI-driven chatbots have made progress in conversational capabilities but still face fundamental limitations regarding context retention and memory persistence. These limitations affect their ability to deliver sustained, meaningful interactions over extended periods or across multiple sessions.
 
@@ -30,7 +28,6 @@ This inherent statelessness leads to:
 - Poor user experience, due to repetitive questions and forgotten context (Humanloop, 2024).
 - Operational inefficiency, as users repeatedly re-enter previously shared information.
 - Limited AI adaptability and personalization, preventing chatbots from evolving based on long-term interaction history.
-
 
 While frameworks such as LangChain and LlamaIndex aim to mitigate some of these challenges by adding context management layers, their complexity, ongoing maintenance overhead, and lack of structured memory management often hinder widespread adoption and practical usability (LangChain Documentation, 2024).
 
@@ -82,7 +79,7 @@ The system is architected as a series of interconnected layers, each providing s
 
 ### Core Technology Stack
 
-The system utilizes cutting-edge technologies across its implementation:
+The system utilizes the following technologies across its implementation:
 
 - **Frontend Technologies**:
   - React 18+ with TypeScript for type-safe component development
@@ -102,7 +99,7 @@ The system utilizes cutting-edge technologies across its implementation:
 - **Vector Database Technologies**:
   - Local pgvector-powered database for high-performance retrieval
   - Pinecone vector database integration for long-term memory persistence
-  - Multi-index memory organization with namespace-based segmentation
+  - Multi-index memory organization
 
 ## Visual System Overview
 
@@ -163,11 +160,95 @@ The SME implements an experimental hybrid retrieval approach that combines:
 
 1. **Dynamic Query Analysis**: Incoming queries are algorithmically classified as questions or statements, with different retrieval parameters applied to each type
    
+2. **Similarity Threshold Adaptation**: The system dynamically adjusts similarity thresholds based on query type, conversation history, and user behavior patterns
+
+3. **Hybrid Scoring Algorithm**: Retrieved memories are ranked using an algorithm combining vector similarity with keyword matching and relevance scoring
+
+### Enhanced Response Generation
+
+The multi-stage response generation process ensures AI outputs are contextually grounded and informationally rich:
+
+1. **Context Augmentation**: The most relevant memories are selectively incorporated into the AI prompt
+2. **Provider-Agnostic Integration**: A unified interface allows seamless switching between OpenAI and Anthropic models while maintaining consistent memory access
+3. **Feedback Loop Integration**: User interactions implicitly refine memory relevance scoring over time
+
+## Data Reconciliation and Deduplication System
+
+The Structured Memory Engine implements a data reconciliation and deduplication system to ensure memory consistency across local and cloud databases. This system prevents memory duplication and optimizes storage efficiency without requiring manual intervention.
+
+### Key Features of the Deduplication System
+
+#### Consistent Hash-based Memory Identification
+
+The system uses a hashing mechanism to generate unique identifiers for each memory:
+
+- Each memory is assigned a hash-based ID derived from its content and type
+- The `memoryIdForUpsert()` function normalizes content by trimming and lowercasing before hashing
+- The SHA-256 hash algorithm generates a consistent identifier regardless of where the memory is created
+- By excluding timestamp and database ID from the hash calculation, identical content always produces the same identifier
+
+#### Bidirectional Synchronization with Deduplication
+
+During synchronization between local pgvector and cloud Pinecone databases:
+
+1. **Pre-synchronization Duplicate Detection**:
+   - Before uploading vectors, the system queries Pinecone to identify existing identical memories
+   - A map of existing memory IDs is created to track potential duplicates
+   - Content fingerprinting prevents re-uploading semantically identical memories
+
+2. **Batch Processing with Deduplication**:
+   - Memories are processed in configurable batches (default: 100) to optimize API usage
+   - Each batch is checked against existing vectors to avoid duplicate uploads
+   - When identical hash matches are found, the system defaults to overwriting the existing record with the new data
+   - The system tracks and reports deduplication rates for monitoring
+
+3. **Hydration with Duplicate Prevention**:
+   - When retrieving memories from Pinecone to the local database, the system checks for duplicates
+   - Local database hashes are compared with incoming vector IDs to prevent redundant storage
+   - Statistics track duplicate detection rates during both sync and hydration operations
+
+#### Deduplication Metrics
+
+The system maintains metrics for deduplication:
+
+- **Sync Deduplication Rate**: Percentage of duplicates detected when sending local memories to Pinecone
+- **Hydration Deduplication Rate**: Percentage of duplicates detected when retrieving memories from Pinecone
+- **Average Deduplication Rate**: Combined metric showing overall system efficiency
+- **Performance Tracking**: UI displays vector counts, operation success rates, and processing timestamps
+
+### Benefits of Automatic Deduplication
+
+1. **Reduced Storage Usage**: Preventing duplicate memories minimizes vector database storage requirements
+2. **Improved Query Performance**: Fewer redundant vectors lead to faster retrieval
+3. **Data Consistency**: Maintains consistent memory representation across local and cloud environments
+4. **No Manual Maintenance**: The system handles deduplication automatically
+5. **Handles Growing Datasets**: The approach maintains performance as the dataset grows
+
+## Implementation Guidelines
+
+The following technical requirements should be considered:
+
+### System Requirements
+
+- **Server Environment**: Node.js v18+ 
+- **Database Infrastructure**: PostgreSQL 14+ with pgvector extension
+- **API Integration**: OpenAI API key and/or Anthropic API key
+- **Vector Database**: Pinecone account for persistent memory storage
+
+### Environment Configuration
+
+The following environment variables are essential for proper system operation:
+
+| Variable | Description | 
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `OPENAI_API_KEY` | OpenAI API key for embedding generation and response |
+| `ANTHROPIC_API_KEY` | Anthropic API key for alternative model access |
+| `PINECONE_API_KEY` | Pinecone API key for cloud vector storage |
 
 ### Security Considerations
 
-When implementing this system in production environments, consider these security best practices:
-
+When implementing this system consider these security best practices:
 
 1. Always use HTTPS in production
 2. Store API keys and secrets securely using environment variables or a secrets manager
@@ -208,10 +289,6 @@ Extensive prompt engineering improvements focusing on:
 - Context-aware prompt templates with parameter optimization
 - A/B testing framework for prompt performance evaluation
 - Automated prompt parameter tuning based on user interaction data
-
-## License and Attribution
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ### References
 
@@ -268,7 +345,6 @@ A session context window refers to how much of the ongoing conversation the chat
 - Some AI chatbots use summarization techniques to keep relevant details from earlier messages within the window.
 - A larger per-prompt context window helps retain more history, but does not create long-term memory—it's just a larger temporary workspace.
 
-
 #### How SME Addresses These Limitations
 
 The Structured Memory Engine addresses the fundamental limitations of traditional context windows by:
@@ -278,3 +354,7 @@ The Structured Memory Engine addresses the fundamental limitations of traditiona
 3. **Unlimited Effective Context**: Breaking free from token limits by maintaining a searchable memory bank that spans all previous interactions
 4. **Cross-Session Continuity**: Enabling conversations to pick up where they left off, even after weeks or months
 5. **Selective Memory Injection**: Including only the most relevant historical context in each prompt, optimizing token usage
+
+## License and Attribution
+
+This project is licensed under the MIT License - see the LICENSE file for details.
