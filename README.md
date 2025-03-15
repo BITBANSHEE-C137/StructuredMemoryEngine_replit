@@ -141,61 +141,23 @@ The multi-stage response generation process ensures AI outputs are contextually 
 2. **Provider-Agnostic Integration**: A unified interface allows seamless switching between OpenAI and Anthropic models while maintaining consistent memory access
 3. **Feedback Loop Integration**: User interactions implicitly refine memory relevance scoring over time
 
-## Application Domains and Use Cases
+## System Workflow Diagram
 
-The Structured Memory Engine addresses critical limitations across numerous high-value application domains:
+The following diagram illustrates the complete data flow and component interaction architecture of the Structured Memory Engine:
 
-### Enterprise Knowledge Management
+![System Workflow Diagram](./screenshots/workflow-diagram.svg)
 
-Organizations deploying conversational AI face significant challenges maintaining context across complex, multi-part discussions. SME provides:
+### Key System Processes
 
-- **Institutional Memory Preservation**: Retains critical context across employee shifts, department handoffs, and extended project timelines
-- **Knowledge Democratization**: Makes historical context available across organizational boundaries
-- **Compliance Documentation**: Maintains auditable conversation records for regulated industries
-
-### Enhanced Customer Experience
-
-For customer-facing applications, SME delivers substantial improvements in user satisfaction and operational efficiency:
-
-- **Conversation Continuity**: Eliminates repetitive questioning and "starting over" experiences across support interactions
-- **Personalized User Journeys**: Builds comprehensive user profiles through persistent memory of preferences, issues, and past interactions
-- **Reduced Cognitive Load**: Minimizes information repetition requirements, creating more natural and efficient interactions
-
-### Research and Knowledge Work
-
-For complex intellectual tasks, SME extends AI capabilities beyond single-session limitations:
-
-- **Extended Research Assistance**: Maintains context across multi-day research projects and complex investigations
-- **Project Continuity**: Preserves the full context of ongoing creative and analytical work
-- **Cross-Reference Integration**: Automatically surfaces relevant information from past discussions when related topics arise
-
-## Future Development Trajectory
-
-The Structured Memory Engine roadmap focuses on extending the platform's capabilities in four key dimensions:
-
-### Memory Architecture Enhancements
-
-- **Hierarchical Memory Structures**: Implementing multi-tier memory organization with categorization and relationship mapping
-- **Cross-Session Memory Synchronization**: Enhanced mechanisms for memory consistency across multiple interface points
-- **Multi-Tenant Memory Isolation**: Advanced security protocols for enterprise deployment with segmented memory stores
-
-### Vector Database Integration
-
-- **✓ Pinecone Integration**: Completed integration with Pinecone vector database for cloud-based persistent memory
-- **Additional Provider Support**: Planned integration with alternative vector stores including Weaviate, Milvus, and others
-- **Hybrid Storage Optimization**: Advanced tier-based memory management with automatic migration between storage layers
-
-### Enhanced AI Capabilities
-
-- **Model-Specific Optimization**: Fine-tuning memory retrieval parameters for specific AI model characteristics
-- **Multi-Modal Memory**: Extending memory capabilities to include images, structured data, and other non-text content
-- **Memory Visualization Framework**: Advanced tools for exploring and understanding semantic relationships between memories
-
-### Enterprise Features
-
-- **Role-Based Memory Access**: Implementing permission structures for team-based memory access
-- **Memory Analytics Dashboard**: Tools for understanding and optimizing memory utilization patterns
-- **Integration SDK**: Developer toolkit for embedding SME capabilities in third-party applications
+1. **Query Submission**: User submits a chat message through the React-based user interface
+2. **API Processing**: Express.js API endpoints handle request authentication and formatting
+3. **Context Retrieval**: Memory Engine analyzes the query and retrieves relevant memories 
+4. **Vector Representation**: Text is converted to vector embeddings for similarity search
+5. **AI Prompt Engineering**: Retrieved context is intelligently injected into AI prompt
+6. **Response Generation**: AI model (OpenAI or Anthropic) generates contextual response
+7. **Memory Creation**: Both query and response are stored as new memories
+8. **Database Persistence**: Memories stored in local pgvector and synced to Pinecone
+9. **UI Rendering**: Response with relevant memory context returned to user interface
 
 ## Implementation Guidelines
 
