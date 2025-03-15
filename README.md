@@ -1,4 +1,4 @@
-# Structured Memory Engine: Overcoming AI Chatbot Memory Limitations
+﻿# Structured Memory Engine: Overcoming AI Chatbot Memory Limitations
 
 ![Version](https://img.shields.io/badge/version-1.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -345,15 +345,6 @@ A session context window refers to how much of the ongoing conversation the chat
 - Some AI chatbots use summarization techniques to keep relevant details from earlier messages within the window.
 - A larger per-prompt context window helps retain more history, but does not create long-term memory—it's just a larger temporary workspace.
 
-#### How SME Addresses These Limitations
-
-The Structured Memory Engine addresses the fundamental limitations of traditional context windows by:
-
-1. **Persistent Vector Memory**: Storing all interactions as semantic vectors that persist beyond the session
-2. **Semantic Retrieval**: Dynamically retrieving only the most relevant memories based on the current query
-3. **Unlimited Effective Context**: Breaking free from token limits by maintaining a searchable memory bank that spans all previous interactions
-4. **Cross-Session Continuity**: Enabling conversations to pick up where they left off, even after weeks or months
-5. **Selective Memory Injection**: Including only the most relevant historical context in each prompt, optimizing token usage
 
 ## License and Attribution
 
