@@ -5,11 +5,11 @@
 
 ## Executive Summary
 
-The Structured Memory Engine (SME) represents a significant advancement in AI-driven conversation systems, directly addressing the critical limitations of current commercial chatbot platforms. By implementing a sophisticated semantic memory architecture, SME transforms ephemeral interactions into persistent, contextually-aware conversational experiences with enhanced relevance and continuity.
+The Structured Memory Engine (SME) is an experimental, open-source proof-of-concept for AI-driven conversation systems, exploring approaches to address limitations of current commercial chatbot platforms. By implementing a semantic memory architecture, SME aims to transform ephemeral interactions into persistent, contextually-aware conversational experiences. This project was developed entirely with AI assistance as an experiment in real-time context capture for RAG systems.
 
 ## Problem Statement
 
-Modern AI-driven chatbots have significantly advanced in conversational capabilities but still face fundamental limitations regarding context retention and memory persistence. These limitations undermine their effectiveness in delivering sustained, meaningful interactions over extended periods or across multiple sessions.
+Modern AI-driven chatbots have made progress in conversational capabilities but still face fundamental limitations regarding context retention and memory persistence. These limitations affect their ability to deliver sustained, meaningful interactions over extended periods or across multiple sessions.
 
 ### Key Limitations of Current AI Chatbots
 
@@ -33,9 +33,25 @@ While frameworks such as LangChain and LlamaIndex aim to mitigate some of these 
 
 ### The Need for Structured, Persistent AI Memory
 
-To overcome these significant limitations, chatbots require an advanced, structured memory framework that ensures context persistence across interactions, sessions, and even platforms. Such a structured approach would drastically improve conversational continuity, accuracy, personalization, and overall user experience.
+To address these limitations, chatbots can benefit from a structured memory framework that enables context persistence across interactions, sessions, and platforms. Such an approach can improve conversational continuity, accuracy, personalization, and overall user experience.
 
-The Structured Memory Engine (SME) directly addresses these critical challenges by providing structured, scalable, intelligent memory management—transforming ephemeral interactions into coherent, continuous, and meaningful long-term conversations.
+The Structured Memory Engine (SME) was created as a proof-of-concept to explore solutions to these challenges. This experimental project, developed entirely using AI assistance, tests approaches for structured memory management to improve conversation quality and context retention across sessions.
+
+## SME vs. Traditional RAG Systems
+
+While Retrieval-Augmented Generation (RAG) has become a standard approach for enhancing LLMs with external knowledge, the Structured Memory Engine (SME) explores several additions to basic RAG implementations. This experimental project tests the following differences from typical RAG systems:
+
+| Feature | Traditional RAG | Structured Memory Engine |
+|---------|----------------|--------------------------|
+| **Memory Persistence** | Typically stateless between sessions | Full cross-session persistence with cloud vector synchronization |
+| **Context Management** | Fixed-size, recency-based context window | Dynamic, relevance-based context selection independent of recency |
+| **Retrieval Mechanism** | Static similarity thresholds | Adaptive thresholds that adjust based on query classification |
+| **Query Analysis** | Basic embedding similarity search | Hybrid scoring combining vector similarity with keyword matching |
+| **Storage Architecture** | Single vector database | Dual-database architecture (local + cloud) with bidirectional sync |
+| **Memory Visualization** | Typically absent | Real-time visualization of semantic relationships and memory retrieval |
+| **Provider Integration** | Usually tied to single LLM provider | Multi-provider support with unified memory interface |
+
+The approach in SME treats conversation history as a structured, persistent memory system rather than merely as retrieval corpus. This experimental design aims to enable progressive learning, continuity across sessions, and improved contextual awareness.
 
 ## SME Core Capabilities
 
@@ -90,24 +106,39 @@ The system utilizes cutting-edge technologies across its implementation:
 The following visuals demonstrate the system's interface and key components:
 
 ### Integrated Chat Interface with Memory Panel
-![Main Interface](./screenshots/main-interface.png)
-*The primary user interface incorporates both conversation interaction and memory visualization, with contextual retrieval capabilities.*
+
+<div align="center">
+  <img src="./screenshots/main-interface.png" alt="Main Interface" width="800">
+  <p><em>The primary user interface incorporates both conversation interaction and memory visualization, with contextual retrieval capabilities.</em></p>
+</div>
 
 ### Memory Configuration System
-![Settings](./screenshots/settings.png)
-*The advanced configuration panel enables precise control over memory parameters, AI provider selection, and similarity thresholds.*
+
+<div align="center">
+  <img src="./screenshots/settings.png" alt="Settings Interface" width="800">
+  <p><em>The advanced configuration panel enables precise control over memory parameters, AI provider selection, and similarity thresholds.</em></p>
+</div>
 
 ### Cloud-based Vector Memory Integration
-![Pinecone Settings](./screenshots/pinecone-settings.png)
-*The vector database integration panel provides configuration for persistent memory storage across sessions and platforms.*
+
+<div align="center">
+  <img src="./screenshots/pinecone-settings.png" alt="Pinecone Settings" width="800">
+  <p><em>The vector database integration panel provides configuration for persistent memory storage across sessions and platforms.</em></p>
+</div>
 
 ### Vector Index Management Interface
-![Pinecone Indexes](./screenshots/pinecone-indexes.png)
-*The index management system enables creation and organization of vector collections with dimension and similarity metric configuration.*
+
+<div align="center">
+  <img src="./screenshots/pinecone-indexes.png" alt="Pinecone Indexes" width="800">
+  <p><em>The index management system enables creation and organization of vector collections with dimension and similarity metric configuration.</em></p>
+</div>
 
 ### Memory Synchronization and Migration Tools
-![Pinecone Sync](./screenshots/pinecone-sync.png)
-*Bidirectional synchronization between local and cloud vector databases ensures memory persistence and availability.*
+
+<div align="center">
+  <img src="./screenshots/pinecone-sync.png" alt="Pinecone Sync" width="800">
+  <p><em>Bidirectional synchronization between local and cloud vector databases ensures memory persistence and availability.</em></p>
+</div>
 
 ## Technical Implementation and Methodology
 
@@ -125,13 +156,13 @@ The Structured Memory Engine employs a sophisticated multi-layered approach to m
 
 ### Contextual Retrieval Mechanism
 
-The SME employs a proprietary hybrid retrieval approach that combines:
+The SME implements an experimental hybrid retrieval approach that combines:
 
 1. **Dynamic Query Analysis**: Incoming queries are algorithmically classified as questions or statements, with different retrieval parameters applied to each type
    
 2. **Similarity Threshold Adaptation**: The system dynamically adjusts similarity thresholds based on query type, conversation history, and user behavior patterns
 
-3. **Hybrid Scoring Algorithm**: Retrieved memories are ranked using a sophisticated algorithm combining vector similarity with keyword matching and relevance scoring
+3. **Hybrid Scoring Algorithm**: Retrieved memories are ranked using an algorithm combining vector similarity with keyword matching and relevance scoring
 
 ### Enhanced Response Generation
 
@@ -140,12 +171,6 @@ The multi-stage response generation process ensures AI outputs are contextually 
 1. **Context Augmentation**: The most relevant memories are selectively incorporated into the AI prompt
 2. **Provider-Agnostic Integration**: A unified interface allows seamless switching between OpenAI and Anthropic models while maintaining consistent memory access
 3. **Feedback Loop Integration**: User interactions implicitly refine memory relevance scoring over time
-
-## System Workflow Diagram
-
-The following diagram illustrates the complete data flow and component interaction architecture of the Structured Memory Engine:
-
-![System Workflow Diagram](./screenshots/workflow-diagram.svg)
 
 ### Key System Processes
 
@@ -190,6 +215,30 @@ When implementing this system in production environments, consider these securit
 3. Implement rate limiting for API endpoints
 4. Configure CORS settings to restrict access to your backend
 5. Regularly update dependencies to patch security vulnerabilities
+
+## Future Roadmap
+
+The Structured Memory Engine is under active development, with several key enhancements planned for future releases:
+
+### Internet Search Agent
+
+A dedicated agent module that will enable the system to dynamically retrieve and incorporate real-time information from internet sources, supplementing the conversation with up-to-date facts and data beyond the existing memory store. This will allow the system to address queries requiring current information while maintaining context awareness through the existing memory architecture.
+
+### Multi-Namespace Support
+
+Enhanced memory organization through hierarchical namespace management, allowing:
+- Segmentation of memories by topic, domain, or user-defined categories
+- Parallel querying across multiple namespaces with configurable priority weighting
+- Improved privacy controls with namespace-level access permissions
+- Dynamic namespace creation based on conversation analysis
+
+### Additional Planned Enhancements:
+
+- **Memory Visualization Upgrades**: Advanced 3D visualization of vector space relationships
+- **Cross-Modal Memory Support**: Expansion to include image, audio and other non-text memory types  
+- **Fine-grained Memory Management**: Tools for manual memory editing, categorization, and prioritization
+- **Enterprise Integration APIs**: Seamless integration with existing knowledge management systems
+- **Federated Memory Networks**: Ability to selectively share and access memories across multiple SME instances
 
 ## License and Attribution
 
