@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="900" height="600" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font: bold 20px sans-serif; fill: #333; }
+    .subtitle { font: 16px sans-serif; fill: #666; }
+    .box { fill: #fff; stroke: #333; stroke-width: 2; rx: 10; ry: 10; }
+    .box-header { font: bold 16px sans-serif; fill: #333; }
+    .box-text { font: 14px sans-serif; fill: #555; }
+    .arrow { stroke: #777; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    .dashed-arrow { stroke: #777; stroke-width: 2; stroke-dasharray: 6, 4; fill: none; marker-end: url(#arrow); }
+    .database { fill: #e6f7ff; stroke: #1890ff; }
+    .api { fill: #f6ffed; stroke: #52c41a; }
+    .ui { fill: #fff0f6; stroke: #eb2f96; }
+    .engine { fill: #f9f0ff; stroke: #722ed1; }
+    .arrow-label { font: 14px sans-serif; fill: #666; }
+    .process-step { font: 14px sans-serif; fill: #333; }
+  </style>
+  
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+        markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#777"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="450" y="40" class="title" text-anchor="middle">Structured Memory Engine - System Workflow</text>
+  <text x="450" y="65" class="subtitle" text-anchor="middle">Data Flow and Component Interaction Architecture</text>
+  
+  <!-- User Interface -->
+  <rect x="50" y="100" width="180" height="120" class="box ui"/>
+  <text x="140" y="125" class="box-header" text-anchor="middle">User Interface</text>
+  <text x="140" y="150" class="box-text" text-anchor="middle">React + TypeScript</text>
+  <text x="140" y="170" class="box-text" text-anchor="middle">Chat Interface</text>
+  <text x="140" y="190" class="box-text" text-anchor="middle">Memory Visualization</text>
+  <text x="140" y="210" class="box-text" text-anchor="middle">Settings Configuration</text>
+  
+  <!-- API Layer -->
+  <rect x="330" y="100" width="180" height="120" class="box api"/>
+  <text x="420" y="125" class="box-header" text-anchor="middle">API Layer</text>
+  <text x="420" y="150" class="box-text" text-anchor="middle">Express.js Endpoints</text>
+  <text x="420" y="170" class="box-text" text-anchor="middle">Authentication</text>
+  <text x="420" y="190" class="box-text" text-anchor="middle">Request Handling</text>
+  <text x="420" y="210" class="box-text" text-anchor="middle">Response Formatting</text>
+  
+  <!-- Memory Engine -->
+  <rect x="330" y="280" width="180" height="140" class="box engine"/>
+  <text x="420" y="305" class="box-header" text-anchor="middle">Memory Engine</text>
+  <text x="420" y="330" class="box-text" text-anchor="middle">Query Analysis</text>
+  <text x="420" y="350" class="box-text" text-anchor="middle">Similarity Threshold</text>
+  <text x="420" y="370" class="box-text" text-anchor="middle">Adaptive Retrieval</text>
+  <text x="420" y="390" class="box-text" text-anchor="middle">Context Management</text>
+  <text x="420" y="410" class="box-text" text-anchor="middle">Hybrid Scoring</text>
+  
+  <!-- AI Integration -->
+  <rect x="610" y="100" width="180" height="120" class="box engine"/>
+  <text x="700" y="125" class="box-header" text-anchor="middle">AI Integration</text>
+  <text x="700" y="150" class="box-text" text-anchor="middle">OpenAI API</text>
+  <text x="700" y="170" class="box-text" text-anchor="middle">Anthropic API</text>
+  <text x="700" y="190" class="box-text" text-anchor="middle">Response Generation</text>
+  <text x="700" y="210" class="box-text" text-anchor="middle">Embedding Creation</text>
+  
+  <!-- Databases -->
+  <rect x="150" y="460" width="180" height="100" class="box database"/>
+  <text x="240" y="485" class="box-header" text-anchor="middle">Local Vector DB</text>
+  <text x="240" y="510" class="box-text" text-anchor="middle">PostgreSQL + pgvector</text>
+  <text x="240" y="530" class="box-text" text-anchor="middle">High-Performance</text>
+  <text x="240" y="550" class="box-text" text-anchor="middle">Short-term Memory</text>
+  
+  <rect x="510" y="460" width="180" height="100" class="box database"/>
+  <text x="600" y="485" class="box-header" text-anchor="middle">Cloud Vector DB</text>
+  <text x="600" y="510" class="box-text" text-anchor="middle">Pinecone</text>
+  <text x="600" y="530" class="box-text" text-anchor="middle">Long-term Persistence</text>
+  <text x="600" y="550" class="box-text" text-anchor="middle">Multi-namespace</text>
+  
+  <!-- Arrows -->
+  <!-- UI to API -->
+  <path d="M 230 160 L 330 160" class="arrow"/>
+  <text x="280" y="150" class="arrow-label" text-anchor="middle">User Query</text>
+  
+  <!-- API to Memory Engine -->
+  <path d="M 420 220 L 420 280" class="arrow"/>
+  <text x="450" y="250" class="arrow-label" text-anchor="start">Query Processing</text>
+  
+  <!-- Memory Engine to Local DB -->
+  <path d="M 350 420 L 260 460" class="arrow"/>
+  <text x="280" y="430" class="arrow-label" text-anchor="middle">Memory Retrieval</text>
+  
+  <!-- Memory Engine to Cloud DB -->
+  <path d="M 490 420 L 580 460" class="arrow"/>
+  <text x="550" y="430" class="arrow-label" text-anchor="middle">Persistent Storage</text>
+  
+  <!-- Memory Engine to AI -->
+  <path d="M 510 320 L 630 220" class="arrow"/>
+  <text x="580" y="280" class="arrow-label" text-anchor="middle">Context Injection</text>
+  
+  <!-- AI to API -->
+  <path d="M 610 160 L 510 160" class="arrow"/>
+  <text x="560" y="150" class="arrow-label" text-anchor="middle">AI Response</text>
+  
+  <!-- API to UI -->
+  <path d="M 330 190 L 230 190" class="arrow"/>
+  <text x="280" y="210" class="arrow-label" text-anchor="middle">Response + Context</text>
+  
+  <!-- Bi-directional between DBs -->
+  <path d="M 330 510 L 510 510" class="dashed-arrow"/>
+  <text x="420" y="500" class="arrow-label" text-anchor="middle">Sync/Hydration</text>
+  
+  <!-- Process Labels -->
+  <text x="65" y="320" class="process-step">(1) User submits query</text>
+  <text x="65" y="345" class="process-step">(2) API processes request</text>
+  <text x="65" y="370" class="process-step">(3) Memory Engine retrieves relevant context</text>
+  <text x="65" y="395" class="process-step">(4) Embedding models convert text to vectors</text>
+  <text x="65" y="420" class="process-step">(5) Context injected into AI prompt</text>
+  <text x="610" y="320" class="process-step">(6) AI generates contextual response</text>
+  <text x="610" y="345" class="process-step">(7) Response stored as new memory</text>
+  <text x="610" y="370" class="process-step">(8) Memory persisted to databases</text>
+  <text x="610" y="395" class="process-step">(9) Response with context returned to UI</text>
+</svg>
