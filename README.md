@@ -79,7 +79,7 @@ The system is architected as a series of interconnected layers, each providing s
 
 ### Core Technology Stack
 
-The system utilizes cutting-edge technologies across its implementation:
+The system utilizes the following technologies across its implementation:
 
 - **Frontend Technologies**:
   - React 18+ with TypeScript for type-safe component development
@@ -99,7 +99,7 @@ The system utilizes cutting-edge technologies across its implementation:
 - **Vector Database Technologies**:
   - Local pgvector-powered database for high-performance retrieval
   - Pinecone vector database integration for long-term memory persistence
-  - Multi-index memory organization with namespace-based segmentation
+  - Multi-index memory organization
 
 ## Visual System Overview
 
@@ -172,21 +172,61 @@ The multi-stage response generation process ensures AI outputs are contextually 
 2. **Provider-Agnostic Integration**: A unified interface allows seamless switching between OpenAI and Anthropic models while maintaining consistent memory access
 3. **Feedback Loop Integration**: User interactions implicitly refine memory relevance scoring over time
 
-### Key System Processes
+## Data Reconciliation and Deduplication System
 
-1. **Query Submission**: User submits a chat message through the React-based user interface
-2. **API Processing**: Express.js API endpoints handle request authentication and formatting
-3. **Context Retrieval**: Memory Engine analyzes the query and retrieves relevant memories 
-4. **Vector Representation**: Text is converted to vector embeddings for similarity search
-5. **AI Prompt Engineering**: Retrieved context is intelligently injected into AI prompt
-6. **Response Generation**: AI model (OpenAI or Anthropic) generates contextual response
-7. **Memory Creation**: Both query and response are stored as new memories
-8. **Database Persistence**: Memories stored in local pgvector and synced to Pinecone
-9. **UI Rendering**: Response with relevant memory context returned to user interface
+The Structured Memory Engine implements a data reconciliation and deduplication system to ensure memory consistency across local and cloud databases. This system prevents memory duplication and optimizes storage efficiency without requiring manual intervention.
+
+### Key Features of the Deduplication System
+
+#### Consistent Hash-based Memory Identification
+
+The system uses a hashing mechanism to generate unique identifiers for each memory:
+
+- Each memory is assigned a hash-based ID derived from its content and type
+- The `memoryIdForUpsert()` function normalizes content by trimming and lowercasing before hashing
+- The SHA-256 hash algorithm generates a consistent identifier regardless of where the memory is created
+- By excluding timestamp and database ID from the hash calculation, identical content always produces the same identifier
+
+#### Bidirectional Synchronization with Deduplication
+
+During synchronization between local pgvector and cloud Pinecone databases:
+
+1. **Pre-synchronization Duplicate Detection**:
+   - Before uploading vectors, the system queries Pinecone to identify existing identical memories
+   - A map of existing memory IDs is created to track potential duplicates
+   - Content fingerprinting prevents re-uploading semantically identical memories
+
+2. **Batch Processing with Deduplication**:
+   - Memories are processed in configurable batches (default: 100) to optimize API usage
+   - Each batch is checked against existing vectors to avoid duplicate uploads
+   - When identical hash matches are found, the system defaults to overwriting the existing record with the new data
+   - The system tracks and reports deduplication rates for monitoring
+
+3. **Hydration with Duplicate Prevention**:
+   - When retrieving memories from Pinecone to the local database, the system checks for duplicates
+   - Local database hashes are compared with incoming vector IDs to prevent redundant storage
+   - Statistics track duplicate detection rates during both sync and hydration operations
+
+#### Deduplication Metrics
+
+The system maintains metrics for deduplication:
+
+- **Sync Deduplication Rate**: Percentage of duplicates detected when sending local memories to Pinecone
+- **Hydration Deduplication Rate**: Percentage of duplicates detected when retrieving memories from Pinecone
+- **Average Deduplication Rate**: Combined metric showing overall system efficiency
+- **Performance Tracking**: UI displays vector counts, operation success rates, and processing timestamps
+
+### Benefits of Automatic Deduplication
+
+1. **Reduced Storage Usage**: Preventing duplicate memories minimizes vector database storage requirements
+2. **Improved Query Performance**: Fewer redundant vectors lead to faster retrieval
+3. **Data Consistency**: Maintains consistent memory representation across local and cloud environments
+4. **No Manual Maintenance**: The system handles deduplication automatically
+5. **Handles Growing Datasets**: The approach maintains performance as the dataset grows
 
 ## Implementation Guidelines
 
-For organizations seeking to implement the Structured Memory Engine, the following technical requirements should be considered:
+The following technical requirements should be considered:
 
 ### System Requirements
 
@@ -208,7 +248,7 @@ The following environment variables are essential for proper system operation:
 
 ### Security Considerations
 
-When implementing this system in production environments, consider these security best practices:
+When implementing this system consider these security best practices:
 
 1. Always use HTTPS in production
 2. Store API keys and secrets securely using environment variables or a secrets manager
@@ -249,10 +289,6 @@ Extensive prompt engineering improvements focusing on:
 - Context-aware prompt templates with parameter optimization
 - A/B testing framework for prompt performance evaluation
 - Automated prompt parameter tuning based on user interaction data
-
-## License and Attribution
-
-This project is licensed under the MIT License - see the LICENSE file for details.
 
 ### References
 
@@ -318,3 +354,7 @@ The Structured Memory Engine addresses the fundamental limitations of traditiona
 3. **Unlimited Effective Context**: Breaking free from token limits by maintaining a searchable memory bank that spans all previous interactions
 4. **Cross-Session Continuity**: Enabling conversations to pick up where they left off, even after weeks or months
 5. **Selective Memory Injection**: Including only the most relevant historical context in each prompt, optimizing token usage
+
+## License and Attribution
+
+This project is licensed under the MIT License - see the LICENSE file for details.
