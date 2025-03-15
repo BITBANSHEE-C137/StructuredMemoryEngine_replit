@@ -1,30 +1,11 @@
 // Types for the client application
 
-// Response format options for chatbot
-export type ResponseFormat = 
-  'plain-text' | 
-  'lists' | 
-  'tables' | 
-  'code-snippets' | 
-  'markdown' | 
-  'latex' | 
-  'html' | 
-  'json' | 
-  'urls' | 
-  'ascii-art' | 
-  'emojis' | 
-  'csv' | 
-  'yaml' | 
-  'xml' | 
-  'quotes';
-
 export interface Message {
   id: number;
   content: string;
   role: 'user' | 'assistant';
   timestamp: string;
   modelId: string;
-  format?: ResponseFormat; // Response format
   // Add optional property for relevant memories
   relevantMemories?: RelevantMemory[];
   // Add optional context property for additional data like similarity threshold

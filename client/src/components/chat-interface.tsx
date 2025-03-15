@@ -1,21 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from './chat-message';
-import { Message, Model, RelevantMemory, ResponseFormat } from '@/lib/types';
+import { Message, Model, RelevantMemory } from '@/lib/types';
 import { useAutosizeTextarea } from '@/lib/hooks';
 import { DEFAULT_SYSTEM_MESSAGE } from '@/lib/constants';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface ChatInterfaceProps {
   messages: Message[];
@@ -25,7 +12,7 @@ interface ChatInterfaceProps {
   selectedEmbeddingModelId: string;
   onModelChange: (modelId: string) => void;
   onEmbeddingModelChange: (modelId: string) => void;
-  onSendMessage: (content: string, modelId: string, format?: ResponseFormat) => Promise<{ relevantMemories: RelevantMemory[] } | null>;
+  onSendMessage: (content: string, modelId: string) => Promise<{ relevantMemories: RelevantMemory[] } | null>;
   onToggleMemoryPanel?: () => void;
   isMobile: boolean;
 }
@@ -43,7 +30,6 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isMobile
 }) => {
   const [input, setInput] = useState('');
-  const [responseFormat, setResponseFormat] = useState<ResponseFormat>('plain-text');
   const [relevantMemoriesMap, setRelevantMemoriesMap] = useState<Record<number, RelevantMemory[]>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { textareaRef, adjustHeight } = useAutosizeTextarea();
@@ -80,8 +66,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
       textareaRef.current.style.height = 'auto';
     }
     
-    // Send message with the selected response format
-    const context = await onSendMessage(trimmedInput, selectedModelId, responseFormat);
+    // Send message and get context
+    const context = await onSendMessage(trimmedInput, selectedModelId);
     
     // Store relevant memories for this message
     if (context && context.relevantMemories) {
@@ -214,102 +200,54 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         {/* Message Input Area - Fixed at bottom */}
         <div className="message-input-area border-t border-primary/10 p-4 bg-gradient-to-b from-white to-primary/5 sticky bottom-0 z-10">
-          <form onSubmit={handleSubmit} className="flex flex-col space-y-3 max-w-4xl mx-auto">
-            {/* Format selector row */}
-            <div className="flex items-center justify-end space-x-2 px-2">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center text-xs text-primary/70">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" />
-                      </svg>
-                      Response Format:
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="text-xs">Choose how you want the AI to format its response</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              
-              <Select 
-                value={responseFormat} 
-                onValueChange={(value) => setResponseFormat(value as ResponseFormat)}
-              >
-                <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue placeholder="Plain Text" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="plain-text">Plain Text</SelectItem>
-                  <SelectItem value="lists">Lists</SelectItem>
-                  <SelectItem value="tables">Tables</SelectItem>
-                  <SelectItem value="code-snippets">Code Snippets</SelectItem>
-                  <SelectItem value="markdown">Markdown</SelectItem>
-                  <SelectItem value="latex">LaTeX</SelectItem>
-                  <SelectItem value="html">HTML</SelectItem>
-                  <SelectItem value="json">JSON</SelectItem>
-                  <SelectItem value="urls">URLs</SelectItem>
-                  <SelectItem value="ascii-art">ASCII Art</SelectItem>
-                  <SelectItem value="emojis">Emojis</SelectItem>
-                  <SelectItem value="csv">CSV</SelectItem>
-                  <SelectItem value="yaml">YAML</SelectItem>
-                  <SelectItem value="xml">XML</SelectItem>
-                  <SelectItem value="quotes">Quotes</SelectItem>
-                </SelectContent>
-              </Select>
+          <form onSubmit={handleSubmit} className="flex items-start space-x-3 max-w-4xl mx-auto">
+            <div className="relative flex-1">
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  adjustHeight(); // Make sure to call the height adjustment
+                }}
+                rows={1}
+                className="w-full pl-4 pr-10 py-3 border border-primary/20 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent transition-all"
+                style={{ 
+                  minHeight: '50px',
+                  maxHeight: '200px', 
+                  overflowY: 'auto',
+                  resize: 'none'
+                }}
+                placeholder="Type your message here..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit(e);
+                  }
+                }}
+                disabled={isLoading}
+              />
+              {isMobile && (
+                <button
+                  type="button"
+                  onClick={onToggleMemoryPanel}
+                  className="absolute right-3 top-3 text-primary/60 hover:text-primary transition-colors"
+                  title="View Memory Information"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+              )}
             </div>
-            
-            {/* Input and send button row */}
-            <div className="flex items-start space-x-3">
-              <div className="relative flex-1">
-                <textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => {
-                    setInput(e.target.value);
-                    adjustHeight(); // Make sure to call the height adjustment
-                  }}
-                  rows={1}
-                  className="w-full pl-4 pr-10 py-3 border border-primary/20 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent transition-all"
-                  style={{ 
-                    minHeight: '50px',
-                    maxHeight: '200px', 
-                    overflowY: 'auto',
-                    resize: 'none'
-                  }}
-                  placeholder="Type your message here..."
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit(e);
-                    }
-                  }}
-                  disabled={isLoading}
-                />
-                {isMobile && (
-                  <button
-                    type="button"
-                    onClick={onToggleMemoryPanel}
-                    className="absolute right-3 top-3 text-primary/60 hover:text-primary transition-colors"
-                    title="View Memory Information"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-              <button
-                type="submit"
-                className="bg-gradient-to-br from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white rounded-xl px-4 py-3 font-medium flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 shadow-md disabled:opacity-50 disabled:pointer-events-none h-[50px] flex-shrink-0 sticky top-0"
-                disabled={isLoading || !input.trim()}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="bg-gradient-to-br from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white rounded-xl px-4 py-3 font-medium flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 shadow-md disabled:opacity-50 disabled:pointer-events-none h-[50px] flex-shrink-0 sticky top-0"
+              disabled={isLoading || !input.trim()}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </button>
           </form>
         </div>
       </div>

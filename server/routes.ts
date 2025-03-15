@@ -187,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit message and get response
   router.post("/chat", async (req, res) => {
     try {
-      const { content, modelId, format } = req.body;
+      const { content, modelId } = req.body;
       
       if (!content || typeof content !== "string") {
         return res.status(400).json({ error: "Message content is required" });
@@ -196,9 +196,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!modelId || typeof modelId !== "string") {
         return res.status(400).json({ error: "Model ID is required" });
       }
-      
-      // Format is optional - default to plain-text if not provided
-      const responseFormat = format || 'plain-text';
       
       // Get model details
       const model = await storage.getModelById(modelId);
@@ -225,8 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assistantMessage = await storage.createMessage({
           content: response,
           role: "assistant",
-          modelId,
-          format: responseFormat
+          modelId
         });
         
         // Return the system response
@@ -799,17 +795,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 2. SYSTEM DETAILS: You're currently running on ${model.name} (${model.provider}) and configured to retrieve up to ${contextSize} relevant memories with a similarity threshold of ${settings.similarityThreshold}.
 
-${responseFormat && responseFormat !== 'plain-text' ? `3. RESPONSE FORMAT: The user has requested that you format your response as ${responseFormat.toUpperCase()}. Please adhere to this format when crafting your response.` : ''}
+3. HANDLING UNCERTAINTY: When memories contain conflicting information, acknowledge the contradiction, explain both perspectives, and consider which is more recent or relevant before responding.
 
-4. HANDLING UNCERTAINTY: When memories contain conflicting information, acknowledge the contradiction, explain both perspectives, and consider which is more recent or relevant before responding.
+4. USER PREFERENCES: Pay special attention to memories that indicate user preferences, factual information, or persistent characteristics, and maintain consistency when referring to them.
 
-5. USER PREFERENCES: Pay special attention to memories that indicate user preferences, factual information, or persistent characteristics, and maintain consistency when referring to them.
+5. MEMORY GAPS: If you recognize that relevant information should exist but wasn't retrieved, acknowledge the gap rather than inventing details.
 
-6. MEMORY GAPS: If you recognize that relevant information should exist but wasn't retrieved, acknowledge the gap rather than inventing details.
+6. META-QUERIES: For questions about your configuration, settings, or memory system (e.g., "what model is this?", "summarize recent chats"), you can directly answer using the system information provided.
 
-7. META-QUERIES: For questions about your configuration, settings, or memory system (e.g., "what model is this?", "summarize recent chats"), you can directly answer using the system information provided.
-
-8. CONTEXT RELATIONSHIPS: Look for relationships between memories - whether retrieved memories form part of a sequence or conversation, represent different perspectives on the same topic, or show evolution of ideas over time.
+7. CONTEXT RELATIONSHIPS: Look for relationships between memories - whether retrieved memories form part of a sequence or conversation, represent different perspectives on the same topic, or show evolution of ideas over time.
 
 CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
 1. Your PRIMARY purpose is to act as a personal assistant with memory - you remember everything the user tells you and can recall it when asked.
@@ -879,8 +873,7 @@ CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
       const assistantMessage = await storage.createMessage({
         content: response,
         role: "assistant",
-        modelId,
-        format: responseFormat
+        modelId
       });
       
       // 8. Process and generate embedding for the response using the same embedding model
@@ -968,7 +961,7 @@ CONVERSATIONAL MEMORY HANDLING AND CONTEXTUAL UNDERSTANDING:
       ];
       
       return {
-        response: `You're interacting with the Structured Memory Engine using the ${model.name} model from ${model.provider}. This model can handle up to ${model.maxTokens} tokens of context. The engine is configured to use ${settings.contextSize} relevant memories for each query with a similarity threshold of ${settings.similarityThreshold}. Additionally, the system supports various response formats including plain text, lists, tables, code snippets, Markdown, LaTeX, HTML, JSON, ASCII art, and more - you can select your preferred format from the dropdown menu.`,
+        response: `You're interacting with the Structured Memory Engine using the ${model.name} model from ${model.provider}. This model can handle up to ${model.maxTokens} tokens of context. The engine is configured to use ${settings.contextSize} relevant memories for each query with a similarity threshold of ${settings.similarityThreshold}.`,
         customContext: customMemories
       };
     }
@@ -1109,9 +1102,8 @@ This hybrid approach ensures that when you ask questions, I retrieve the most re
 - Default Embedding Model: ${settings.defaultEmbeddingModelId}
 - Context Size: ${settings.contextSize} memories per query
 - Similarity Threshold: ${settings.similarityThreshold}
-- Response Format Options: plain-text, lists, tables, code-snippets, markdown, latex, html, json, urls, ascii-art, emojis, csv, yaml, xml, quotes
 
-These settings determine how the system processes your queries and retrieves relevant context from past conversations. You can manually clear all memories through the settings menu, and you can select your preferred response format from the dropdown menu in the chat interface.`,
+These settings determine how the system processes your queries and retrieves relevant context from past conversations. You can manually clear all memories through the settings menu.`,
         customContext: customMemories
       };
     }

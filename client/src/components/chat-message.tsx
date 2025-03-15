@@ -206,18 +206,6 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               </span>
             ))}
           </div>
-          
-          {/* Display response format if it's an assistant message and has a format */}
-          {!isUser && message.format && message.format !== 'plain-text' && (
-            <div className="mt-2 flex items-center text-xs text-primary/60">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" />
-              </svg>
-              <span className="font-medium">
-                Format: {message.format.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </div>
