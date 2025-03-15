@@ -225,7 +225,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const assistantMessage = await storage.createMessage({
           content: response,
           role: "assistant",
-          modelId
+          modelId,
+          format: responseFormat
         });
         
         // Return the system response
