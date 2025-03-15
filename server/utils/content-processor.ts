@@ -924,37 +924,99 @@ export function applyHybridRanking<T extends { content: string; similarity: numb
         }
       }
       
-      // 5. WORLD SERIES SPECIFIC SOLUTION - Simplified for debugging
-      // Special case for "who won" sports championship questions
-      if (content.toLowerCase().startsWith('who won') && 
-          query.toLowerCase().startsWith('who won') &&
-          content.includes('world series') && 
-          query.toLowerCase().includes('world series')) {
+      // 5. SPECIALIZED SPORTS AND CHAMPIONSHIP QUESTION HANDLING
+      // Enhanced system to handle popular sports event questions
+      
+      // Define sports championship events we want to handle
+      const championshipEvents = [
+        { name: 'world_series', terms: ['world series', 'baseball championship'] },
+        { name: 'super_bowl', terms: ['super bowl', 'nfl championship'] },
+        { name: 'nba_finals', terms: ['nba finals', 'nba championship'] },
+        { name: 'stanley_cup', terms: ['stanley cup', 'nhl championship'] },
+        { name: 'world_cup', terms: ['world cup', 'fifa world cup'] },
+        { name: 'olympics', terms: ['olympics', 'olympic games'] }
+      ];
+      
+      // Check if this is a "who won" type question for any championship event
+      const isWinnerQuestion = 
+        (content.toLowerCase().includes('who') && query.toLowerCase().includes('who')) &&
+        (content.toLowerCase().includes('won') && query.toLowerCase().includes('won'));
+      
+      if (isWinnerQuestion) {
+        // Check each championship type
+        for (const event of championshipEvents) {
+          // See if both query and content mention this championship
+          const contentMentionsEvent = event.terms.some(term => content.toLowerCase().includes(term));
+          const queryMentionsEvent = event.terms.some(term => query.toLowerCase().includes(term));
           
-        // Find years in both strings (1900s or 2000s)
-        const contentYear = content.match(/\b(19|20)\d{2}\b/);
-        const queryYear = query.toLowerCase().match(/\b(19|20)\d{2}\b/);
-        
-        // If both have the same year, they're asking the same question
-        if (contentYear && queryYear && contentYear[0] === queryYear[0]) {
-          console.log(`🔴 DUPLICATE SPORTS QUESTION FOR YEAR ${contentYear[0]}`);
-          
-          // We need a way to only keep one version of this question
-          // Use a global variable to track if we've seen this question before
-          if (!(globalThis as any).__dedupeGroups) {
-            (globalThis as any).__dedupeGroups = {};
-          }
-          
-          const key = `worldseries_${contentYear[0]}`;
-          
-          if (!(globalThis as any).__dedupeGroups[key]) {
-            // First time seeing this question, keep it
-            console.log(`✅ Keeping this as the canonical version`);
-            (globalThis as any).__dedupeGroups[key] = true;
-          } else {
-            // We've seen this question before, remove this duplicate
-            console.log(`❌ Removing duplicate question`);
-            mem.similarity = 0.01; // Effectively removed from results
+          if (contentMentionsEvent && queryMentionsEvent) {
+            // This is a championship winner question - extract years
+            const yearPattern = /\b(19|20)\d{2}\b/;
+            const contentYear = content.match(yearPattern);
+            const queryYear = query.toLowerCase().match(yearPattern);
+            
+            // If both questions refer to the same year, they're duplicates
+            if (contentYear && queryYear && contentYear[0] === queryYear[0]) {
+              const eventYear = contentYear[0];
+              const dedupeKey = `${event.name}_${eventYear}`;
+              
+              console.log(`🏆 CHAMPIONSHIP QUESTION MATCH: ${event.name.replace('_', ' ')} ${eventYear}`);
+              
+              // Create deduplication tracker if needed
+              if (!(globalThis as any).__dedupeGroups) {
+                (globalThis as any).__dedupeGroups = {};
+                console.log(`🔧 Creating global deduplication tracking system`);
+              }
+              
+              // Check if we already have a canonical version of this question
+              if (!(globalThis as any).__dedupeGroups[dedupeKey]) {
+                // This is the first instance - make it canonical
+                console.log(`✅ KEEPING: First instance of "${dedupeKey}" question (ID: ${(mem as any).id || 'unknown'})`);
+                (globalThis as any).__dedupeGroups[dedupeKey] = {
+                  id: (mem as any).id || 'unknown',
+                  content: content,
+                  score: mem.similarity,
+                  timestamp: new Date().toISOString()
+                };
+              } else {
+                // Duplicate - check if this version is better than our canonical version
+                const existingScore = (globalThis as any).__dedupeGroups[dedupeKey].score;
+                
+                // If this new version has a much better score, replace the canonical version
+                if (mem.similarity > existingScore + 0.15) {
+                  console.log(`🔄 REPLACING CANONICAL: New version has better score (${mem.similarity.toFixed(2)} vs ${existingScore.toFixed(2)})`);
+                  console.log(`   New content: "${content}"`);
+                  
+                  // Update the canonical version
+                  (globalThis as any).__dedupeGroups[dedupeKey] = {
+                    id: (mem as any).id || 'unknown',
+                    content: content,
+                    score: mem.similarity,
+                    timestamp: new Date().toISOString()
+                  };
+                  
+                  // We need to find the old canonical version and downgrade it
+                  for (let j = 0; j < memories.length; j++) {
+                    if (j !== i && (memories[j] as any).id === (globalThis as any).__dedupeGroups[dedupeKey].id) {
+                      console.log(`   Downgrading former canonical version ID: ${(memories[j] as any).id}`);
+                      memories[j].similarity = 0.01;
+                      break;
+                    }
+                  }
+                } else {
+                  // This is a regular duplicate - remove it
+                  console.log(`❌ REMOVING: Duplicate instance of "${dedupeKey}" question`);
+                  console.log(`   Original question ID: ${(globalThis as any).__dedupeGroups[dedupeKey].id}`);
+                  console.log(`   This question ID: ${(mem as any).id || 'unknown'}`);
+                  
+                  // Effectively remove from results
+                  mem.similarity = 0.01;
+                }
+              }
+              
+              // We found a match for this event, no need to check others
+              break;
+            }
           }
         }
       }
