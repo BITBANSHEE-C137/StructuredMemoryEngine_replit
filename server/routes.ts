@@ -187,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Submit message and get response
   router.post("/chat", async (req, res) => {
     try {
-      const { content, modelId } = req.body;
+      const { content, modelId, format } = req.body;
       
       if (!content || typeof content !== "string") {
         return res.status(400).json({ error: "Message content is required" });
@@ -196,6 +196,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!modelId || typeof modelId !== "string") {
         return res.status(400).json({ error: "Model ID is required" });
       }
+      
+      // Format is optional - default to plain-text if not provided
+      const responseFormat = format || 'plain-text';
       
       // Get model details
       const model = await storage.getModelById(modelId);
