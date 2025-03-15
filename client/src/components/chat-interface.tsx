@@ -205,14 +205,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         {/* Message Input Area - Fixed at bottom */}
         <div className="message-input-area border-t border-primary/10 p-4 bg-gradient-to-b from-white to-primary/5 sticky bottom-0 z-10">
-          <form onSubmit={handleSubmit} className="flex items-center space-x-3 max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="flex items-start space-x-3 max-w-4xl mx-auto">
             <div className="relative flex-1">
               <textarea
                 ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  adjustHeight(); // Make sure to call the height adjustment
+                }}
                 rows={1}
-                className="w-full pl-4 pr-10 py-3 border border-primary/20 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent resize-none transition-all"
+                className="w-full pl-4 pr-10 py-3 border border-primary/20 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-transparent transition-all"
+                style={{ 
+                  minHeight: '50px',
+                  maxHeight: '200px', 
+                  overflowY: 'auto',
+                  resize: 'none'
+                }}
                 placeholder="Type your message here..."
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
@@ -237,7 +246,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
             <button
               type="submit"
-              className="bg-gradient-to-br from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white rounded-xl px-4 py-3 font-medium flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 shadow-md disabled:opacity-50 disabled:pointer-events-none"
+              className="bg-gradient-to-br from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white rounded-xl px-4 py-3 font-medium flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 shadow-md disabled:opacity-50 disabled:pointer-events-none h-[50px] flex-shrink-0 sticky top-0"
               disabled={isLoading || !input.trim()}
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

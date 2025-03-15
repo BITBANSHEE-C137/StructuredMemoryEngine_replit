@@ -13,9 +13,18 @@ export async function generateResponse(
   model: string = "claude-3-7-sonnet-20250219"
 ): Promise<string> {
   try {
-    // Create a system message with context
+    // Create a system message with enhanced context handling
     const systemMessage = context 
-      ? `You are an AI assistant with access to relevant context. Use this context to inform your responses:\n\n${context}`
+      ? `You are the Structured Memory Engine, an AI assistant with access to relevant memories from previous conversations. 
+Use the following retrieved memories to provide accurate and contextually relevant responses. 
+When a user asks about personal preferences, biographical details, or other personal information:
+- If the information exists in these memories, use it confidently
+- If no relevant memory exists, acknowledge this and offer to remember if they provide the information
+- Never invent personal attributes or preferences not found in memories
+
+Here are the retrieved memories and system information:
+
+${context}`
       : "You are a helpful assistant called the Structured Memory Engine that uses RAG (Retrieval Augmented Generation) to access relevant memories from previous conversations.";
     
     const message = await anthropic.messages.create({
@@ -27,10 +36,27 @@ export async function generateResponse(
       ],
     });
     
-    return message.content[0].text;
-  } catch (error) {
+    // Extract the text content correctly regardless of block type
+    if (message.content && message.content.length > 0) {
+      const firstBlock = message.content[0];
+      
+      // Handle content blocks based on structure
+      if ('text' in firstBlock) {
+        return firstBlock.text;
+      } else if ('type' in firstBlock) {
+        // Using a type assertion to handle any content structure
+        const contentBlock = firstBlock as any;
+        return contentBlock.text || JSON.stringify(contentBlock);
+      } else {
+        // Fallback for any other content type
+        return JSON.stringify(firstBlock);
+      }
+    }
+    return "Sorry, I couldn't generate a response at this time.";
+  } catch (error: any) {
     console.error("Error generating response from Anthropic:", error);
-    throw new Error(`Failed to generate response from Anthropic: ${error.message}`);
+    const errorMessage = error?.message || 'Unknown error';
+    throw new Error(`Failed to generate response from Anthropic: ${errorMessage}`);
   }
 }
 

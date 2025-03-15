@@ -15,6 +15,8 @@ export const MEMORY_PANEL_BREAKPOINT = 768; // px
 export const DEFAULT_SETTINGS = {
   contextSize: 5,
   similarityThreshold: "0.75",
+  questionThresholdFactor: "0.7",    // More permissive for questions
+  statementThresholdFactor: "0.85",  // More strict for statements
   defaultModelId: "gpt-4o",
   defaultEmbeddingModelId: "text-embedding-ada-002"
   // Removed autoClearMemories option - using manual memory management instead

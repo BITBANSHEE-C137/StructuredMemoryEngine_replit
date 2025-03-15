@@ -5,6 +5,7 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useChatMessages } from '@/lib/hooks';
 import { PineconeSettingsModal } from './pinecone-settings-modal';
+import { RAGStatusPanel } from '@/components/rag-status-panel';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const [contextSize, setContextSize] = useState(DEFAULT_SETTINGS.contextSize);
   const [similarityThreshold, setSimilarityThreshold] = useState(DEFAULT_SETTINGS.similarityThreshold);
+  const [questionThresholdFactor, setQuestionThresholdFactor] = useState(settings?.questionThresholdFactor || "0.7");
+  const [statementThresholdFactor, setStatementThresholdFactor] = useState(settings?.statementThresholdFactor || "0.85");
   const [defaultModelId, setDefaultModelId] = useState(DEFAULT_SETTINGS.defaultModelId);
   const [defaultEmbeddingModelId, setDefaultEmbeddingModelId] = useState(DEFAULT_SETTINGS.defaultEmbeddingModelId);
   const [clearingMemories, setClearingMemories] = useState(false);
@@ -44,6 +47,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (settings) {
       setContextSize(settings.contextSize);
       setSimilarityThreshold(settings.similarityThreshold);
+      setQuestionThresholdFactor(settings.questionThresholdFactor || "0.7");
+      setStatementThresholdFactor(settings.statementThresholdFactor || "0.85");
       setDefaultModelId(settings.defaultModelId || DEFAULT_SETTINGS.defaultModelId);
       setDefaultEmbeddingModelId(settings.defaultEmbeddingModelId || DEFAULT_SETTINGS.defaultEmbeddingModelId);
     }
@@ -92,6 +97,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     const updated = await onSave({
       contextSize,
       similarityThreshold,
+      questionThresholdFactor,
+      statementThresholdFactor,
       defaultModelId,
       defaultEmbeddingModelId
     });
@@ -106,6 +113,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     if (reset) {
       setContextSize(reset.contextSize);
       setSimilarityThreshold(reset.similarityThreshold);
+      setQuestionThresholdFactor(reset.questionThresholdFactor || "0.7");
+      setStatementThresholdFactor(reset.statementThresholdFactor || "0.85");
       setDefaultModelId(reset.defaultModelId || DEFAULT_SETTINGS.defaultModelId);
       setDefaultEmbeddingModelId(reset.defaultEmbeddingModelId || DEFAULT_SETTINGS.defaultEmbeddingModelId);
     }
@@ -230,34 +239,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             
             {/* RAG System Status Indicator */}
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg shadow-sm mb-4">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-blue-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <h3 className="text-sm font-semibold text-blue-800">RAG System Status</h3>
-                </div>
-                <span className="text-xs font-medium text-white bg-green-600 px-2 py-0.5 rounded-full">Active</span>
-              </div>
-              
-              <div className="mt-2 text-xs text-blue-800 space-y-1">
-                <div className="flex justify-between">
-                  <span>Context retrieval:</span>
-                  <span className="font-medium">{contextSize} memories per query</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Similarity threshold:</span>
-                  <span className="font-medium">{parseFloat(similarityThreshold).toFixed(2)} (min. confidence)</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Embedding model:</span>
-                  <span className="font-medium">{settings?.defaultEmbeddingModelId || 'text-embedding-ada-002'}</span>
-                </div>
-              </div>
-              
-              <div className="mt-2 text-[10px] text-blue-700">
-                The system will retrieve previous memories that match your query with at least {(parseFloat(similarityThreshold) * 100).toFixed(0)}% similarity.
-              </div>
+              <RAGStatusPanel 
+                contextSize={contextSize}
+                similarityThreshold={similarityThreshold}
+                questionThresholdFactor={questionThresholdFactor}
+                statementThresholdFactor={statementThresholdFactor}
+                embeddingModel={settings?.defaultEmbeddingModelId || 'text-embedding-3-small'}
+                compact={true}
+              />
             </div>
             
             <div className="space-y-4">
@@ -288,7 +277,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div>
                 <label htmlFor="similarity-threshold" className="flex items-center justify-between text-sm mb-1">
                   <span className="text-primary font-medium">Similarity Threshold</span>
-                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium" id="similarity-value">{similarityThreshold}</span>
+                  <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium" id="similarity-value">{parseFloat(similarityThreshold).toFixed(2)} ({(parseFloat(similarityThreshold) * 100).toFixed(0)}%)</span>
                 </label>
                 <input 
                   id="similarity-threshold" 
@@ -307,6 +296,82 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="flex justify-between text-xs text-primary mt-1">
                   <span>Lower Precision</span>
                   <span>Higher Precision</span>
+                </div>
+              </div>
+              
+              {/* Smart Retrieval Controls */}
+              <div className="mt-6">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-medium text-primary">Smart Retrieval Controls</h4>
+                  <div className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">New</div>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
+                  <p className="text-xs text-blue-800 mb-2">
+                    The system automatically detects questions vs. statements and adjusts memory retrieval accordingly:
+                  </p>
+                  <ul className="text-xs text-blue-800 list-disc list-inside space-y-1">
+                    <li>Questions get broader results to find potential answers</li>
+                    <li>Statements get more precise matching for accuracy</li>
+                  </ul>
+                </div>
+                
+                <div className="space-y-3">
+                  {/* Question Threshold Factor - Simplified */}
+                  <div>
+                    <label htmlFor="question-threshold" className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-primary font-medium">Question Mode</span>
+                      <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium">
+                        {parseFloat(questionThresholdFactor).toFixed(2)}
+                      </span>
+                    </label>
+                    <input 
+                      id="question-threshold" 
+                      type="range" 
+                      min="0.55" 
+                      max="0.85" 
+                      step="0.05" 
+                      value={parseFloat(questionThresholdFactor)}
+                      onChange={(e) => setQuestionThresholdFactor(e.target.value)}
+                      className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-blue-500 border border-blue-200" 
+                      style={{ 
+                        WebkitAppearance: 'none',
+                        appearance: 'none',
+                      }}
+                    />
+                    <div className="flex justify-between text-xs text-blue-700 mt-1">
+                      <span>More Results</span>
+                      <span>Higher Accuracy</span>
+                    </div>
+                  </div>
+                  
+                  {/* Statement Threshold Factor - Simplified */}
+                  <div>
+                    <label htmlFor="statement-threshold" className="flex items-center justify-between text-sm mb-1">
+                      <span className="text-primary font-medium">Statement Mode</span>
+                      <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-md font-medium">
+                        {parseFloat(statementThresholdFactor).toFixed(2)}
+                      </span>
+                    </label>
+                    <input 
+                      id="statement-threshold" 
+                      type="range" 
+                      min="0.75" 
+                      max="0.95" 
+                      step="0.05" 
+                      value={parseFloat(statementThresholdFactor)}
+                      onChange={(e) => setStatementThresholdFactor(e.target.value)}
+                      className="w-full h-2 bg-neutral rounded-lg appearance-none cursor-pointer accent-purple-500 border border-purple-200" 
+                      style={{ 
+                        WebkitAppearance: 'none',
+                        appearance: 'none',
+                      }}
+                    />
+                    <div className="flex justify-between text-xs text-purple-700 mt-1">
+                      <span>More Results</span>
+                      <span>Higher Accuracy</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               

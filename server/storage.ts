@@ -16,6 +16,7 @@ import {
   fetchVectorsFromPinecone,
   listPineconeIndexes
 } from "./utils/pinecone";
+import { performKeywordMatch } from "./utils/content-processor";
 
 // Define the storage interface
 export interface IStorage {
@@ -140,7 +141,7 @@ export class DatabaseStorage implements IStorage {
         timestamp: memory.timestamp as Date,
         metadata: memory.metadata
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating memory:", error);
       
       // Handle foreign key constraint violation
@@ -197,55 +198,266 @@ export class DatabaseStorage implements IStorage {
     return memory;
   }
 
-  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.5): Promise<(Memory & { similarity: number })[]> {
+  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.75, excludeMemoryId?: number): Promise<(Memory & { similarity: number })[]> {
     try {
-      // Make sure similarityThreshold is a proper number between 0 and 1
-      const threshold = Math.min(1, Math.max(0, similarityThreshold));
+      // ===== CRITICAL FIX FOR THRESHOLD VALUE =====
+      // This ensures the threshold is properly converted to a number and normalized
+      let threshold = 0.75; // Default fallback
       
-      console.log(`Querying memories with similarityThreshold: ${threshold} (${threshold * 100}%)`);
-      
-      // Ensure embedding is cast as vector and using the cosine distance operator (<->)
-      // Added filtering by similarity threshold
-      const result = await db.execute(sql`
-        SELECT m.*, 
-               1 - (m.embedding <-> ${embedding}::vector) as similarity
-        FROM memories m
-        WHERE m.embedding IS NOT NULL
-        AND 1 - (m.embedding <-> ${embedding}::vector) >= ${threshold}
-        ORDER BY m.embedding <-> ${embedding}::vector
-        LIMIT ${limit}
-      `);
-      
-      console.log(`Successfully found ${result.length} relevant memories with similarity >= ${threshold}`);
-      
-      // Convert the raw result to Memory objects with similarity score
-      return result.map(row => ({
-        id: Number(row.id),
-        content: String(row.content),
-        embedding: String(row.embedding),
-        type: String(row.type),
-        messageId: row.message_id ? Number(row.message_id) : null,
-        timestamp: row.timestamp as Date,
-        metadata: row.metadata,
-        similarity: parseFloat(String(row.similarity) || '0')
-      }));
-    } catch (error) {
-      console.error("Error querying memories by embedding:", error);
-      
-      // Try fallback to basic query without vector operations
-      try {
-        console.log("Trying fallback query...");
-        const fallbackResult = await db.select().from(memories).limit(limit);
-        
-        return fallbackResult.map(row => ({
-          ...row,
-          similarity: 0.5 // Default similarity for fallback results
-        }));
-      } catch (fallbackError) {
-        console.error("Fallback query also failed:", fallbackError);
-        return []; // Return empty array as last resort
+      if (similarityThreshold !== undefined && similarityThreshold !== null) {
+        // Convert to number if it's a string (from settings.similarityThreshold)
+        if (typeof similarityThreshold === 'string') {
+          const strValue = String(similarityThreshold).trim();
+          // Handle percentage format
+          if (strValue.includes('%')) {
+            threshold = parseFloat(strValue) / 100;
+          } else {
+            threshold = parseFloat(strValue);
+          }
+        } else {
+          // It's already a number
+          threshold = similarityThreshold;
+        }
       }
+      
+      // Ensure threshold is valid
+      threshold = Math.min(1, Math.max(0, threshold));
+      
+      console.log(`=== STORAGE LAYER DEBUG ===`);
+      console.log(`Input similarityThreshold: ${similarityThreshold} (type: ${typeof similarityThreshold})`);
+      console.log(`FIXED threshold value: ${threshold} (${threshold * 100}%)`);
+      
+      // Format embedding for pgvector - IMPROVED VERSION
+      let embeddingVector;
+      try {
+        // If embedding is a string that looks like a JSON array 
+        if (typeof embedding === 'string') {
+          if (embedding.startsWith('[') && embedding.endsWith(']')) {
+            // It's already in JSON array format
+            embeddingVector = embedding;
+          } else if (embedding.includes(',')) {
+            // It's comma-separated values
+            const values = embedding.split(',').map(v => v.trim()).filter(v => v);
+            embeddingVector = `[${values.join(',')}]`;
+          } else {
+            // It's something else
+            embeddingVector = embedding;
+          }
+        } else {
+          // Not a string, use as is
+          embeddingVector = embedding;
+        }
+      } catch (e) {
+        console.warn("Failed to process embedding:", e);
+        embeddingVector = embedding;
+      }
+      
+      // Check if the query is using the fallback mode (for debugging)
+      let usingFallback = false;
+      
+      // CRITICAL FIX: Try different approaches for vector search
+      let vectorResult;
+      try {
+        console.log(`Trying direct vector query...`);
+        // Attempt direct vector query first
+        // Add exclusion condition if excludeMemoryId is provided
+        if (excludeMemoryId) {
+          console.log(`Excluding memory ID ${excludeMemoryId} from vector search results`);
+          vectorResult = await db.execute(sql`
+            SELECT m.*, 
+                   1 - (m.embedding <-> ${embeddingVector}::vector) as similarity
+            FROM memories m
+            WHERE m.embedding IS NOT NULL
+            AND 1 - (m.embedding <-> ${embeddingVector}::vector) >= ${threshold}
+            AND m.id != ${excludeMemoryId}
+            ORDER BY 1 - (m.embedding <-> ${embeddingVector}::vector) DESC
+            LIMIT ${limit}
+          `);
+        } else {
+          vectorResult = await db.execute(sql`
+            SELECT m.*, 
+                   1 - (m.embedding <-> ${embeddingVector}::vector) as similarity
+            FROM memories m
+            WHERE m.embedding IS NOT NULL
+            AND 1 - (m.embedding <-> ${embeddingVector}::vector) >= ${threshold}
+            ORDER BY 1 - (m.embedding <-> ${embeddingVector}::vector) DESC
+            LIMIT ${limit}
+          `);
+        }
+      } catch (vectorError: any) {
+        console.warn("Vector query failed:", vectorError.message);
+        
+        // Try alternate approach if direct approach fails
+        try {
+          console.log("Trying alternate vector casting approach...");
+          
+          // Parse embedding into an array if needed
+          let embeddingArray;
+          if (typeof embedding === 'string' && embedding.startsWith('[')) {
+            embeddingArray = JSON.parse(embedding);
+          } else if (typeof embedding === 'string' && embedding.includes(',')) {
+            embeddingArray = embedding.split(',').map(v => parseFloat(v.trim()));
+          }
+          
+          // Use a simpler query approach as a backup
+          if (Array.isArray(embeddingArray)) {
+            const vectorLiteral = `[${embeddingArray.join(',')}]`;
+            // Add exclusion condition if excludeMemoryId is provided
+            if (excludeMemoryId) {
+              console.log(`Excluding memory ID ${excludeMemoryId} from alternate vector search results`);
+              vectorResult = await db.execute(sql`
+                SELECT *, 
+                       1 - (embedding <-> ${vectorLiteral}::vector) as similarity
+                FROM memories 
+                WHERE embedding IS NOT NULL
+                AND id != ${excludeMemoryId}
+                AND 1 - (embedding <-> ${vectorLiteral}::vector) >= ${threshold}
+                ORDER BY embedding <-> ${vectorLiteral}::vector ASC
+                LIMIT ${limit}
+              `);
+            } else {
+              vectorResult = await db.execute(sql`
+                SELECT *, 
+                       1 - (embedding <-> ${vectorLiteral}::vector) as similarity
+                FROM memories 
+                WHERE embedding IS NOT NULL
+                AND 1 - (embedding <-> ${vectorLiteral}::vector) >= ${threshold}
+                ORDER BY embedding <-> ${vectorLiteral}::vector ASC
+                LIMIT ${limit}
+              `);
+            }
+          } else {
+            throw new Error("Could not parse embedding into array");
+          }
+        } catch (alternateError: any) {
+          console.warn("Alternate vector query also failed:", alternateError.message);
+          throw alternateError; // Let fallback handle it
+        }
+      }
+      
+      if (vectorResult && vectorResult.length > 0) {
+        console.log(`Vector search successful! Found ${vectorResult.length} memories`);
+        if (vectorResult.length > 0) {
+          console.log(`First memory similarity: ${vectorResult[0].similarity}`);
+          console.log(`Last memory similarity: ${vectorResult[vectorResult.length-1].similarity}`);
+        }
+        
+        // Filter results by threshold if the query didn't do it
+        const filteredResult = vectorResult.filter((row: any) => {
+          const sim = typeof row.similarity === 'number' ? row.similarity : 0;
+          return sim >= threshold;
+        });
+        
+        console.log(`After threshold filtering: ${filteredResult.length} memories`);
+        
+        // Convert the raw result to Memory objects with similarity score
+        return filteredResult.map((row: any) => ({
+          id: Number(row.id),
+          content: String(row.content),
+          embedding: String(row.embedding),
+          type: String(row.type),
+          messageId: row.message_id ? Number(row.message_id) : null,
+          timestamp: row.timestamp as Date,
+          metadata: row.metadata,
+          similarity: Number(row.similarity) || 0
+        }));
+      }
+      
+      // If we reached here, both methods failed or returned no results
+      // We'll use a more intelligent fallback mechanism that prioritizes matching keywords
+      usingFallback = true;
+      console.log(`Using intelligent fallback mechanism (no vector search available)`);
+      
+      // Get a sample of memories
+      const fallbackResult = await db.select().from(memories).limit(Math.max(limit * 5, 50));
+      console.log(`Fallback: retrieved ${fallbackResult.length} memories for keyword analysis`);
+      
+      // Import the keyword matching function
+      const { performKeywordMatch } = await import('./utils/content-processor');
+      
+      // Parse the query embedding to get the original text if available
+      let queryText = "";
+      if (typeof embedding === 'object' && (embedding as any).metadata && (embedding as any).metadata.text) {
+        queryText = (embedding as any).metadata.text;
+      }
+      
+      // Get the query text from previous memories if we couldn't extract it
+      if (!queryText) {
+        try {
+          const latestMemories = await db
+            .select()
+            .from(memories)
+            .where(eq(memories.type, 'prompt'))
+            .orderBy(desc(memories.timestamp))
+            .limit(1);
+          
+          if (latestMemories.length > 0) {
+            queryText = latestMemories[0].content;
+          }
+        } catch (error) {
+          console.warn("Couldn't get latest prompt for fallback:", error);
+        }
+      }
+      
+      // In the worst case, just use a timestamp-based approach
+      if (!queryText) {
+        // Sort by newest and give them decreasing scores
+        fallbackResult.sort((a, b) => {
+          const dateA = new Date(a.timestamp);
+          const dateB = new Date(b.timestamp);
+          return dateB.getTime() - dateA.getTime();
+        });
+        
+        const result = fallbackResult.slice(0, limit).map((memory, index) => {
+          // Assign decreasing similarity scores from 0.9 to 0.5
+          const simulatedSimilarity = 0.9 - (index * (0.4 / Math.min(limit, fallbackResult.length)));
+          return {
+            ...memory,
+            similarity: simulatedSimilarity
+          };
+        });
+        
+        return result;
+      }
+      
+      // Here we actually have some query text to work with for keyword matching
+      console.log(`Fallback with keyword matching on query: "${queryText.substring(0, 50)}..."`);
+      
+      // Calculate keyword match scores
+      const scoredMemories = fallbackResult.map(memory => {
+        // Use proper keyword matching algorithm
+        const keywordScore = performKeywordMatch(queryText, memory.content);
+        
+        return {
+          ...memory,
+          similarity: keywordScore * 0.9 // Scale to make it comparable to vector similarity
+        };
+      });
+      
+      // Filter, sort by score, and limit to requested amount
+      const matchedMemories = scoredMemories
+        .filter(m => m.similarity >= threshold)
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, limit);
+      
+      console.log(`Fallback returned ${matchedMemories.length} memories with keyword match >= ${threshold}`);
+      
+      return matchedMemories;
+    } catch (error) {
+      console.error("All approaches for memory search failed:", error);
+      return []; // Return empty array as last resort
     }
+  }
+  
+  // Helper function to generate a hash number from a string
+  private hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
   }
   
   // Method to clear all memories and messages
@@ -304,12 +516,12 @@ export class DatabaseStorage implements IStorage {
     if (existingSettings.length > 0) {
       return existingSettings[0];
     } else {
-      // Create default settings
+      // Create default settings with newer embedding model
       const [newSettings] = await db.insert(settings).values({
         contextSize: 5,
         similarityThreshold: "0.75",
         defaultModelId: "gpt-3.5-turbo",
-        defaultEmbeddingModelId: "text-embedding-ada-002"
+        defaultEmbeddingModelId: "text-embedding-3-small"
       }).returning();
       
       return newSettings;
@@ -383,13 +595,10 @@ export class DatabaseStorage implements IStorage {
     const currentSettings = await this.getPineconeSettings();
     
     // Handle metadata merging
-    let mergedMetadata = currentSettings.metadata;
-    if (updatedSettings.metadata) {
-      mergedMetadata = {
-        ...mergedMetadata,
-        ...updatedSettings.metadata
-      };
-    }
+    const mergedMetadata = { 
+      ...(currentSettings.metadata || {}),
+      ...(updatedSettings.metadata || {})
+    };
     
     // Update settings with the new values
     const [updated] = await db.update(pineconeSettings)
@@ -444,10 +653,12 @@ export class DatabaseStorage implements IStorage {
       
       // Store the sync result in the settings metadata for future reference
       const currentSettings = await this.getPineconeSettings();
-      const metadata = currentSettings.metadata ? { ...currentSettings.metadata } : {};
+      const metadataObj = typeof currentSettings.metadata === 'object' && currentSettings.metadata !== null 
+        ? { ...currentSettings.metadata as object } 
+        : {};
       
-      // Add the sync result to metadata
-      metadata.lastSyncResult = {
+      // Add the sync result to metadata using proper type handling
+      const syncResult = {
         count: result.count,
         duplicateCount: result.duplicateCount,
         dedupRate: result.dedupRate,
@@ -456,13 +667,16 @@ export class DatabaseStorage implements IStorage {
         timestamp: result.timestamp || new Date().toISOString()
       };
       
+      // Use type assertion for the metadata object
+      (metadataObj as any).lastSyncResult = syncResult;
+      
       // Update the settings with result and last sync timestamp
       await this.updatePineconeSettings({
         activeIndexName: indexName,
         namespace,
         isEnabled: true,
         lastSyncTimestamp: new Date(),
-        metadata
+        metadata: metadataObj as any
       });
       
       // Return comprehensive response with all sync statistics
