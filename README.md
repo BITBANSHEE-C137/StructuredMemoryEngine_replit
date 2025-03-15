@@ -8,8 +8,10 @@ A real-time context-aware RAG (Retrieval Augmented Generation) chatbot system th
 ## 🚀 Features
 
 - **Vector-based Memory Storage**: Utilizes PostgreSQL with pgvector extension for efficient semantic similarity search
+- **Pinecone Vector Database Integration**: Long-term persistent memory storage with cloud-based vector database
 - **Multi-Provider AI Support**: Seamlessly integrates with both OpenAI and Anthropic models
 - **Contextual Memory Retrieval**: Automatically retrieves relevant historical information during conversations
+- **Smart Context Adjustment**: Dynamically adjusts similarity thresholds based on query type (questions vs. statements)
 - **Customizable Settings**: Fine-tune memory relevance, context window size, and similarity thresholds
 - **Real-time Embedding Visualization**: Visual representation of memory similarity and vector space
 - **Modern UI/UX**: Clean, responsive interface with AppStack-inspired design system
@@ -25,6 +27,21 @@ The main interface shows the chat interaction area with the memory system panel 
 The settings modal allows customization of AI providers, model selection, embedding parameters, and memory management options.
 
 ![Settings](./screenshots/settings.png)
+
+### Pinecone Integration
+The Pinecone settings panel enables configuration for long-term vector memory storage in the cloud.
+
+![Pinecone Settings](./screenshots/pinecone-settings.png)
+
+### Pinecone Index Management
+Create, manage, and delete vector indexes for organizing memory vectors.
+
+![Pinecone Indexes](./screenshots/pinecone-indexes.png)
+
+### Pinecone Sync & Hydrate
+Synchronize local memories to Pinecone or hydrate your local database from Pinecone's persistent storage.
+
+![Pinecone Sync](./screenshots/pinecone-sync.png)
 
 ## 🛠️ Technology Stack
 
@@ -91,7 +108,8 @@ These features need to be reconfigured when deploying outside of Replit. See the
    
    # API Keys
    OPENAI_API_KEY=your_openai_key
-   ANTHROPIC_API_KEY=your_anthropic_key 
+   ANTHROPIC_API_KEY=your_anthropic_key
+   PINECONE_API_KEY=your_pinecone_key
    
    # Session configuration
    SESSION_SECRET=your_random_secret_string
@@ -403,6 +421,7 @@ When deploying, ensure the following environment variables are properly configur
 | `PGPORT` | PostgreSQL port | `5432` |
 | `OPENAI_API_KEY` | Your OpenAI API key | `sk-...` |
 | `ANTHROPIC_API_KEY` | Your Anthropic API key | `sk-ant-...` |
+| `PINECONE_API_KEY` | Your Pinecone API key | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 | `SESSION_SECRET` | Secret for session encryption | `random_string` |
 
 ### Securing Your Deployment
@@ -430,7 +449,8 @@ When deploying, ensure the following environment variables are properly configur
 ## 🛣️ Roadmap
 
 - [ ] Memory clustering and categorization
-- [ ] Integration with Pinecone and other vector databases
+- [x] Integration with Pinecone vector database
+- [ ] Integration with additional vector databases (Weaviate, Milvus, etc.)
 - [ ] Fine-tuning capabilities for custom domain adaptation
 - [ ] Advanced memory visualization tools
 - [ ] User management and multi-tenant support
