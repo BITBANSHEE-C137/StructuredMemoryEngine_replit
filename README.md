@@ -5,7 +5,8 @@
 
 ## Executive Summary
 
-The Structured Memory Engine (SME) is an experimental, open-source proof-of-concept for AI-driven conversation systems, exploring approaches to address limitations of current commercial chatbot platforms. By implementing a semantic memory architecture, SME aims to transform ephemeral interactions into persistent, contextually-aware conversational experiences. This project was developed entirely with AI assistance as an experiment in real-time context capture for RAG systems.
+The Structured Memory Engine (SME) is an experimental, open-source proof-of-concept for AI-driven conversation systems, exploring approaches to address limitations of current commercial chatbot platforms. By implementing a semantic memory architecture, SME aims to transform ephemeral interactions into persistent, contextually-aware conversational experiences. This project was developed entirely with AI assistance as an experiment in real-time context capture for RAG systems. Replit is my current build platform
+https://lnkd.in/ecJcAaF9
 
 ## Problem Statement
 
