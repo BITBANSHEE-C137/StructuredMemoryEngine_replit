@@ -198,7 +198,7 @@ export class DatabaseStorage implements IStorage {
     return memory;
   }
 
-  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.75): Promise<(Memory & { similarity: number })[]> {
+  async queryMemoriesByEmbedding(embedding: string, limit: number = 5, similarityThreshold: number = 0.75, excludeMemoryId?: number): Promise<(Memory & { similarity: number })[]> {
     try {
       // ===== CRITICAL FIX FOR THRESHOLD VALUE =====
       // This ensures the threshold is properly converted to a number and normalized
@@ -260,15 +260,30 @@ export class DatabaseStorage implements IStorage {
       try {
         console.log(`Trying direct vector query...`);
         // Attempt direct vector query first
-        vectorResult = await db.execute(sql`
-          SELECT m.*, 
-                 1 - (m.embedding <-> ${embeddingVector}::vector) as similarity
-          FROM memories m
-          WHERE m.embedding IS NOT NULL
-          AND 1 - (m.embedding <-> ${embeddingVector}::vector) >= ${threshold}
-          ORDER BY 1 - (m.embedding <-> ${embeddingVector}::vector) DESC
-          LIMIT ${limit}
-        `);
+        // Add exclusion condition if excludeMemoryId is provided
+        if (excludeMemoryId) {
+          console.log(`Excluding memory ID ${excludeMemoryId} from vector search results`);
+          vectorResult = await db.execute(sql`
+            SELECT m.*, 
+                   1 - (m.embedding <-> ${embeddingVector}::vector) as similarity
+            FROM memories m
+            WHERE m.embedding IS NOT NULL
+            AND 1 - (m.embedding <-> ${embeddingVector}::vector) >= ${threshold}
+            AND m.id != ${excludeMemoryId}
+            ORDER BY 1 - (m.embedding <-> ${embeddingVector}::vector) DESC
+            LIMIT ${limit}
+          `);
+        } else {
+          vectorResult = await db.execute(sql`
+            SELECT m.*, 
+                   1 - (m.embedding <-> ${embeddingVector}::vector) as similarity
+            FROM memories m
+            WHERE m.embedding IS NOT NULL
+            AND 1 - (m.embedding <-> ${embeddingVector}::vector) >= ${threshold}
+            ORDER BY 1 - (m.embedding <-> ${embeddingVector}::vector) DESC
+            LIMIT ${limit}
+          `);
+        }
       } catch (vectorError: any) {
         console.warn("Vector query failed:", vectorError.message);
         
@@ -287,15 +302,30 @@ export class DatabaseStorage implements IStorage {
           // Use a simpler query approach as a backup
           if (Array.isArray(embeddingArray)) {
             const vectorLiteral = `[${embeddingArray.join(',')}]`;
-            const alternateResult = await db.execute(sql`
-              SELECT *, 
-                     1 - (embedding <-> ${vectorLiteral}::vector) as similarity
-              FROM memories 
-              WHERE embedding IS NOT NULL
-              ORDER BY embedding <-> ${vectorLiteral}::vector ASC
-              LIMIT ${limit}
-            `);
-            vectorResult = alternateResult;
+            // Add exclusion condition if excludeMemoryId is provided
+            if (excludeMemoryId) {
+              console.log(`Excluding memory ID ${excludeMemoryId} from alternate vector search results`);
+              vectorResult = await db.execute(sql`
+                SELECT *, 
+                       1 - (embedding <-> ${vectorLiteral}::vector) as similarity
+                FROM memories 
+                WHERE embedding IS NOT NULL
+                AND id != ${excludeMemoryId}
+                AND 1 - (embedding <-> ${vectorLiteral}::vector) >= ${threshold}
+                ORDER BY embedding <-> ${vectorLiteral}::vector ASC
+                LIMIT ${limit}
+              `);
+            } else {
+              vectorResult = await db.execute(sql`
+                SELECT *, 
+                       1 - (embedding <-> ${vectorLiteral}::vector) as similarity
+                FROM memories 
+                WHERE embedding IS NOT NULL
+                AND 1 - (embedding <-> ${vectorLiteral}::vector) >= ${threshold}
+                ORDER BY embedding <-> ${vectorLiteral}::vector ASC
+                LIMIT ${limit}
+              `);
+            }
           } else {
             throw new Error("Could not parse embedding into array");
           }

@@ -57,7 +57,7 @@ ${context}`
     });
     
     return response.choices[0].message.content || "No response generated";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating response from OpenAI:", error);
     throw new Error(`Failed to generate response from OpenAI: ${error.message}`);
   }

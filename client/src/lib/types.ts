@@ -8,6 +8,17 @@ export interface Message {
   modelId: string;
   // Add optional property for relevant memories
   relevantMemories?: RelevantMemory[];
+  // Add optional context property for additional data like similarity threshold
+  context?: {
+    similarityThreshold?: number;
+    thresholdDetails?: {
+      baseThreshold: number;      // Original threshold from settings
+      adjustmentFactor: number;   // Adjustment factor (lower for questions, higher for statements)
+      adjustedThreshold: number;  // Final threshold after adjustment
+      isQuestion: boolean;        // Whether the query was classified as a question
+    };
+    [key: string]: any;
+  };
 }
 
 export interface Memory {
@@ -29,6 +40,13 @@ export interface ChatResponse {
       content: string;
       similarity: number;
     }[];
+    similarityThreshold?: number; // Added similarity threshold used for query
+    thresholdDetails?: {
+      baseThreshold: number;      // Original threshold from settings
+      adjustmentFactor: number;   // Adjustment factor (lower for questions, higher for statements)
+      adjustedThreshold: number;  // Final threshold after adjustment
+      isQuestion: boolean;        // Whether the query was classified as a question
+    };
   };
 }
 
@@ -44,6 +62,8 @@ export interface Settings {
   id: number;
   contextSize: number;
   similarityThreshold: string;
+  questionThresholdFactor: string;  // Factor for questions (more permissive)
+  statementThresholdFactor: string; // Factor for statements (more strict)
   defaultModelId: string;
   defaultEmbeddingModelId: string;
   autoClearMemories: boolean;

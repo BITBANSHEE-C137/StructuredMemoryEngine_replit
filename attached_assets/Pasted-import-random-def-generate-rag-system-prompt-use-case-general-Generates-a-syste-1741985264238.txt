@@ -1,0 +1,59 @@
+import random
+
+def generate_rag_system_prompt(use_case="general"):
+    """
+    Generates a system prompt for an AI assistant that uses a tiered RAG system.
+    PGVector is used for ephemeral storage, while Pinecone is long-term memory that
+    must be recalled by the user.
+    """
+    system_prompt_template = f'''
+    SYSTEM PROMPT:
+    You are an AI assistant designed for Retrieval-Augmented Generation (RAG) with a two-tiered memory system:
+    1. **PGVector (Ephemeral Memory)** – Stores recent interactions and frequently accessed data.
+    2. **Pinecone (Long-Term Memory)** – Stores historical knowledge that users can recall manually. You do not access access to this unless the user recalls the data
+    
+    **Retrieval Strategy:**
+    - By default, retrieve responses using **PGVector** to maintain conversation flow.
+    - If PGVector lacks relevant context, inform the user that **related information may exist in Pinecone** recommend that the user may want to recall it.
+    - If the user recalls Pinecone data, integrate it seamlessly and update PGVector for future reference.
+    
+    **Guidelines:**
+    - Ensure responses are context-aware and prioritize recent conversation history.
+    - When Pinecone is suggested, clearly state that it requires user interaction.
+    - Maintain accuracy when merging recalled data with ephemeral context.
+    - If both memory tiers lack relevant data, generate an informed response based on general knowledge.
+    '''
+
+    # Customize the prompt for specific use cases
+    use_case_prompts = {
+        "general": system_prompt_template,
+        "knowledge_management": system_prompt_template + "\n    - Designed for knowledge base retrieval and management, prioritizing up-to-date information in PGVector before suggesting archived data from Pinecone.",
+        "technical_support": system_prompt_template + "\n    - Provides step-by-step troubleshooting guidance, checking PGVector first for recent issues before suggesting historical resolutions from Pinecone.",
+        "market_research": system_prompt_template + "\n    - Gathers recent market insights from PGVector and references historical trends in Pinecone if needed.",
+        "product_recommendation": system_prompt_template + "\n    - Uses user preferences stored in PGVector for immediate recommendations, with Pinecone storing long-term purchase history.",
+        "healthcare_information": system_prompt_template + "\n    - Retrieves the latest medical guidelines from PGVector, with Pinecone holding older clinical research archives.",
+        "financial_analysis": system_prompt_template + "\n    - Queries PGVector for current financial data and trends before suggesting Pinecone retrieval for historical analysis.",
+        "legal_research": system_prompt_template + "\n    - Checks PGVector for recent case law and legislation, while Pinecone stores precedent and older rulings.",
+        "scientific_research": system_prompt_template + "\n    - Prioritizes recent studies from PGVector, offering Pinecone retrieval for historical references if needed.",
+        "content_moderation": system_prompt_template + "\n    - Flags recent violations from PGVector before cross-referencing past enforcement actions in Pinecone.",
+        "cybersecurity_threats": system_prompt_template + "\n    - Prioritizes the latest threat intelligence from PGVector before referencing older attack patterns in Pinecone.",
+        "e-learning": system_prompt_template + "\n    - Uses PGVector for recently accessed course material, offering Pinecone recall for past lessons.",
+        "customer_support": system_prompt_template + "\n    - For customer FAQs, check PGVector first. If no match is found, suggest retrieving archived resolutions from Pinecone.",
+        "HR_assistance": system_prompt_template + "\n    - Retrieves recent company policy updates from PGVector, with Pinecone holding archived HR documents.",
+        "personalized_recommendations": system_prompt_template + "\n    - Uses recent user behavior stored in PGVector, with Pinecone containing long-term preferences.",
+        "software_development_assistance": system_prompt_template + "\n    - Retrieves recent coding discussions from PGVector and references historical best practices from Pinecone.",
+        "supply_chain_management": system_prompt_template + "\n    - Retrieves the latest logistics data from PGVector, with Pinecone holding past supply chain performance metrics.",
+        "news_analysis": system_prompt_template + "\n    - Prioritizes breaking news from PGVector, suggesting Pinecone recall for historical context.",
+        "AI_model_training": system_prompt_template + "\n    - Retrieves recent training runs and fine-tuning parameters from PGVector, with Pinecone storing past model performance data.",
+        "public_policy_analysis": system_prompt_template + "\n    - Uses PGVector for recent policy updates, while Pinecone retains historical legislative data.",
+        "event_planning": system_prompt_template + "\n    - Retrieves upcoming event details from PGVector and references past event data in Pinecone if needed."
+    }
+    
+    return use_case_prompts.get(use_case, system_prompt_template)
+
+# Example usage
+if __name__ == "__main__":
+    use_cases = list(use_case_prompts.keys())
+    for use_case in use_cases:
+        print(f"\n=== System Prompt for {use_case.replace('_', ' ').title()} ===")
+        print(generate_rag_system_prompt(use_case))

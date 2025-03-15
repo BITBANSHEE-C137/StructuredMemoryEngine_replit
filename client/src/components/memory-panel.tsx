@@ -6,6 +6,8 @@ import { apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { usePineconeStats } from '@/hooks/usePineconeStats';
 import { usePineconeSettings } from '@/hooks/usePineconeSettings';
+import { useSettings } from '@/lib/hooks';
+import { RAGStatusPanel } from '@/components/rag-status-panel';
 import { Loader2 } from 'lucide-react';
 
 interface MemoryPanelProps {
@@ -30,6 +32,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
   const [pageSize] = useState(10);
   const [total, setTotal] = useState(totalMemories || 0);
   const [loading, setLoading] = useState(false);
+  // RAG panel state removed as the section has been removed
   
   // Fetch Pinecone stats
   const { stats: pineconeStats, isLoading: loadingPinecone } = usePineconeStats();
@@ -42,6 +45,9 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
     resetDedupMetrics,
     isLoading: pineconeLoading
   } = usePineconeSettings();
+  
+  // Get settings for RAG status panel
+  const { settings } = useSettings();
 
   // Initialize with total memories from props
   useEffect(() => {
@@ -49,6 +55,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
       setTotal(totalMemories);
     }
   }, [totalMemories]);
+  
+
 
   // Fetch memories when panel is open
   useEffect(() => {
@@ -119,6 +127,8 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
           </svg>
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/70">Memory System</span>
         </h2>
+        
+        {/* Memory stats section starts here - we removed the RAG System Controls section */}
         
         {/* Memory Stats */}
         <div className="bg-white/90 backdrop-blur-sm rounded-xl shadow-sm p-5 mb-5 border border-primary/10">

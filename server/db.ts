@@ -170,7 +170,7 @@ export async function applyPgvectorFix() {
         console.log("Creating vector index...");
         try {
           await migrationClient`CREATE INDEX IF NOT EXISTS embedding_idx ON memories USING ivfflat (embedding vector_cosine_ops)`;
-        } catch (error) {
+        } catch (error: any) {
           console.warn(`Error creating index (continuing anyway): ${error.message}`);
         }
       }

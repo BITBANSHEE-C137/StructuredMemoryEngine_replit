@@ -1,0 +1,69 @@
+You
+what is my favorite car and board game?
+AI
+Retrieved Memories
+5 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 98.0%
+1
+Memory #259
+High relevance
+98.7% match
+my favorite car is the Ferrari 308gtsi years 1984-1985
+2
+Memory #267
+High relevance
+98.0% match
+My favorite car is the Ferrari 308GTS
+3
+Memory #271
+High relevance
+98.7% match
+My favorite car is Ferrari 308GTSi
+4
+Memory #325
+High relevance
+98.7% match
+My favorite car is the Ferrari 308GTSi. It's a beautiful classic car with amazing styling.
+5
+Memory #332
+High relevance
+98.4% match
+My favorite car is the Ferrari 308GTSi. It is a classic sports car with beautiful styling.
+Memory retrieval powered by vector embedding similarity search.
+Your favorite car is the Ferrari 308GTSi, specifically from the years 1984-1985. However, I don’t have any information about your favorite board game yet. If you'd like to share it, I can remember it for the future!
+You
+what board games have we discussed
+AI
+Retrieved Memories
+1 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 99.0%
+1
+Memory #344
+High relevance
+99.0% match
+what board games have we discussed
+Memory retrieval powered by vector embedding similarity search.
+It seems I don't currently have any memories of specific board games we've discussed. If you'd like, you can tell me which board games you're interested in, and I can remember them for future reference!
+You
+do you know anything about Monopoly?
+AI
+Retrieved Memories
+1 memories
+RAG Active
+Showing relevant context used to generate this response
+Similarity: 98.1%
+1
+Memory #346
+High relevance
+98.1% match
+do you know anything about Monopoly?
+Memory retrieval powered by vector embedding similarity search.
+Yes! I do know about Monopoly. It's a classic board game that originated in the early 20th century and is designed for 2 to 8 players. The goal of the game is to buy, trade, and develop properties while driving your opponents into bankruptcy. Players move around the board, landing on properties, utilities, railroads, and other spaces, earning or losing money depending on the space they land on.
+
+Monopoly is famous for its iconic tokens, Chance and Community Chest cards, and the use of Monopoly money. It also introduces mechanics like auctions, trading, and the chance to build houses and hotels to increase rent charges. The game has a rich history with countless editions, including themed versions based on cities, pop culture, and even video games.
+
+If you have specific questions about Monopoly or want to discuss strategies or editions, let me know!
