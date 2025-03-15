@@ -153,8 +153,14 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
           </div>
           
           {settings && (
-            <div className={`transition-all duration-300 overflow-hidden ${isRAGPanelOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'}`}>
-              <div className="pt-2 pb-1">
+            <div className={`transform transition-all duration-300 ease-in-out ${
+              isRAGPanelOpen 
+                ? 'max-h-[800px] opacity-100 mt-4' 
+                : 'max-h-0 opacity-0 mt-0'
+            }`}>
+              <div className={`bg-white/50 rounded-lg border border-blue-100 p-4 ${
+                isRAGPanelOpen ? 'block' : 'hidden'
+              }`}>
                 <RAGStatusPanel 
                   contextSize={settings.contextSize}
                   similarityThreshold={settings.similarityThreshold}
