@@ -93,7 +93,7 @@ The system utilizes cutting-edge technologies across its implementation:
 
 - **AI Integration**:
   - OpenAI and Anthropic API integrations with unified interface
-  - Embedding generation using state-of-the-art models
+  - OpenAI text-embedding-3-small model for vector embeddings
   - Vector similarity search algorithms for memory retrieval
 
 - **Vector Database Technologies**:
@@ -231,6 +231,24 @@ Enhanced memory organization through hierarchical namespace management, allowing
 - Parallel querying across multiple namespaces with configurable priority weighting
 - Improved privacy controls with namespace-level access permissions
 - Dynamic namespace creation based on conversation analysis
+
+### File Upload and Document Processing
+
+A comprehensive document processing pipeline that will:
+- Support multiple file formats (PDF, DOCX, TXT, etc.)
+- Extract text and structured data from uploaded documents
+- Automatically summarize document content for efficient storage
+- Create semantic embeddings of document segments for context retrieval
+- Link document knowledge with conversational memory
+
+### Prompt and Query Optimization
+
+Extensive prompt engineering improvements focusing on:
+- Fine-tuned prompts for different interaction types and contexts
+- Dynamic query reformulation for improved memory retrieval
+- Context-aware prompt templates with parameter optimization
+- A/B testing framework for prompt performance evaluation
+- Automated prompt parameter tuning based on user interaction data
 
 ### Additional Planned Enhancements:
 
